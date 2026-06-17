@@ -80,7 +80,7 @@ function BookingCard({
             {tr('paymentMethod')}: {booking.paymentMethod === 'cash' ? tr('cash') : tr('upi')} · {tr('payAtSalon')}
           </p>
         </div>
-        <div className="text-right">
+        <div className="text-left sm:text-right">
           <span className={`inline-block rounded-full px-3 py-1 text-xs font-medium ${
             booking.status === 'confirmed' ? 'bg-green-500/20 text-green-400' :
             booking.status === 'cancelled' ? 'bg-red-500/20 text-red-400' :

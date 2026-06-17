@@ -123,7 +123,7 @@ export function SalonDetailPage() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+    <div className={`mx-auto max-w-7xl px-4 py-8 sm:px-6 ${total > 0 ? 'pb-28 lg:pb-8' : ''}`}>
       <div className="relative h-56 overflow-hidden rounded-2xl sm:h-72">
         <img src={currentSalon.image} alt={currentSalon.name} className="h-full w-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-t from-[#0f0d12] via-transparent to-transparent" />
@@ -276,6 +276,39 @@ export function SalonDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Sticky Bottom Booking Bar for Mobile/Tablet */}
+      {total > 0 && (
+        <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-[#c9a962]/20 bg-[#1a1520]/95 p-4 shadow-2xl backdrop-blur-xl lg:hidden animate-fade-in">
+          <div className="mx-auto flex max-w-7xl items-center justify-between">
+            <div>
+              <p className="text-xs text-[#9a8fa8]">
+                {selectedPackage
+                  ? 'Package Selected'
+                  : `${selectedServices.length} service${selectedServices.length > 1 ? 's' : ''} selected`}
+              </p>
+              <p className="font-display text-xl font-bold text-[#c9a962]">
+                ₹{total.toLocaleString('en-IN')}
+              </p>
+            </div>
+            {user ? (
+              <button
+                onClick={() => setShowBooking(true)}
+                className="luxe-btn py-2 px-6 text-sm"
+              >
+                {tr('confirmBooking')}
+              </button>
+            ) : (
+              <Link
+                to="/login"
+                className="luxe-btn py-2 px-6 text-sm text-center"
+              >
+                {tr('login')}
+              </Link>
+            )}
+          </div>
+        </div>
+      )}
 
       {showBooking && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">

@@ -62,9 +62,13 @@ export function AIStylistPage() {
       <div className="mt-8 grid gap-8 lg:grid-cols-2">
         <div className="luxe-card overflow-hidden p-4">
           <div className="relative aspect-[4/3] overflow-hidden rounded-xl bg-[#0f0d12]">
-            {cameraOn ? (
-              <video ref={videoRef} className="h-full w-full object-cover mirror" playsInline muted />
-            ) : (
+            <video
+              ref={videoRef}
+              className={`h-full w-full object-cover mirror ${cameraOn ? 'block' : 'hidden'}`}
+              playsInline
+              muted
+            />
+            {!cameraOn && (
               <div className="flex h-full flex-col items-center justify-center text-[#9a8fa8]">
                 <Camera className="h-16 w-16 opacity-40" />
                 <p className="mt-4 text-sm">{tr('turnOnCamera')}</p>
