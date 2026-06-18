@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Sparkles, Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useT } from '../hooks/useT';
+import logoUrl from '../assets/logo.png.jpeg';
 
 export function LoginPage() {
   const [email, setEmail] = useState('');
@@ -31,7 +32,7 @@ export function LoginPage() {
     <div className="flex min-h-[calc(100vh-140px)] items-center justify-center px-4 py-12">
       <div className="w-full max-w-md animate-fade-in">
         <div className="mb-8 text-center">
-          <Sparkles className="mx-auto h-10 w-10 text-[#c9a962]" />
+          <img src={logoUrl} alt="Luxeluru" className="mx-auto h-20 w-auto object-contain mix-blend-screen" />
           <h1 className="mt-4 font-display text-3xl gold-gradient">{tr('login')}</h1>
           <p className="mt-2 text-sm text-[#9a8fa8]">{tr('tagline')}</p>
         </div>
