@@ -204,7 +204,7 @@ const en: Record<TranslationKey, string> = {
   suggestedStyles: 'Recommended Styles',
   adjustColor: 'Prefer a different hair colour?',
   applySuggestion: 'Find Salons for This Look',
-  nearestSalons: 'Nearest Salons (KNN)',
+  nearestSalons: 'Nearest Salons',
   distance: 'Distance',
   km: 'km',
   salonPortal: 'Salon Partner Portal',

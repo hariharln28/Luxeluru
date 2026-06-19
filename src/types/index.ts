@@ -59,6 +59,14 @@ export interface Salon {
   featured: boolean;
   commissionPaidUntil?: string;
   commissionDue?: number;
+  password?: string;
+  isActive?: boolean;
+  registrationStatus?: 'pending' | 'approved' | 'rejected';
+  ownerName?: string;
+  phoneOwner?: string;
+  tradeLicenseUrl?: string;
+  exitReason?: string;
+  registeredAt?: string;
 }
 
 export interface User {
@@ -69,6 +77,7 @@ export interface User {
   password: string;
   createdAt: string;
   preferredLanguage: Language;
+  blockedUntil?: string;
 }
 
 export interface Booking {
@@ -90,6 +99,17 @@ export interface Booking {
   feedbackRequestedAt?: string;
   rating?: number;
   review?: string;
+  paymentUpdatedBySalon?: boolean;
+  originalPrice?: number;
+  originalPackageId?: string;
+  originalPackageName?: string;
+  updatedPackageId?: string;
+  updatedPackageName?: string;
+  isPackageChanged?: boolean;
+  commissionAmount?: number;
+  commissionPaid?: boolean;
+  reportedAsFake?: boolean;
+  fakeReportReason?: string;
 }
 
 export interface StaffReview {

@@ -9,6 +9,28 @@ const staffPool = [
   { name: 'Ananya Shetty', role: 'Color Expert', specialties: ['Highlights', 'Global Color'] },
   { name: 'Vikram Rao', role: 'Grooming Expert', specialties: ['Premium Cut', 'Hot Towel'] },
   { name: 'Divya R', role: 'Bridal Specialist', specialties: ['HD Makeup', 'Hair Styling'] },
+  { name: 'Sneha Nair', role: 'Senior Stylist', specialties: ['Keratin', 'Smoothening'] },
+  { name: 'Arjun Menon', role: 'Master Barber', specialties: ['Classic Cut', 'Shave'] },
+  { name: 'Lakshmi Devi', role: 'Skin Specialist', specialties: ['Peels', 'Hydra Facial'] },
+  { name: 'Ritu Sharma', role: 'Nail Artist', specialties: ['Acrylic', 'Chrome Nails'] },
+  { name: 'Karan Singh', role: 'Spa Therapist', specialties: ['Swedish', 'Thai'] },
+  { name: 'Pooja Hegde', role: 'Color Expert', specialties: ['Ombre', 'Balayage'] },
+  { name: 'Nikhil Joshi', role: 'Grooming Expert', specialties: ['Beard Design', 'Fade'] },
+  { name: 'Swathi Reddy', role: 'Bridal Specialist', specialties: ['Airbrush Makeup', 'Draping'] },
+  { name: 'Arun Prasad', role: 'Senior Stylist', specialties: ['Layered Cut', 'Blowout'] },
+  { name: 'Deepika M', role: 'Skin Specialist', specialties: ['LED Therapy', 'Microderm'] },
+  { name: 'Sanjay Gupta', role: 'Master Barber', specialties: ['Razor Art', 'Pompadour'] },
+  { name: 'Nithya Krishnan', role: 'Nail Artist', specialties: ['Nail Art', 'Gel Polish'] },
+  { name: 'Rohan Kapoor', role: 'Spa Therapist', specialties: ['Hot Stone', 'Shiatsu'] },
+  { name: 'Tanvi Bhat', role: 'Color Expert', specialties: ['Platinum', 'Fantasy Color'] },
+  { name: 'Siddharth Pai', role: 'Grooming Expert', specialties: ['Scalp Treatment', 'Trim'] },
+  { name: 'Ishita Verma', role: 'Bridal Specialist', specialties: ['South Indian Bridal', 'Mehndi'] },
+  { name: 'Varun Teja', role: 'Senior Stylist', specialties: ['Textured Cut', 'Waves'] },
+  { name: 'Bhavana S', role: 'Skin Specialist', specialties: ['Gold Facial', 'De-tan'] },
+  { name: 'Manoj Hegde', role: 'Master Barber', specialties: ['Undercut', 'Line-up'] },
+  { name: 'Shruti Patel', role: 'Nail Artist', specialties: ['French Tips', 'Dip Powder'] },
+  { name: 'Ajay Nambiar', role: 'Spa Therapist', specialties: ['Balinese', 'Cupping'] },
+  { name: 'Rekha Gowda', role: 'Color Expert', specialties: ['Root Melt', 'Sombre'] },
 ];
 
 function makeStaff(salonIdx: number, count: number) {
@@ -26,7 +48,7 @@ function makeStaff(salonIdx: number, count: number) {
   });
 }
 
-export const salons: Salon[] = [
+const rawSalons: Salon[] = [
   {
     id: 'LLANU569',
     name: 'Anura House of Beauty',
@@ -67,7 +89,7 @@ export const salons: Salon[] = [
     rating: 4.8,
     reviewCount: 980,
     categories: ['spa', 'wellness', 'skin'],
-    image: 'https://images.unsplash.com/photo-1519415510233-955b37dafffb?w=800&q=80',
+    image: 'https://images.unsplash.com/photo-1470259078422-826894b933aa?w=800&q=80',
     openHours: '9:00 AM - 10:00 PM',
     phone: '+919876543211',
     email: 'book@olavubeautyheaven.in',
@@ -95,7 +117,7 @@ export const salons: Salon[] = [
     rating: 4.7,
     reviewCount: 756,
     categories: ['grooming', 'hair'],
-    image: 'https://images.unsplash.com/photo-1503951914875-452162b0f784?w=800&q=80',
+    image: 'https://images.unsplash.com/photo-1621605815971-fbc98d665033?w=800&q=80',
     openHours: '11:00 AM - 9:00 PM',
     phone: '+919876543212',
     email: 'info@hairandgroominglounge.in',
@@ -207,7 +229,7 @@ export const salons: Salon[] = [
     rating: 4.9,
     reviewCount: 1100,
     categories: ['bridal', 'hair', 'skin'],
-    image: 'https://images.unsplash.com/photo-1487412947727-957ce9036869?w=800&q=80',
+    image: 'https://images.unsplash.com/photo-1568702846914-96b305d2aaeb?w=800&q=80',
     openHours: '9:00 AM - 8:00 PM',
     phone: '+919876543216',
     email: 'dreams@blushbridal.in',
@@ -278,7 +300,7 @@ export const salons: Salon[] = [
     packages: [
       { id: 'p9-1', name: 'Color Transformation', description: 'Global color + keratin treatment', services: ['s9-1', 's9-3'], price: 15500, savings: 2000 },
     ],
-    staff: makeStaff(0, 3),
+    staff: makeStaff(8, 3),
   },
   {
     id: 'LLROY502',
@@ -305,7 +327,7 @@ export const salons: Salon[] = [
     packages: [
       { id: 'p10-1', name: 'Royal Grooming', description: 'Fade cut, beard design & head massage', services: ['s10-1', 's10-2'], price: 2200, savings: 400 },
     ],
-    staff: makeStaff(1, 2),
+    staff: makeStaff(9, 2),
   },
   {
     id: 'LLGLO839',
@@ -332,7 +354,7 @@ export const salons: Salon[] = [
     packages: [
       { id: 'p11-1', name: 'Quick Glow', description: 'Express facial, blowdry & manicure', services: ['s11-1', 's11-2', 's11-3'], price: 2800, savings: 500 },
     ],
-    staff: makeStaff(2, 2),
+    staff: makeStaff(10, 2),
   },
   {
     id: 'LLOPU467',
@@ -359,7 +381,7 @@ export const salons: Salon[] = [
     packages: [
       { id: 'p12-1', name: 'Opulence Experience', description: 'Gold wrap, luxury facial & aromatherapy', services: ['s12-2', 's12-3'], price: 13500, savings: 1500 },
     ],
-    staff: makeStaff(3, 3),
+    staff: makeStaff(11, 3),
   },
   {
     id: 'LLTRE138',
@@ -386,7 +408,7 @@ export const salons: Salon[] = [
     packages: [
       { id: 'p13-1', name: 'Hair Revival', description: 'Creative cut + hair spa', services: ['s13-1', 's13-2'], price: 3500, savings: 500 },
     ],
-    staff: makeStaff(4, 2),
+    staff: makeStaff(12, 2),
   },
   {
     id: 'LLECL981',
@@ -399,7 +421,7 @@ export const salons: Salon[] = [
     rating: 4.6,
     reviewCount: 510,
     categories: ['hair', 'nails', 'skin'],
-    image: 'https://images.unsplash.com/photo-1492108687078-cd3f3a2a2f1a?w=800&q=80',
+    image: 'https://images.unsplash.com/photo-1522337660859-02fbefca4702?w=800&q=80',
     openHours: '11:00 AM - 9:00 PM',
     phone: '+919876543223',
     email: 'shine@eclat.in',
@@ -413,7 +435,7 @@ export const salons: Salon[] = [
     packages: [
       { id: 'p14-1', name: 'Party Ready', description: 'Styling, party makeup & pedicure', services: ['s14-1', 's14-2', 's14-3'], price: 9500, savings: 900 },
     ],
-    staff: makeStaff(5, 3),
+    staff: makeStaff(13, 3),
   },
   {
     id: 'LLNIR725',
@@ -426,7 +448,7 @@ export const salons: Salon[] = [
     rating: 4.7,
     reviewCount: 640,
     categories: ['spa', 'wellness'],
-    image: 'https://images.unsplash.com/photo-1540555700478-4be289fbbebf?w=800&q=80',
+    image: 'https://images.unsplash.com/photo-1600334089648-b0d9d3028eb2?w=800&q=80',
     openHours: '8:00 AM - 9:00 PM',
     phone: '+919876543224',
     email: 'peace@nirvana-spa.in',
@@ -441,9 +463,19 @@ export const salons: Salon[] = [
     packages: [
       { id: 'p15-1', name: 'Nirvana Journey', description: 'Thai massage, reflexology & herbal scrub', services: ['s15-1', 's15-2', 's15-4'], price: 9800, savings: 1200 },
     ],
-    staff: makeStaff(6, 3),
+    staff: makeStaff(14, 3),
   },
 ];
+
+// Add default properties (like password and activation status) to the mock salons
+export const salons: Salon[] = rawSalons.map(s => ({
+  ...s,
+  password: 'SALON@123',
+  isActive: s.isActive !== false,
+  registrationStatus: 'approved',
+  commissionDue: s.commissionDue ?? 0,
+  commissionPaidUntil: s.commissionPaidUntil ?? '2026-07-01',
+}));
 
 export function getSalonById(id: string): Salon | undefined {
   return salons.find((s) => s.id === id);
@@ -452,6 +484,8 @@ export function getSalonById(id: string): Salon | undefined {
 export function getActiveSalons(): Salon[] {
   const now = new Date();
   return salons.filter((s) => {
+    if (s.registrationStatus !== 'approved') return false;
+    if (s.isActive === false) return false;
     if (!s.commissionPaidUntil) return true;
     const paidUntil = new Date(s.commissionPaidUntil);
     const graceEnd = new Date(paidUntil);
