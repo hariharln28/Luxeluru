@@ -31,7 +31,12 @@ export function SalonCard({ salon, distance }: SalonCardProps) {
         )}
       </div>
       <div className="p-4">
-        <h3 className="font-display text-lg text-[#e8d5a3] group-hover:text-[#c9a962]">{salon.name}</h3>
+        <div className="flex items-start justify-between gap-2">
+          <h3 className="font-display text-lg text-[#e8d5a3] group-hover:text-[#c9a962]">{salon.name}</h3>
+          <span className="shrink-0 rounded bg-[#c9a962]/10 px-1.5 py-0.5 text-[10px] font-mono text-[#c9a962]">
+            {salon.id}
+          </span>
+        </div>
         <p className="mt-0.5 flex items-center gap-1 text-xs text-[#9a8fa8]">
           <MapPin className="h-3 w-3" /> {salon.area}
         </p>

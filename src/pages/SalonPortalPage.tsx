@@ -112,7 +112,7 @@ export function SalonPortalPage() {
                 due ? 'bg-amber-500/10 border border-amber-500/20' :
                 'bg-green-500/5 border border-green-500/10'
               }`}>
-                <span className="text-sm">{s.name}</span>
+                <span className="text-sm">{s.name} <span className="text-xs text-[#9a8fa8] font-mono">({s.id})</span></span>
                 <span className={`text-xs ${overdue ? 'text-red-400' : due ? 'text-amber-400' : 'text-green-400'}`}>
                   {overdue ? tr('salonRemoved') : due ? `₹${s.commissionDue} due` : tr('commissionPaid')}
                 </span>

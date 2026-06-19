@@ -128,7 +128,12 @@ export function SalonDetailPage() {
         <img src={currentSalon.image} alt={currentSalon.name} className="h-full w-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-t from-[#0f0d12] via-transparent to-transparent" />
         <div className="absolute bottom-4 left-4 right-4">
-          <h1 className="font-display text-3xl sm:text-4xl text-white">{currentSalon.name}</h1>
+          <div className="flex flex-wrap items-baseline gap-2.5">
+            <h1 className="font-display text-3xl sm:text-4xl text-white">{currentSalon.name}</h1>
+            <span className="rounded bg-[#c9a962]/20 px-2 py-0.5 text-xs font-semibold text-[#c9a962]">
+              ID: {currentSalon.id}
+            </span>
+          </div>
           <p className="text-[#e8d5a3]">{currentSalon.tagline}</p>
         </div>
       </div>
