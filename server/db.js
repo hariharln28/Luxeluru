@@ -1,0 +1,617 @@
+import mongoose from 'mongoose';
+import sqlite3 from 'sqlite3';
+import { open } from 'sqlite';
+import path from 'path';
+import fs from 'fs/promises';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const DATA_DIR = path.join(__dirname, 'data');
+const SQLITE_FILE = path.join(DATA_DIR, 'database.sqlite');
+
+// Ensure data directory exists
+async function ensureDataDir() {
+  try {
+    await fs.mkdir(DATA_DIR, { recursive: true });
+  } catch (err) {
+    if (err.code !== 'EEXIST') {
+      console.error('Error creating data directory:', err);
+    }
+  }
+}
+
+// ==========================================
+// MongoDB Schema Definitions
+// ==========================================
+let MongoUser, MongoSalon, MongoBooking, MongoReview;
+
+function initMongoModels() {
+  if (MongoUser) return;
+
+  const userSchema = new mongoose.Schema({
+    id: { type: String, required: true, unique: true },
+    name: { type: String, required: true },
+    email: { type: String, required: true, unique: true },
+    phone: { type: String, required: true },
+    password: { type: String, required: true },
+    createdAt: { type: String, required: true },
+    preferredLanguage: { type: String },
+    blockedUntil: { type: String }
+  });
+
+  const salonSchema = new mongoose.Schema({
+    id: { type: String, required: true, unique: true },
+    name: { type: String, required: true },
+    tagline: { type: String },
+    area: { type: String },
+    address: { type: String },
+    lat: { type: Number },
+    lng: { type: Number },
+    rating: { type: Number },
+    reviewCount: { type: Number },
+    categories: [String],
+    image: { type: String },
+    openHours: { type: String },
+    phone: { type: String },
+    email: { type: String },
+    services: { type: mongoose.Schema.Types.Mixed },
+    packages: { type: mongoose.Schema.Types.Mixed },
+    staff: { type: mongoose.Schema.Types.Mixed },
+    featured: { type: Boolean, default: false },
+    password: { type: String },
+    isActive: { type: Boolean, default: false },
+    registrationStatus: { type: String, default: 'pending' },
+    ownerName: { type: String },
+    phoneOwner: { type: String },
+    tradeLicenseUrl: { type: String },
+    registeredAt: { type: String },
+    commissionDue: { type: Number, default: 0 },
+    commissionPaidUntil: { type: String },
+    exitReason: { type: String }
+  });
+
+  const bookingSchema = new mongoose.Schema({
+    id: { type: String, required: true, unique: true },
+    userId: { type: String, required: true },
+    salonId: { type: String, required: true },
+    salonName: { type: String },
+    serviceIds: [String],
+    serviceNames: [String],
+    staffId: { type: String },
+    staffName: { type: String },
+    date: { type: String },
+    time: { type: String },
+    totalPrice: { type: Number },
+    originalPrice: { type: Number },
+    paymentMethod: { type: String },
+    status: { type: String, default: 'confirmed' },
+    createdAt: { type: String },
+    feedbackRequestedAt: { type: String },
+    feedbackSent: { type: Boolean, default: false },
+    rating: { type: Number },
+    review: { type: String },
+    isPackageChanged: { type: Boolean, default: false },
+    updatedPackageId: { type: String },
+    updatedPackageName: { type: String },
+    paymentUpdatedBySalon: { type: Boolean, default: false },
+    commissionAmount: { type: Number, default: 0 },
+    commissionPaid: { type: Boolean, default: false },
+    reportedAsFake: { type: Boolean, default: false },
+    fakeReportReason: { type: String }
+  });
+
+  const reviewSchema = new mongoose.Schema({
+    id: { type: String, required: true, unique: true },
+    bookingId: { type: String },
+    salonId: { type: String },
+    salonName: { type: String },
+    userId: { type: String },
+    userName: { type: String },
+    rating: { type: Number },
+    comment: { type: String },
+    staffId: { type: String },
+    staffName: { type: String },
+    createdAt: { type: String }
+  });
+
+  MongoUser = mongoose.model('User', userSchema);
+  MongoSalon = mongoose.model('Salon', salonSchema);
+  MongoBooking = mongoose.model('Booking', bookingSchema);
+  MongoReview = mongoose.model('Review', reviewSchema);
+}
+
+// ==========================================
+// SQLite Connection & Table Init
+// ==========================================
+let sqliteDb = null;
+
+async function initSqlite() {
+  await ensureDataDir();
+  sqliteDb = await open({
+    filename: SQLITE_FILE,
+    driver: sqlite3.Database
+  });
+
+  await sqliteDb.exec(`
+    CREATE TABLE IF NOT EXISTS users (
+      id TEXT PRIMARY KEY,
+      name TEXT,
+      email TEXT UNIQUE,
+      phone TEXT,
+      password TEXT,
+      createdAt TEXT,
+      preferredLanguage TEXT,
+      blockedUntil TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS salons (
+      id TEXT PRIMARY KEY,
+      name TEXT,
+      tagline TEXT,
+      area TEXT,
+      address TEXT,
+      lat REAL,
+      lng REAL,
+      rating REAL,
+      reviewCount INTEGER,
+      categories TEXT,
+      image TEXT,
+      openHours TEXT,
+      phone TEXT,
+      email TEXT,
+      services TEXT,
+      packages TEXT,
+      staff TEXT,
+      featured INTEGER,
+      password TEXT,
+      isActive INTEGER,
+      registrationStatus TEXT,
+      ownerName TEXT,
+      phoneOwner TEXT,
+      tradeLicenseUrl TEXT,
+      registeredAt TEXT,
+      commissionDue REAL,
+      commissionPaidUntil TEXT,
+      exitReason TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS bookings (
+      id TEXT PRIMARY KEY,
+      userId TEXT,
+      salonId TEXT,
+      salonName TEXT,
+      serviceIds TEXT,
+      serviceNames TEXT,
+      staffId TEXT,
+      staffName TEXT,
+      date TEXT,
+      time TEXT,
+      totalPrice REAL,
+      originalPrice REAL,
+      paymentMethod TEXT,
+      status TEXT,
+      createdAt TEXT,
+      feedbackRequestedAt TEXT,
+      feedbackSent INTEGER,
+      rating REAL,
+      review TEXT,
+      isPackageChanged INTEGER,
+      updatedPackageId TEXT,
+      updatedPackageName TEXT,
+      paymentUpdatedBySalon INTEGER,
+      commissionAmount REAL,
+      commissionPaid INTEGER,
+      reportedAsFake INTEGER,
+      fakeReportReason TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS reviews (
+      id TEXT PRIMARY KEY,
+      bookingId TEXT,
+      salonId TEXT,
+      salonName TEXT,
+      userId TEXT,
+      userName TEXT,
+      rating REAL,
+      comment TEXT,
+      staffId TEXT,
+      staffName TEXT,
+      createdAt TEXT
+    );
+  `);
+}
+
+// Helper to convert SQLite row objects back to standard JS objects (parsing JSON strings)
+function mapSqlUser(u) {
+  if (!u) return null;
+  return { ...u };
+}
+
+function mapSqlSalon(s) {
+  if (!s) return null;
+  return {
+    ...s,
+    featured: Boolean(s.featured),
+    isActive: Boolean(s.isActive),
+    categories: s.categories ? JSON.parse(s.categories) : [],
+    services: s.services ? JSON.parse(s.services) : [],
+    packages: s.packages ? JSON.parse(s.packages) : [],
+    staff: s.staff ? JSON.parse(s.staff) : []
+  };
+}
+
+function mapSqlBooking(b) {
+  if (!b) return null;
+  return {
+    ...b,
+    feedbackSent: Boolean(b.feedbackSent),
+    isPackageChanged: Boolean(b.isPackageChanged),
+    paymentUpdatedBySalon: Boolean(b.paymentUpdatedBySalon),
+    commissionPaid: Boolean(b.commissionPaid),
+    reportedAsFake: Boolean(b.reportedAsFake),
+    serviceIds: b.serviceIds ? JSON.parse(b.serviceIds) : [],
+    serviceNames: b.serviceNames ? JSON.parse(b.serviceNames) : []
+  };
+}
+
+function mapSqlReview(r) {
+  if (!r) return null;
+  return { ...r };
+}
+
+// ==========================================
+// Database Adapter Implementation
+// ==========================================
+class DatabaseManager {
+  constructor() {
+    this.mode = 'sqlite'; // Default mode
+  }
+
+  async connect(uri) {
+    if (uri) {
+      try {
+        console.log('Connecting to MongoDB database...');
+        await mongoose.connect(uri, { serverSelectionTimeoutMS: 5000 });
+        initMongoModels();
+        this.mode = 'mongodb';
+        console.log('Successfully connected to MongoDB.');
+        return;
+      } catch (err) {
+        console.error('MongoDB connection failed, falling back to SQLite:', err.message);
+      }
+    }
+    console.log('Initializing SQLite database...');
+    await initSqlite();
+    this.mode = 'sqlite';
+    console.log('SQLite database initialized at:', SQLITE_FILE);
+  }
+
+  // USERS
+  async getUsers() {
+    if (this.mode === 'mongodb') {
+      const docs = await MongoUser.find({});
+      return docs.map(d => d.toObject());
+    } else {
+      const rows = await sqliteDb.all('SELECT * FROM users');
+      return rows.map(mapSqlUser);
+    }
+  }
+
+  async getUser(id) {
+    if (this.mode === 'mongodb') {
+      const doc = await MongoUser.findOne({ id });
+      return doc ? doc.toObject() : null;
+    } else {
+      const row = await sqliteDb.get('SELECT * FROM users WHERE id = ?', id);
+      return mapSqlUser(row);
+    }
+  }
+
+  async createUser(userData) {
+    if (this.mode === 'mongodb') {
+      const doc = new MongoUser(userData);
+      await doc.save();
+      return doc.toObject();
+    } else {
+      await sqliteDb.run(
+        `INSERT INTO users (id, name, email, phone, password, createdAt, preferredLanguage, blockedUntil)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        userData.id,
+        userData.name,
+        userData.email,
+        userData.phone,
+        userData.password,
+        userData.createdAt,
+        userData.preferredLanguage || null,
+        userData.blockedUntil || null
+      );
+      return userData;
+    }
+  }
+
+  async updateUser(id, updates) {
+    if (this.mode === 'mongodb') {
+      const doc = await MongoUser.findOneAndUpdate({ id }, { $set: updates }, { new: true });
+      return doc ? doc.toObject() : null;
+    } else {
+      const keys = Object.keys(updates);
+      if (keys.length === 0) return this.getUser(id);
+      
+      const setClause = keys.map(k => `${k} = ?`).join(', ');
+      const values = keys.map(k => updates[k]);
+      values.push(id);
+
+      await sqliteDb.run(`UPDATE users SET ${setClause} WHERE id = ?`, ...values);
+      return this.getUser(id);
+    }
+  }
+
+  // SALONS
+  async getSalons() {
+    if (this.mode === 'mongodb') {
+      const docs = await MongoSalon.find({});
+      return docs.map(d => d.toObject());
+    } else {
+      const rows = await sqliteDb.all('SELECT * FROM salons');
+      return rows.map(mapSqlSalon);
+    }
+  }
+
+  async getSalon(id) {
+    if (this.mode === 'mongodb') {
+      const doc = await MongoSalon.findOne({ id });
+      return doc ? doc.toObject() : null;
+    } else {
+      const row = await sqliteDb.get('SELECT * FROM salons WHERE id = ?', id);
+      return mapSqlSalon(row);
+    }
+  }
+
+  async createSalon(salonData) {
+    if (this.mode === 'mongodb') {
+      const doc = new MongoSalon(salonData);
+      await doc.save();
+      return doc.toObject();
+    } else {
+      await sqliteDb.run(
+        `INSERT INTO salons (id, name, tagline, area, address, lat, lng, rating, reviewCount, categories,
+         image, openHours, phone, email, services, packages, staff, featured, password, isActive,
+         registrationStatus, ownerName, phoneOwner, tradeLicenseUrl, registeredAt, commissionDue,
+         commissionPaidUntil, exitReason)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        salonData.id,
+        salonData.name,
+        salonData.tagline || null,
+        salonData.area || null,
+        salonData.address || null,
+        salonData.lat || null,
+        salonData.lng || null,
+        salonData.rating || 5.0,
+        salonData.reviewCount || 0,
+        JSON.stringify(salonData.categories || []),
+        salonData.image || null,
+        salonData.openHours || null,
+        salonData.phone || null,
+        salonData.email || null,
+        JSON.stringify(salonData.services || []),
+        JSON.stringify(salonData.packages || []),
+        JSON.stringify(salonData.staff || []),
+        salonData.featured ? 1 : 0,
+        salonData.password || null,
+        salonData.isActive ? 1 : 0,
+        salonData.registrationStatus || 'pending',
+        salonData.ownerName || null,
+        salonData.phoneOwner || null,
+        salonData.tradeLicenseUrl || null,
+        salonData.registeredAt || null,
+        salonData.commissionDue || 0,
+        salonData.commissionPaidUntil || null,
+        salonData.exitReason || null
+      );
+      return salonData;
+    }
+  }
+
+  async updateSalon(id, updates) {
+    if (this.mode === 'mongodb') {
+      const doc = await MongoSalon.findOneAndUpdate({ id }, { $set: updates }, { new: true });
+      return doc ? doc.toObject() : null;
+    } else {
+      const keys = Object.keys(updates);
+      if (keys.length === 0) return this.getSalon(id);
+
+      const setClause = keys.map(k => `${k} = ?`).join(', ');
+      const values = keys.map(k => {
+        const val = updates[k];
+        if (Array.isArray(val) || typeof val === 'object') {
+          return JSON.stringify(val);
+        }
+        if (typeof val === 'boolean') {
+          return val ? 1 : 0;
+        }
+        return val;
+      });
+      values.push(id);
+
+      await sqliteDb.run(`UPDATE salons SET ${setClause} WHERE id = ?`, ...values);
+      return this.getSalon(id);
+    }
+  }
+
+  // BOOKINGS
+  async getBookings() {
+    if (this.mode === 'mongodb') {
+      const docs = await MongoBooking.find({});
+      return docs.map(d => d.toObject());
+    } else {
+      const rows = await sqliteDb.all('SELECT * FROM bookings');
+      return rows.map(mapSqlBooking);
+    }
+  }
+
+  async getBooking(id) {
+    if (this.mode === 'mongodb') {
+      const doc = await MongoBooking.findOne({ id });
+      return doc ? doc.toObject() : null;
+    } else {
+      const row = await sqliteDb.get('SELECT * FROM bookings WHERE id = ?', id);
+      return mapSqlBooking(row);
+    }
+  }
+
+  async createBooking(bData) {
+    if (this.mode === 'mongodb') {
+      const doc = new MongoBooking(bData);
+      await doc.save();
+      return doc.toObject();
+    } else {
+      await sqliteDb.run(
+        `INSERT INTO bookings (id, userId, salonId, salonName, serviceIds, serviceNames, staffId, staffName,
+         date, time, totalPrice, originalPrice, paymentMethod, status, createdAt, feedbackRequestedAt,
+         feedbackSent, rating, review, isPackageChanged, updatedPackageId, updatedPackageName,
+         paymentUpdatedBySalon, commissionAmount, commissionPaid, reportedAsFake, fakeReportReason)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        bData.id,
+        bData.userId,
+        bData.salonId,
+        bData.salonName || null,
+        JSON.stringify(bData.serviceIds || []),
+        JSON.stringify(bData.serviceNames || []),
+        bData.staffId || null,
+        bData.staffName || null,
+        bData.date || null,
+        bData.time || null,
+        bData.totalPrice || null,
+        bData.originalPrice || null,
+        bData.paymentMethod || null,
+        bData.status || 'confirmed',
+        bData.createdAt || null,
+        bData.feedbackRequestedAt || null,
+        bData.feedbackSent ? 1 : 0,
+        bData.rating || null,
+        bData.review || null,
+        bData.isPackageChanged ? 1 : 0,
+        bData.updatedPackageId || null,
+        bData.updatedPackageName || null,
+        bData.paymentUpdatedBySalon ? 1 : 0,
+        bData.commissionAmount || 0,
+        bData.commissionPaid ? 1 : 0,
+        bData.reportedAsFake ? 1 : 0,
+        bData.fakeReportReason || null
+      );
+      return bData;
+    }
+  }
+
+  async updateBooking(id, updates) {
+    if (this.mode === 'mongodb') {
+      const doc = await MongoBooking.findOneAndUpdate({ id }, { $set: updates }, { new: true });
+      return doc ? doc.toObject() : null;
+    } else {
+      const keys = Object.keys(updates);
+      if (keys.length === 0) return this.getBooking(id);
+
+      const setClause = keys.map(k => `${k} = ?`).join(', ');
+      const values = keys.map(k => {
+        const val = updates[k];
+        if (Array.isArray(val) || typeof val === 'object') {
+          return JSON.stringify(val);
+        }
+        if (typeof val === 'boolean') {
+          return val ? 1 : 0;
+        }
+        return val;
+      });
+      values.push(id);
+
+      await sqliteDb.run(`UPDATE bookings SET ${setClause} WHERE id = ?`, ...values);
+      return this.getBooking(id);
+    }
+  }
+
+  // REVIEWS
+  async getReviews() {
+    if (this.mode === 'mongodb') {
+      const docs = await MongoReview.find({});
+      return docs.map(d => d.toObject());
+    } else {
+      const rows = await sqliteDb.all('SELECT * FROM reviews');
+      return rows.map(mapSqlReview);
+    }
+  }
+
+  async createReview(revData) {
+    if (this.mode === 'mongodb') {
+      const doc = new MongoReview(revData);
+      await doc.save();
+      return doc.toObject();
+    } else {
+      await sqliteDb.run(
+        `INSERT INTO reviews (id, bookingId, salonId, salonName, userId, userName, rating, comment, staffId, staffName, createdAt)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        revData.id,
+        revData.bookingId || null,
+        revData.salonId || null,
+        revData.salonName || null,
+        revData.userId || null,
+        revData.userName || null,
+        revData.rating || 5.0,
+        revData.comment || null,
+        revData.staffId || null,
+        revData.staffName || null,
+        revData.createdAt || null
+      );
+      return revData;
+    }
+  }
+
+  // Dynamic Seeding Helper
+  async seed(data) {
+    const { salons, users, bookings, reviews } = data;
+
+    if (salons && salons.length > 0) {
+      const existing = await this.getSalons();
+      if (existing.length === 0) {
+        console.log(`Seeding ${salons.length} salons...`);
+        for (const s of salons) {
+          await this.createSalon(s);
+        }
+      }
+    }
+
+    if (users && users.length > 0) {
+      const existing = await this.getUsers();
+      if (existing.length === 0) {
+        console.log(`Seeding ${users.length} users...`);
+        for (const u of users) {
+          await this.createUser(u);
+        }
+      }
+    }
+
+    if (bookings && bookings.length > 0) {
+      const existing = await this.getBookings();
+      if (existing.length === 0) {
+        console.log(`Seeding ${bookings.length} bookings...`);
+        for (const b of bookings) {
+          await this.createBooking(b);
+        }
+      }
+    }
+
+    if (reviews && reviews.length > 0) {
+      const existing = await this.getReviews();
+      if (existing.length === 0) {
+        console.log(`Seeding ${reviews.length} reviews...`);
+        for (const r of reviews) {
+          await this.createReview(r);
+        }
+      }
+    }
+    console.log('Seeding process completed.');
+  }
+}
+
+export const db = new DatabaseManager();

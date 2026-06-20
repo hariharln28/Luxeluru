@@ -26,3 +26,8 @@ dist-ssr
 # Backend
 server/data/
 server/node_modules/
+
+# Environment files (contain secrets)
+.env
+.env.local
+server/.env
