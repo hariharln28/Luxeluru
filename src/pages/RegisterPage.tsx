@@ -41,7 +41,9 @@ export function RegisterPage() {
       preferredLanguage: language as Language,
     });
     if (!ok) {
-      setError(tr('emailExists'));
+      // The specific error (rate limit, email exists, etc.) is already shown as a toast
+      // by the register() function. Only show a fallback if no toast was triggered.
+      setError('Registration failed. Please check the error message above and try again.');
       return;
     }
     navigate('/login', { state: { fromRegister: true } });
