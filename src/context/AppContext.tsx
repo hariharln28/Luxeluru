@@ -432,7 +432,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
       });
 
       if (error) {
-        addToast('error', error.message);
+        // Give specific, helpful error messages
+        if (error.message.includes('Email not confirmed') || error.message.includes('email_not_confirmed')) {
+          addToast('error', 'Please verify your email before signing in. Check your inbox (and spam folder) for the confirmation link.');
+        } else if (error.message.includes('Invalid login credentials') || error.message.includes('invalid_credentials')) {
+          addToast('error', 'Invalid email or password. Please check your credentials and try again.');
+        } else if (error.message.includes('rate limit') || error.status === 429) {
+          addToast('error', 'Too many login attempts. Please wait a minute and try again.');
+        } else {
+          addToast('error', error.message);
+        }
         return false;
       }
 
@@ -459,7 +468,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
       return false;
     } catch (err: any) {
-      addToast('error', err.message || 'Login failed');
+      if (err.message && err.message.includes('fetch')) {
+        addToast('error', 'Network error. Please check your internet connection.');
+      } else {
+        addToast('error', err.message || 'Login failed. Please try again.');
+      }
       return false;
     }
   }, [users, addToast]);

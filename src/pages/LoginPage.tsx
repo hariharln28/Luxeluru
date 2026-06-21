@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Eye, EyeOff, User as UserIcon, Scissors } from 'lucide-react';
+import { Eye, EyeOff, User as UserIcon, Scissors, Loader2, Mail } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useT } from '../hooks/useT';
 import logoUrl from '../assets/logo.png.jpeg';
@@ -12,6 +12,7 @@ export function LoginPage() {
   const [emailOrPhone, setEmailOrPhone] = useState('');
   const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   // Salon states
   const [salonName, setSalonName] = useState('');
@@ -25,20 +26,30 @@ export function LoginPage() {
   const tr = useT();
   const navigate = useNavigate();
   const location = useLocation();
-  const justRegistered = (location.state as { fromRegister?: boolean } | null)?.fromRegister ?? false;
+  const locationState = location.state as { fromRegister?: boolean; email?: string } | null;
+  const justRegistered = locationState?.fromRegister ?? false;
+
+  // Pre-fill email from register page
+  useState(() => {
+    if (locationState?.email) {
+      setEmailOrPhone(locationState.email);
+    }
+  });
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
 
     if (loginType === 'user') {
-      if (!emailOrPhone || !password) {
+      if (!emailOrPhone.trim() || !password) {
         setError(tr('required'));
         return;
       }
-      const success = await login(emailOrPhone, password);
+      setLoading(true);
+      const success = await login(emailOrPhone.trim(), password);
+      setLoading(false);
       if (!success) {
-        setError(tr('invalidCredentials'));
+        // The specific error is already shown as a toast by the login function
         return;
       }
       navigate('/dashboard');
@@ -47,7 +58,9 @@ export function LoginPage() {
         setError('All fields are required for salon login.');
         return;
       }
+      setLoading(true);
       const success = await salonLogin(salonName, salonId, salonEmail, salonPassword);
+      setLoading(false);
       if (!success) {
         setError('Invalid salon login details. Verify name, ID, email, password and approval status.');
         return;
@@ -90,13 +103,19 @@ export function LoginPage() {
 
         <form onSubmit={handleSubmit} className="luxe-card space-y-4 p-6 sm:p-8">
           {justRegistered && (
-            <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/30 px-4 py-3 text-sm text-emerald-400 flex items-center gap-2">
-              <span>✓</span>
-              <span>Account created successfully! Please sign in to continue.</span>
+            <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/30 px-4 py-3 text-sm text-emerald-400">
+              <div className="flex items-center gap-2 font-medium">
+                <Mail className="h-4 w-4" />
+                Account created successfully!
+              </div>
+              <p className="mt-1 text-emerald-400/80 text-xs">
+                Please check your email inbox and click the verification link, then sign in below.
+                Don&apos;t forget to check your spam folder.
+              </p>
             </div>
           )}
           {error && (
-            <div className="rounded-lg bg-red-500/10 px-4 py-2 text-sm text-red-400">{error}</div>
+            <div className="rounded-lg bg-red-500/10 border border-red-500/20 px-4 py-2.5 text-sm text-red-400">{error}</div>
           )}
 
           {loginType === 'user' ? (
@@ -109,6 +128,7 @@ export function LoginPage() {
                   onChange={(e) => setEmailOrPhone(e.target.value)}
                   className="luxe-input"
                   placeholder="you@example.com or +91 98765 43210"
+                  autoComplete="email"
                 />
               </div>
               <div>
@@ -120,11 +140,12 @@ export function LoginPage() {
                     onChange={(e) => setPassword(e.target.value)}
                     className="luxe-input pr-10"
                     placeholder="••••••••"
+                    autoComplete="current-password"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPass(!showPass)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9a8fa8]"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9a8fa8] hover:text-[#e8d5a3] transition"
                   >
                     {showPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
@@ -176,7 +197,7 @@ export function LoginPage() {
                   <button
                     type="button"
                     onClick={() => setShowSalonPass(!showSalonPass)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9a8fa8]"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9a8fa8] hover:text-[#e8d5a3] transition"
                   >
                     {showSalonPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
@@ -185,8 +206,15 @@ export function LoginPage() {
             </>
           )}
 
-          <button type="submit" className="luxe-btn w-full">
-            {loginType === 'user' ? tr('login') : 'Sign In as Salon'}
+          <button type="submit" disabled={loading} className="luxe-btn w-full disabled:opacity-60 disabled:cursor-not-allowed">
+            {loading ? (
+              <span className="flex items-center justify-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Signing in...
+              </span>
+            ) : (
+              loginType === 'user' ? tr('login') : 'Sign In as Salon'
+            )}
           </button>
 
           {loginType === 'user' && (
