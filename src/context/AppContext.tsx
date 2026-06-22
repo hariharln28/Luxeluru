@@ -974,27 +974,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
     try {
       const res = await api.rescheduleBooking(id, date, time);
       if (res.success) {
-        setBookings(prev => prev.map(bk => bk.id === id ? { ...bk, date, time } : bk));
-        addToast('success', 'Appointment rescheduled successfully!');
+        setBookings(prev => {
+          const updated = prev.map(bk => bk.id === id ? { ...bk, date, time } : bk);
+          localStorage.setItem(STORAGE_KEYS.bookings, JSON.stringify(updated));
+          return updated;
+        });
+        addToast('success', `Appointment rescheduled to ${date} at ${time}.`);
         return true;
       }
+      addToast('error', 'Failed to reschedule. The slot may be taken.');
       return false;
     } catch {
       // Local fallback
-      const currentBookings = loadLocalBookings();
-      const idx = currentBookings.findIndex((bk) => bk.id === id);
-      if (idx >= 0) {
-        currentBookings[idx] = {
-          ...currentBookings[idx],
-          date,
-          time,
-        };
-        localStorage.setItem(STORAGE_KEYS.bookings, JSON.stringify(currentBookings));
-        setBookings(currentBookings);
-        addToast('success', 'Appointment rescheduled successfully!');
-        return true;
-      }
-      return false;
+      setBookings(prev => {
+        const updated = prev.map(bk => bk.id === id ? { ...bk, date, time } : bk);
+        localStorage.setItem(STORAGE_KEYS.bookings, JSON.stringify(updated));
+        return updated;
+      });
+      addToast('success', `Appointment rescheduled to ${date} at ${time}.`);
+      return true;
     }
   }, [addToast, bookings]);
 
