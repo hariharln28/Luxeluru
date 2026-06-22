@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { 
@@ -17,7 +17,8 @@ import {
   Award,
   Lock,
   Unlock,
-  UserPlus
+  UserPlus,
+  RefreshCw
 } from 'lucide-react';
 import type { PaymentMethod } from '../types';
 import { CheckoutModal } from '../components/CheckoutModal';
@@ -33,8 +34,17 @@ export function SalonDashboardPage() {
     blockedSlots,
     fetchBlockedSlots,
     blockSlot,
-    unblockSlot
+    unblockSlot,
+    refreshData
   } = useApp();
+
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await refreshData();
+    setRefreshing(false);
+  }, [refreshData]);
   
   const navigate = useNavigate();
   
@@ -177,6 +187,14 @@ export function SalonDashboardPage() {
             <span className={`h-2 w-2 rounded-full ${isOverdue ? 'bg-red-500' : 'bg-green-500 animate-pulse'}`} />
             {isOverdue ? 'DEACTIVATED / UNPAID DUES' : 'ACTIVE ON PLATFORM'}
           </span>
+          <button
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="luxe-btn-outline text-xs px-4 py-2 flex items-center gap-1.5"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+            {refreshing ? 'Refreshing...' : 'Refresh'}
+          </button>
           <button onClick={() => { logout(); navigate('/login'); }} className="luxe-btn-outline text-xs px-4 py-2">
             Logout
           </button>
