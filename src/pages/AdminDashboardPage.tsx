@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { 
@@ -19,7 +19,8 @@ import {
   Activity,
   Percent,
   LogIn,
-  LogOut
+  LogOut,
+  RefreshCw
 } from 'lucide-react';
 
 export function AdminDashboardPage() {
@@ -33,15 +34,35 @@ export function AdminDashboardPage() {
     removeSalonForcefully, 
     blockUserForcefully, 
     unblockUserForcefully,
-    logout
+    logout,
+    refreshData,
+    addToast
   } = useApp();
   
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'pending' | 'salons' | 'users' | 'platform' | 'test-signin'>('pending');
+  const [refreshing, setRefreshing] = useState(false);
   
   // Blocking modal state
   const [blockingUserId, setBlockingUserId] = useState<string | null>(null);
   const [blockDays, setBlockDays] = useState('3');
+
+  // Auto-refresh data on mount and every 30 seconds
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await refreshData();
+    setRefreshing(false);
+  }, [refreshData]);
+
+  useEffect(() => {
+    // Refresh on mount to get latest data
+    handleRefresh();
+    // Poll every 30 seconds for new registrations
+    const interval = setInterval(() => {
+      refreshData();
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [handleRefresh, refreshData]);
 
   // Guard page for unauthorized users
   if (!isAdmin) {
@@ -128,7 +149,15 @@ export function AdminDashboardPage() {
           <h1 className="mt-1 font-display text-3xl sm:text-4xl font-bold gold-gradient">Admin Control Center</h1>
           <p className="mt-1 text-[#9a8fa8]">LuxeLuru Platform Administrator Dashboard</p>
         </div>
-        <div>
+        <div className="flex gap-2">
+          <button 
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="luxe-btn bg-[#1a1520] border border-[#c9a962]/30 hover:bg-[#c9a962]/10 text-[#c9a962] text-sm flex items-center gap-2"
+          >
+            <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+            {refreshing ? 'Refreshing...' : 'Refresh'}
+          </button>
           <button 
             onClick={() => { logout(); navigate('/partner-with-us'); }} 
             className="luxe-btn bg-red-600 hover:shadow-red-500/20 text-white text-sm"

@@ -75,6 +75,7 @@ interface AppContextType {
   fetchBlockedSlots: (salonId: string) => Promise<BlockedSlot[]>;
   blockSlot: (salonId: string, date: string, time: string, customerName?: string, reason?: string) => Promise<boolean>;
   unblockSlot: (salonId: string, slotId: string) => Promise<boolean>;
+  refreshData: () => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -330,6 +331,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     syncWithBackend();
   }, [syncWithBackend]);
+
+  // Expose a refreshData function for pages that need to refetch
+  const refreshData = useCallback(async () => {
+    try {
+      const [backendSalons, backendUsers, backendBookings, backendReviews] = await Promise.all([
+        api.getSalons(), api.getUsers(), api.getBookings(), api.getReviews()
+      ]);
+      setSalonsList(backendSalons);
+      setUsers(backendUsers);
+      setBookings(backendBookings);
+      setStaffReviews(backendReviews);
+    } catch (err) {
+      console.warn('refreshData failed:', err);
+    }
+  }, []);
 
   // Listen for Supabase Authentication State Changes
   useEffect(() => {
@@ -1461,6 +1477,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         fetchBlockedSlots,
         blockSlot,
         unblockSlot,
+        refreshData,
       }}
     >
       {children}
