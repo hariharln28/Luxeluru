@@ -93,6 +93,13 @@ const STORAGE_KEYS = {
 
 const SALON_SESSION_TIMEOUT = 2 * 60 * 60 * 1000; // 2 hours
 
+// Session auth keys use sessionStorage → auto-clears when browser/tab closes
+const sessionStore = {
+  get: (key: string) => sessionStorage.getItem(key),
+  set: (key: string, val: string) => sessionStorage.setItem(key, val),
+  remove: (key: string) => sessionStorage.removeItem(key),
+};
+
 // Local storage fallback helpers in case backend is unreachable
 function loadLocalUsers(): User[] {
   try {
@@ -269,13 +276,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setBookings(backendBookings);
       setStaffReviews(backendReviews);
 
-      const sessionSalonId = localStorage.getItem(STORAGE_KEYS.salonSession);
-      const sessionTs = localStorage.getItem(STORAGE_KEYS.salonSessionTimestamp);
+      const sessionSalonId = sessionStore.get(STORAGE_KEYS.salonSession);
+      const sessionTs = sessionStore.get(STORAGE_KEYS.salonSessionTimestamp);
       if (sessionSalonId) {
         const isExpired = sessionTs && (Date.now() - parseInt(sessionTs, 10)) > SALON_SESSION_TIMEOUT;
         if (isExpired) {
-          localStorage.removeItem(STORAGE_KEYS.salonSession);
-          localStorage.removeItem(STORAGE_KEYS.salonSessionTimestamp);
+          sessionStore.remove(STORAGE_KEYS.salonSession);
+          sessionStore.remove(STORAGE_KEYS.salonSessionTimestamp);
           // Toast will be shown once component mounts
         } else {
           const foundSalon = backendSalons.find(s => s.id === sessionSalonId);
@@ -285,7 +292,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      const adminSession = localStorage.getItem(STORAGE_KEYS.adminSession) === 'true';
+      const adminSession = sessionStore.get(STORAGE_KEYS.adminSession) === 'true';
       if (adminSession) {
         setIsAdmin(true);
       }
@@ -301,13 +308,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setBookings(localBookings);
       setStaffReviews(localReviews);
 
-      const sessionSalonId = localStorage.getItem(STORAGE_KEYS.salonSession);
-      const sessionTs = localStorage.getItem(STORAGE_KEYS.salonSessionTimestamp);
+      const sessionSalonId = sessionStore.get(STORAGE_KEYS.salonSession);
+      const sessionTs = sessionStore.get(STORAGE_KEYS.salonSessionTimestamp);
       if (sessionSalonId) {
         const isExpired = sessionTs && (Date.now() - parseInt(sessionTs, 10)) > SALON_SESSION_TIMEOUT;
         if (isExpired) {
-          localStorage.removeItem(STORAGE_KEYS.salonSession);
-          localStorage.removeItem(STORAGE_KEYS.salonSessionTimestamp);
+          sessionStore.remove(STORAGE_KEYS.salonSession);
+          sessionStore.remove(STORAGE_KEYS.salonSessionTimestamp);
         } else {
           const foundSalon = localSalons.find(s => s.id === sessionSalonId);
           if (foundSalon) {
@@ -316,7 +323,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      setIsAdmin(localStorage.getItem(STORAGE_KEYS.adminSession) === 'true');
+      setIsAdmin(sessionStore.get(STORAGE_KEYS.adminSession) === 'true');
     }
   }, []);
 
@@ -549,8 +556,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const res = await api.salonLogin(name, id, email, checkPass);
       if (res.success) {
         setSalon(res.salon);
-        localStorage.setItem(STORAGE_KEYS.salonSession, res.salon.id);
-        localStorage.setItem(STORAGE_KEYS.salonSessionTimestamp, Date.now().toString());
+        sessionStore.set(STORAGE_KEYS.salonSession, res.salon.id);
+        sessionStore.set(STORAGE_KEYS.salonSessionTimestamp, Date.now().toString());
         addToast('success', `Welcome back, ${res.salon.name}!`);
         return true;
       }
@@ -587,8 +594,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
 
       setSalon(found);
-      localStorage.setItem(STORAGE_KEYS.salonSession, found.id);
-      localStorage.setItem(STORAGE_KEYS.salonSessionTimestamp, Date.now().toString());
+      sessionStore.set(STORAGE_KEYS.salonSession, found.id);
+      sessionStore.set(STORAGE_KEYS.salonSessionTimestamp, Date.now().toString());
       addToast('success', `Welcome back, ${found.name}!`);
       return true;
     }
@@ -599,7 +606,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const res = await api.adminLogin(userStr, passStr);
       if (res.success) {
         setIsAdmin(true);
-        localStorage.setItem(STORAGE_KEYS.adminSession, 'true');
+        sessionStore.set(STORAGE_KEYS.adminSession, 'true');
         addToast('success', 'Logged in as Administrator');
         return true;
       }
@@ -608,7 +615,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       // Local fallback
       if (userStr === 'ADMINLLURU' && passStr === 'ADMIN@LUXE26') {
         setIsAdmin(true);
-        localStorage.setItem(STORAGE_KEYS.adminSession, 'true');
+        sessionStore.set(STORAGE_KEYS.adminSession, 'true');
         addToast('success', 'Logged in as Administrator');
         return true;
       }
@@ -787,9 +794,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     supabase.auth.signOut();
 
     // Clear all session keys from localStorage
-    localStorage.removeItem(STORAGE_KEYS.salonSession);
-    localStorage.removeItem(STORAGE_KEYS.salonSessionTimestamp);
-    localStorage.removeItem(STORAGE_KEYS.adminSession);
+    sessionStore.remove(STORAGE_KEYS.salonSession);
+    sessionStore.remove(STORAGE_KEYS.salonSessionTimestamp);
+    sessionStore.remove(STORAGE_KEYS.adminSession);
   }, []);
 
   const isUserBlocked = useCallback((userId: string): { blocked: boolean; reason?: string; until?: string } => {
