@@ -238,7 +238,7 @@ export function SalonDashboardPage() {
                 <IndianRupee className="h-8 w-8 text-[#c9a962]" />
                 {totalCommissionDue.toLocaleString('en-IN')}
               </p>
-              <p className="mt-2 text-xs text-[#9a8fa8]">5% of final bills from completed appointments.</p>
+              <p className="mt-2 text-xs text-[#9a8fa8]">3% of final bills from completed appointments.</p>
             </div>
 
             <div className="luxe-card p-6">
@@ -365,7 +365,7 @@ export function SalonDashboardPage() {
                           <p className="text-sm font-semibold text-[#c9a962]">₹{b.totalPrice.toLocaleString('en-IN')} ({b.paymentMethod})</p>
                         </div>
                         <div className="text-right">
-                          <p className="text-[#9a8fa8]">Commission (5%)</p>
+                          <p className="text-[#9a8fa8]">Commission (3%)</p>
                           <p className="text-sm font-semibold text-amber-300">₹{(b.commissionAmount ?? 0).toLocaleString('en-IN')}</p>
                         </div>
                       </div>
@@ -456,7 +456,7 @@ export function SalonDashboardPage() {
               </div>
 
               <div className="rounded-lg bg-[#0f0d12]/50 p-4 border border-[#c9a962]/10 text-xs text-[#9a8fa8] leading-relaxed">
-                UPI payments represent digital wallet collections. Platform charges are 5% of this total revenue split regardless of payment method.
+                UPI payments represent digital wallet collections. Platform charges are 3% of this total revenue split regardless of payment method.
               </div>
             </div>
 
@@ -720,7 +720,7 @@ export function SalonDashboardPage() {
               </div>
 
               <div className="rounded-lg bg-[#0f0d12] p-3 text-xs text-[#9a8fa8] space-y-1">
-                <p>Estimated 5% platform charge will be calculated on save.</p>
+                <p>Estimated 3% platform charge will be calculated on save.</p>
                 <p>If changed, final bill updates to select package price.</p>
               </div>
 

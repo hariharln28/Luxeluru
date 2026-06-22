@@ -950,7 +950,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           const pkg = salonObj.packages.find(p => p.id === packageId);
           if (pkg) finalPrice = pkg.price;
         }
-        const commission = Math.round(finalPrice * 0.05);
+        const commission = Math.round(finalPrice * 0.03);
 
         setBookings(prev => prev.map(bk => bk.id === id ? {
           ...bk,
@@ -1023,7 +1023,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           }
         }
 
-        const commission = Math.round(finalPrice * 0.05);
+        const commission = Math.round(finalPrice * 0.03);
 
         currentBookings[idx] = {
           ...b,

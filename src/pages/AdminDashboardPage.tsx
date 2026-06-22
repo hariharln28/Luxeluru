@@ -467,7 +467,7 @@ export function AdminDashboardPage() {
                 <TrendingUp className="h-4 w-4 text-green-400" />
               </div>
               <p className="mt-2 font-display text-3xl font-bold text-green-400">₹{totalPlatformCommissions.toLocaleString('en-IN')}</p>
-              <p className="text-[10px] text-[#9a8fa8] mt-1">Platform revenue (5% service charge).</p>
+              <p className="text-[10px] text-[#9a8fa8] mt-1">Platform revenue (3% service charge).</p>
             </div>
 
             <div className="luxe-card p-6 border-l-4 border-amber-500/50">
