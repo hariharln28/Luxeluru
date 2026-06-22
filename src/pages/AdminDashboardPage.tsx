@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { 
@@ -20,7 +20,11 @@ import {
   Percent,
   LogIn,
   LogOut,
-  RefreshCw
+  RefreshCw,
+  CalendarCheck,
+  UserCheck,
+  UserX,
+  BarChart3
 } from 'lucide-react';
 
 export function AdminDashboardPage() {
@@ -105,6 +109,33 @@ export function AdminDashboardPage() {
   
   const spamBookingsCount = bookings.filter(b => b.reportedAsFake).length;
   const spamRatio = bookings.length ? Math.round((spamBookingsCount / bookings.length) * 100) : 0;
+
+  // Additional tracking metrics
+  const rejectedSalons = salons.filter(s => s.registrationStatus === 'rejected');
+  const approvedSalons = salons.filter(s => s.registrationStatus === 'approved');
+  const todayStr = new Date().toISOString().split('T')[0];
+  const todayBookings = bookings.filter(b => b.date === todayStr);
+  const uniqueBookingUsers = new Set(bookings.map(b => b.userId)).size;
+  const blockedUsersCount = users.filter(u => u.blockedUntil && u.blockedUntil >= todayStr).length;
+
+  // Per-salon booking breakdown
+  const perSalonStats = useMemo(() => {
+    const map: Record<string, { name: string; total: number; completed: number; cancelled: number; revenue: number }> = {};
+    bookings.forEach(b => {
+      if (!map[b.salonId]) {
+        map[b.salonId] = { name: b.salonName, total: 0, completed: 0, cancelled: 0, revenue: 0 };
+      }
+      map[b.salonId].total++;
+      if (b.status === 'completed') { map[b.salonId].completed++; map[b.salonId].revenue += b.totalPrice; }
+      if (b.status === 'cancelled') map[b.salonId].cancelled++;
+    });
+    return Object.entries(map).sort((a, b) => b[1].total - a[1].total);
+  }, [bookings]);
+
+  // Recent bookings (last 10)
+  const recentBookings = useMemo(() => {
+    return [...bookings].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 10);
+  }, [bookings]);
 
   function handleBlockSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -533,18 +564,26 @@ export function AdminDashboardPage() {
                 <Activity className="h-5 w-5 text-[#c9a962]" /> Salon Health & Registration Ratios
               </h3>
               
-              <div className="grid grid-cols-3 gap-4 text-center">
+              <div className="grid grid-cols-5 gap-3 text-center">
                 <div className="bg-[#0f0d12] p-4 rounded-lg">
                   <p className="text-2xl font-bold text-green-400">{activeSalonsCount}</p>
-                  <p className="text-[10px] text-[#9a8fa8] mt-1">Active Salons</p>
+                  <p className="text-[10px] text-[#9a8fa8] mt-1">Active</p>
+                </div>
+                <div className="bg-[#0f0d12] p-4 rounded-lg">
+                  <p className="text-2xl font-bold text-blue-400">{approvedSalons.length}</p>
+                  <p className="text-[10px] text-[#9a8fa8] mt-1">Approved</p>
+                </div>
+                <div className="bg-[#0f0d12] p-4 rounded-lg">
+                  <p className="text-2xl font-bold text-[#c9a962]">{pendingSalons.length}</p>
+                  <p className="text-[10px] text-[#9a8fa8] mt-1">Pending</p>
+                </div>
+                <div className="bg-[#0f0d12] p-4 rounded-lg">
+                  <p className="text-2xl font-bold text-red-400">{rejectedSalons.length}</p>
+                  <p className="text-[10px] text-[#9a8fa8] mt-1">Rejected</p>
                 </div>
                 <div className="bg-[#0f0d12] p-4 rounded-lg">
                   <p className="text-2xl font-bold text-orange-400">{deactivatedSalonsCount}</p>
                   <p className="text-[10px] text-[#9a8fa8] mt-1">Deactivated</p>
-                </div>
-                <div className="bg-[#0f0d12] p-4 rounded-lg">
-                  <p className="text-2xl font-bold text-red-400">{exitedSalonsCount}</p>
-                  <p className="text-[10px] text-[#9a8fa8] mt-1">Exited/Rejected</p>
                 </div>
               </div>
 
@@ -554,8 +593,8 @@ export function AdminDashboardPage() {
                   <span className="text-[#e8d5a3] font-semibold">{salons.length} Salons</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-[#9a8fa8]">Applications Pending Verification</span>
-                  <span className="text-[#c9a962] font-semibold">{pendingSalons.length} Applications</span>
+                  <span className="text-[#9a8fa8]">Salons Active on User Dashboard</span>
+                  <span className="text-green-400 font-semibold">{activeSalonsCount} Salons</span>
                 </div>
               </div>
             </div>
@@ -613,6 +652,129 @@ export function AdminDashboardPage() {
               </div>
             </div>
           </div>
+
+          {/* Quick Stats Row */}
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="luxe-card p-4 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-500/15">
+                <UserCheck className="h-5 w-5 text-blue-400" />
+              </div>
+              <div>
+                <p className="text-xl font-bold text-blue-400">{users.length}</p>
+                <p className="text-[10px] text-[#9a8fa8]">Total Users on Platform</p>
+              </div>
+            </div>
+            <div className="luxe-card p-4 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-purple-500/15">
+                <CalendarCheck className="h-5 w-5 text-purple-400" />
+              </div>
+              <div>
+                <p className="text-xl font-bold text-purple-400">{todayBookings.length}</p>
+                <p className="text-[10px] text-[#9a8fa8]">Bookings Today</p>
+              </div>
+            </div>
+            <div className="luxe-card p-4 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-cyan-500/15">
+                <Users className="h-5 w-5 text-cyan-400" />
+              </div>
+              <div>
+                <p className="text-xl font-bold text-cyan-400">{uniqueBookingUsers}</p>
+                <p className="text-[10px] text-[#9a8fa8]">Unique Users Booked</p>
+              </div>
+            </div>
+            <div className="luxe-card p-4 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-500/15">
+                <UserX className="h-5 w-5 text-red-400" />
+              </div>
+              <div>
+                <p className="text-xl font-bold text-red-400">{blockedUsersCount}</p>
+                <p className="text-[10px] text-[#9a8fa8]">Blocked Users</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Per-Salon Booking Breakdown */}
+          {perSalonStats.length > 0 && (
+            <div className="luxe-card p-6 space-y-4">
+              <h3 className="font-display text-lg text-[#e8d5a3] flex items-center gap-2">
+                <BarChart3 className="h-5 w-5 text-[#c9a962]" /> Bookings Per Salon
+              </h3>
+              <div className="overflow-x-auto rounded-lg border border-[#c9a962]/10">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="bg-[#0f0d12] text-[#9a8fa8] uppercase tracking-wider">
+                      <th className="px-4 py-3 text-left">Salon</th>
+                      <th className="px-4 py-3 text-center">Total</th>
+                      <th className="px-4 py-3 text-center">Completed</th>
+                      <th className="px-4 py-3 text-center">Cancelled</th>
+                      <th className="px-4 py-3 text-right">Revenue</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#c9a962]/10">
+                    {perSalonStats.map(([salonId, stats]) => (
+                      <tr key={salonId} className="hover:bg-[#c9a962]/5 transition-colors">
+                        <td className="px-4 py-3">
+                          <p className="font-semibold text-[#e8d5a3]">{stats.name}</p>
+                          <p className="text-[10px] text-[#9a8fa8] font-mono">{salonId}</p>
+                        </td>
+                        <td className="px-4 py-3 text-center font-semibold text-[#e8d5a3]">{stats.total}</td>
+                        <td className="px-4 py-3 text-center text-green-400">{stats.completed}</td>
+                        <td className="px-4 py-3 text-center text-red-400">{stats.cancelled}</td>
+                        <td className="px-4 py-3 text-right font-semibold text-[#c9a962]">₹{stats.revenue.toLocaleString('en-IN')}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Recent Bookings Log */}
+          {recentBookings.length > 0 && (
+            <div className="luxe-card p-6 space-y-4">
+              <h3 className="font-display text-lg text-[#e8d5a3] flex items-center gap-2">
+                <FileText className="h-5 w-5 text-[#c9a962]" /> Recent Booking Activity
+              </h3>
+              <div className="overflow-x-auto rounded-lg border border-[#c9a962]/10">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="bg-[#0f0d12] text-[#9a8fa8] uppercase tracking-wider">
+                      <th className="px-4 py-3 text-left">User</th>
+                      <th className="px-4 py-3 text-left">Salon</th>
+                      <th className="px-4 py-3 text-center">Date</th>
+                      <th className="px-4 py-3 text-center">Time</th>
+                      <th className="px-4 py-3 text-center">Status</th>
+                      <th className="px-4 py-3 text-right">Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#c9a962]/10">
+                    {recentBookings.map(b => {
+                      const bookingUser = users.find(u => u.id === b.userId);
+                      return (
+                        <tr key={b.id} className="hover:bg-[#c9a962]/5 transition-colors">
+                          <td className="px-4 py-3 text-[#e8d5a3]">{bookingUser?.name || 'Unknown'}</td>
+                          <td className="px-4 py-3 text-[#e8d5a3]">{b.salonName}</td>
+                          <td className="px-4 py-3 text-center text-[#9a8fa8]">{b.date}</td>
+                          <td className="px-4 py-3 text-center text-[#9a8fa8]">{b.time}</td>
+                          <td className="px-4 py-3 text-center">
+                            <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                              b.status === 'completed' ? 'bg-green-500/20 text-green-400' :
+                              b.status === 'confirmed' ? 'bg-amber-500/20 text-amber-300' :
+                              b.status === 'cancelled' ? 'bg-red-500/20 text-red-400' :
+                              'bg-[#9a8fa8]/20 text-[#9a8fa8]'
+                            }`}>
+                              {b.status}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-right font-semibold text-[#c9a962]">₹{b.totalPrice.toLocaleString('en-IN')}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

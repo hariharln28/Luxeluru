@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { CaptchaChallenge } from '../components/CaptchaChallenge';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Shield, FileText, LogOut, Lock, Building, Search, CheckCircle, Clock, Eye, EyeOff, Loader2, KeyRound } from 'lucide-react';
 import { useApp } from '../context/AppContext';
@@ -39,6 +40,7 @@ export function PartnerWithUsPage() {
   // Admin state
   const [adminUser, setAdminUser] = useState('');
   const [adminPass, setAdminPass] = useState('');
+  const [adminCaptchaValid, setAdminCaptchaValid] = useState(false);
 
   // Status check state
   const [statusSearch, setStatusSearch] = useState('');
@@ -617,7 +619,9 @@ export function PartnerWithUsPage() {
             </div>
           </div>
 
-          <button type="submit" className="luxe-btn w-full">
+          <CaptchaChallenge onVerified={setAdminCaptchaValid} />
+
+          <button type="submit" disabled={!adminCaptchaValid} className="luxe-btn w-full disabled:opacity-50 disabled:cursor-not-allowed">
             Log In as Admin
           </button>
         </form>
