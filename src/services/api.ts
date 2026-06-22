@@ -110,6 +110,11 @@ export const api = {
       method: 'POST',
     }),
 
+  deleteSalonPermanently: (id: string) =>
+    request<{ success: boolean; message: string }>(`/api/salons/${id}`, {
+      method: 'DELETE',
+    }),
+
   paySalonCommission: (id: string) =>
     request<{ success: boolean }>(`/api/salons/${id}/pay-commission`, {
       method: 'POST',

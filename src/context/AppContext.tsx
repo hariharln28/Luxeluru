@@ -68,6 +68,7 @@ interface AppContextType {
   approveSalon: (salonId: string) => void;
   rejectSalon: (salonId: string) => void;
   removeSalonForcefully: (salonId: string) => void;
+  deleteSalonPermanently: (salonId: string) => Promise<void>;
   blockUserForcefully: (userId: string, dateStr: string) => void;
   unblockUserForcefully: (userId: string) => void;
   isUserBlocked: (userId: string) => { blocked: boolean; reason?: string; until?: string };
@@ -1356,6 +1357,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [addToast]);
 
+  const deleteSalonPermanently = useCallback(async (salonId: string) => {
+    try {
+      await api.deleteSalonPermanently(salonId);
+      setSalonsList(prev => prev.filter(s => s.id !== salonId));
+      addToast('success', 'Salon permanently deleted from the platform.');
+    } catch (err: any) {
+      if (err?.message) {
+        addToast('error', err.message);
+      } else {
+        // Local fallback
+        setSalonsList(prev => {
+          const updated = prev.filter(s => s.id !== salonId);
+          localStorage.setItem(STORAGE_KEYS.salons, JSON.stringify(updated));
+          return updated;
+        });
+        addToast('success', 'Salon permanently deleted from the platform.');
+      }
+    }
+  }, [addToast]);
+
   const blockUserForcefully = useCallback(async (userId: string, dateStr: string) => {
     try {
       await api.blockUser(userId, dateStr);
@@ -1470,6 +1491,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         approveSalon,
         rejectSalon,
         removeSalonForcefully,
+        deleteSalonPermanently,
         blockUserForcefully,
         unblockUserForcefully,
         isUserBlocked,
