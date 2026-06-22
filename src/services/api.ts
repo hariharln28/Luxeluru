@@ -90,7 +90,7 @@ export const api = {
     }),
 
   approveSalon: (id: string) =>
-    request<{ success: boolean }>(`/api/salons/${id}/approve`, {
+    request<{ success: boolean; newSalonId?: string }>(`/api/salons/${id}/approve`, {
       method: 'POST',
     }),
 

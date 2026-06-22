@@ -668,13 +668,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     } catch {
       // Local fallback
       const currentSalons = loadLocalSalons();
-      const cleanedName = data.name.trim().replace(/[^a-zA-Z]/g, '');
-      const prefix = (cleanedName.slice(0, 3) || 'REG').toUpperCase();
-      const randomDigits = Math.floor(100 + Math.random() * 900);
-      const generatedId = `LL${prefix}${randomDigits}`;
+      const tempId = `PENDING-${Date.now()}`;
       
       const newSalon: Salon = {
-        id: generatedId,
+        id: tempId,
         name: data.name,
         tagline: 'Premium boutique beauty services',
         area: data.address.split(',')[0] || 'Bengaluru',
@@ -713,7 +710,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       currentSalons.push(newSalon);
       localStorage.setItem(STORAGE_KEYS.salons, JSON.stringify(currentSalons));
       setSalonsList(currentSalons);
-      return generatedId;
+      return tempId;
     }
   }, []);
 
@@ -1210,16 +1207,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const approveSalon = useCallback(async (salonId: string) => {
     try {
-      await api.approveSalon(salonId);
-      setSalonsList(prev => prev.map(s => s.id === salonId ? { ...s, registrationStatus: 'approved' as const, isActive: true } : s));
-      addToast('success', 'Salon approved and activated on platform!');
+      const res = await api.approveSalon(salonId);
+      // Refetch salons since the ID may have changed (PENDING → LL...)
+      const updatedSalons = await api.getSalons();
+      setSalonsList(updatedSalons);
+      const newId = res.newSalonId || salonId;
+      addToast('success', `Salon approved! New Salon ID: ${newId}`);
     } catch {
-      // Local fallback
+      // Local fallback — generate ID locally
+      const salon = salonsList.find(s => s.id === salonId);
+      const cleanedName = (salon?.name || 'SAL').trim().replace(/[^a-zA-Z]/g, '');
+      const prefix = (cleanedName.slice(0, 3) || 'SAL').toUpperCase();
+      const randomDigits = Math.floor(100 + Math.random() * 900);
+      const newId = `LL${prefix}${randomDigits}`;
+
       setSalonsList((prev) => {
         const updated = prev.map((s) => {
           if (s.id === salonId) {
             return {
               ...s,
+              id: newId,
               registrationStatus: 'approved' as const,
               isActive: true,
             };
@@ -1229,9 +1236,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         localStorage.setItem(STORAGE_KEYS.salons, JSON.stringify(updated));
         return updated;
       });
-      addToast('success', 'Salon approved and activated on platform!');
+      addToast('success', `Salon approved! New Salon ID: ${newId}`);
     }
-  }, [addToast]);
+  }, [addToast, salonsList]);
 
   const rejectSalon = useCallback(async (salonId: string) => {
     try {
