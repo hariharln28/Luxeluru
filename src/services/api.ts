@@ -69,6 +69,12 @@ export const api = {
       body: JSON.stringify({ name, id, email, password: checkPass }),
     }),
 
+  setSalonPassword: (email: string, salonId: string, newPassword: string) =>
+    request<{ success: boolean; message: string }>('/api/salons/set-password', {
+      method: 'POST',
+      body: JSON.stringify({ email, salonId, newPassword }),
+    }),
+
   salonRegister: (salonData: {
     ownerName: string;
     name: string;
