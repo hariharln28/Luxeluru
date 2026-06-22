@@ -149,23 +149,43 @@ app.post('/api/seed', async (req, res) => {
 
 // GET endpoints
 app.get('/api/users', async (req, res) => {
-  const users = await db.getUsers();
-  res.json(users);
+  try {
+    const users = await db.getUsers();
+    // Strip passwords from response
+    const safeUsers = users.map(({ password, ...u }) => u);
+    res.json(safeUsers);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.get('/api/salons', async (req, res) => {
-  const salons = await db.getSalons();
-  res.json(salons);
+  try {
+    const salons = await db.getSalons();
+    // Strip passwords from response
+    const safeSalons = salons.map(({ password, ...s }) => s);
+    res.json(safeSalons);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.get('/api/bookings', async (req, res) => {
-  const bookings = await db.getBookings();
-  res.json(bookings);
+  try {
+    const bookings = await db.getBookings();
+    res.json(bookings);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.get('/api/reviews', async (req, res) => {
-  const reviews = await db.getReviews();
-  res.json(reviews);
+  try {
+    const reviews = await db.getReviews();
+    res.json(reviews);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Auth endpoints
@@ -337,6 +357,11 @@ app.post('/api/salons/set-password', async (req, res) => {
 app.post('/api/salons/register', async (req, res) => {
   const data = req.body;
   
+  // Input validation
+  if (!data.name || !data.address || !data.email || !data.phone || !data.ownerName) {
+    return res.status(400).json({ success: false, message: 'All required fields must be provided: name, address, email, phone, ownerName.' });
+  }
+
   // Use a temporary pending ID — real ID is generated after admin approval
   const tempId = `PENDING-${Date.now()}`;
   
@@ -527,6 +552,12 @@ app.post('/api/bookings', authenticateJWT, async (req, res) => {
   // Verify that booking userId matches the authenticated user
   if (bookingData.userId !== req.user.id) {
     return res.status(403).json({ success: false, message: 'Unauthorized booking placement' });
+  }
+
+  // ─── Past date validation ─────────────────────────
+  const today = new Date().toISOString().split('T')[0];
+  if (bookingData.date < today) {
+    return res.status(400).json({ success: false, message: 'Cannot book appointments in the past.' });
   }
 
   // ─── Double-booking prevention ───────────────────────
@@ -896,6 +927,21 @@ process.on('SIGINT', () => {
 process.on('SIGTERM', () => {
   console.log('\nShutting down server gracefully...');
   process.exit(0);
+});
+
+// ─── Global Error Handlers (prevent server crash) ───────
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[FATAL] Unhandled Promise Rejection:', reason);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('[FATAL] Uncaught Exception:', err);
+});
+
+// Express global error middleware
+app.use((err, req, res, next) => {
+  console.error('[EXPRESS ERROR]', err.stack || err);
+  res.status(500).json({ success: false, message: 'Internal server error' });
 });
 
 // Connect to Database first and then start server listening

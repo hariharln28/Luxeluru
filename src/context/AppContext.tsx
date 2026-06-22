@@ -776,10 +776,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [addToast, salonsList]);
 
   const logout = useCallback(() => {
+    // Clear all authentication state
     setUser(null);
     setSalon(null);
     setIsAdmin(false);
+    setStyleRecommendation(null);
+    setBlockedSlots([]);
+
+    // Sign out of Supabase
     supabase.auth.signOut();
+
+    // Clear all session keys from localStorage
     localStorage.removeItem(STORAGE_KEYS.salonSession);
     localStorage.removeItem(STORAGE_KEYS.salonSessionTimestamp);
     localStorage.removeItem(STORAGE_KEYS.adminSession);

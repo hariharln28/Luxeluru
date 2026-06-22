@@ -1,7 +1,8 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AppProvider } from './context/AppContext';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { Layout } from './components/Layout';
-import { ProtectedRoute, GuestRoute } from './components/ProtectedRoute';
+import { ProtectedRoute, GuestRoute, SalonRoute, AdminRoute } from './components/ProtectedRoute';
 import { LandingPage } from './pages/LandingPage';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
@@ -20,6 +21,7 @@ import { AdminDashboardPage } from './pages/AdminDashboardPage';
 
 export default function App() {
   return (
+    <ErrorBoundary>
     <AppProvider>
       <BrowserRouter>
         <Routes>
@@ -38,11 +40,12 @@ export default function App() {
             <Route path="/bookings" element={<ProtectedRoute><BookingsPage /></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
             <Route path="/partner-with-us" element={<PartnerWithUsPage />} />
-            <Route path="/salon-dashboard" element={<SalonDashboardPage />} />
-            <Route path="/admin-dashboard" element={<AdminDashboardPage />} />
+            <Route path="/salon-dashboard" element={<SalonRoute><SalonDashboardPage /></SalonRoute>} />
+            <Route path="/admin-dashboard" element={<AdminRoute><AdminDashboardPage /></AdminRoute>} />
           </Route>
         </Routes>
       </BrowserRouter>
     </AppProvider>
+    </ErrorBoundary>
   );
 }

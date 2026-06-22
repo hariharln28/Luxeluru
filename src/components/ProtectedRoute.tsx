@@ -13,3 +13,15 @@ export function GuestRoute({ children }: { children: ReactNode }) {
   if (user) return <Navigate to="/dashboard" replace />;
   return <>{children}</>;
 }
+
+export function SalonRoute({ children }: { children: ReactNode }) {
+  const { salon } = useApp();
+  if (!salon) return <Navigate to="/login" replace />;
+  return <>{children}</>;
+}
+
+export function AdminRoute({ children }: { children: ReactNode }) {
+  const { isAdmin } = useApp();
+  if (!isAdmin) return <Navigate to="/partner-with-us?tab=admin" replace />;
+  return <>{children}</>;
+}
