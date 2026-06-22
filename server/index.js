@@ -496,6 +496,47 @@ app.post('/api/bookings/:id/report-fake', async (req, res) => {
   }
 });
 
+// ─── Blocked Slots ───────────────────────
+app.get('/api/salons/:id/blocked-slots', async (req, res) => {
+  try {
+    const slots = await db.getBlockedSlots(req.params.id);
+    res.json(slots);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/salons/:id/block-slot', async (req, res) => {
+  try {
+    const { date, time, customerName, reason } = req.body;
+    if (!date || !time) {
+      return res.status(400).json({ error: 'date and time are required' });
+    }
+    const slotData = {
+      id: `bs-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+      salonId: req.params.id,
+      date,
+      time,
+      customerName: customerName || '',
+      reason: reason || 'Walk-in customer',
+      createdAt: new Date().toISOString(),
+    };
+    await db.addBlockedSlot(slotData);
+    res.json({ success: true, slot: slotData });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/salons/:id/blocked-slots/:slotId', async (req, res) => {
+  try {
+    await db.removeBlockedSlot(req.params.slotId);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Reviews endpoints
 app.post('/api/reviews', authenticateJWT, async (req, res) => {
   const reviewData = req.body;

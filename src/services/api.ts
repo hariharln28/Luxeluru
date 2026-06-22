@@ -1,4 +1,4 @@
-import type { User, Salon, Booking, StaffReview } from '../types';
+import type { User, Salon, Booking, StaffReview, BlockedSlot } from '../types';
 
 let authToken: string | null = null;
 
@@ -156,6 +156,21 @@ export const api = {
     request<{ success: boolean }>(`/api/bookings/${id}/report-fake`, {
       method: 'POST',
       body: JSON.stringify({ reason }),
+    }),
+
+  // Blocked Slots
+  getBlockedSlots: (salonId: string) =>
+    request<BlockedSlot[]>(`/api/salons/${salonId}/blocked-slots`),
+
+  blockSlot: (salonId: string, data: { date: string; time: string; customerName?: string; reason?: string }) =>
+    request<{ success: boolean; slot: BlockedSlot }>(`/api/salons/${salonId}/block-slot`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  unblockSlot: (salonId: string, slotId: string) =>
+    request<{ success: boolean }>(`/api/salons/${salonId}/blocked-slots/${slotId}`, {
+      method: 'DELETE',
     }),
 
   // Reviews
