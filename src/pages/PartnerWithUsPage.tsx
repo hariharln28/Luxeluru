@@ -1,16 +1,15 @@
 import { useEffect, useState } from 'react';
-import { CaptchaChallenge } from '../components/CaptchaChallenge';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { Shield, FileText, LogOut, Lock, Building, Search, CheckCircle, Clock, Eye, EyeOff, Loader2, KeyRound } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { api } from '../services/api';
 
 export function PartnerWithUsPage() {
-  const { salonRegister, salonExit, adminLogin, salons, addToast } = useApp();
-  const navigate = useNavigate();
+  const { salonRegister, salonExit, salons, addToast } = useApp();
+
   const [searchParams, setSearchParams] = useSearchParams();
   const tabParam = searchParams.get('tab');
-  const [activeTab, setActiveTab] = useState<'register' | 'exit' | 'admin' | 'status'>(
+  const [activeTab, setActiveTab] = useState<'register' | 'exit' | 'status'>(
     (tabParam as any) || 'register'
   );
 
@@ -31,16 +30,15 @@ export function PartnerWithUsPage() {
   const [phoneOwner, setPhoneOwner] = useState('');
   const [tradeLicenseFile, setTradeLicenseFile] = useState<File | null>(null);
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [panCardOwner, setPanCardOwner] = useState('');
+  const [panCardBusiness, setPanCardBusiness] = useState('');
 
   // Exit state
   const [exitSalonId, setExitSalonId] = useState('');
   const [exitReason, setExitReason] = useState('');
   const [exitPassword, setExitPassword] = useState('');
 
-  // Admin state
-  const [adminUser, setAdminUser] = useState('');
-  const [adminPass, setAdminPass] = useState('');
-  const [adminCaptchaValid, setAdminCaptchaValid] = useState(false);
+
 
   // Status check state
   const [statusSearch, setStatusSearch] = useState('');
@@ -59,7 +57,7 @@ export function PartnerWithUsPage() {
     setError('');
     setSuccessMsg('');
 
-    if (!ownerName || !salonName || !address || !email || !phone || !phoneOwner) {
+    if (!ownerName || !salonName || !address || !email || !phone || !phoneOwner || !panCardOwner || !panCardBusiness) {
       setError('Please fill in all contact and business details.');
       return;
     }
@@ -74,6 +72,18 @@ export function PartnerWithUsPage() {
       return;
     }
 
+    // Convert trade license file to base64
+    let tradeLicenseUrl = tradeLicenseFile.name;
+    try {
+      const reader = new FileReader();
+      tradeLicenseUrl = await new Promise<string>((resolve) => {
+        reader.onload = () => resolve(reader.result as string);
+        reader.readAsDataURL(tradeLicenseFile);
+      });
+    } catch {
+      // fallback to filename
+    }
+
     // Auto generate ID and return it
     const generatedId = await salonRegister({
       ownerName,
@@ -82,7 +92,9 @@ export function PartnerWithUsPage() {
       email,
       phone,
       phoneOwner,
-      tradeLicenseUrl: tradeLicenseFile.name,
+      panCardOwner,
+      panCardBusiness,
+      tradeLicenseUrl,
     });
 
     setSuccessMsg(
@@ -101,6 +113,8 @@ export function PartnerWithUsPage() {
     setPhoneOwner('');
     setTradeLicenseFile(null);
     setTermsAccepted(false);
+    setPanCardOwner('');
+    setPanCardBusiness('');
   }
 
   async function handleExitSubmit(e: React.FormEvent) {
@@ -131,22 +145,7 @@ export function PartnerWithUsPage() {
     }
   }
 
-  async function handleAdminSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError('');
 
-    if (!adminUser || !adminPass) {
-      setError('Please enter both Admin username and password.');
-      return;
-    }
-
-    const success = await adminLogin(adminUser, adminPass);
-    if (success) {
-      navigate('/admin-dashboard');
-    } else {
-      setError('Invalid Administrator Username or Password.');
-    }
-  }
 
   function handleStatusCheck(e: React.FormEvent) {
     e.preventDefault();
@@ -178,8 +177,8 @@ export function PartnerWithUsPage() {
   return (
     <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6">
       <div className="text-center mb-10">
-        <h1 className="font-display text-4xl sm:text-5xl font-bold gold-gradient">Partner with Luxeluru</h1>
-        <p className="mt-3 text-lg text-[#9a8fa8]">Grow your luxury salon brand or manage your existing association.</p>
+        <h1 className="font-display text-4xl sm:text-5xl font-bold gold-gradient">Partner with Us</h1>
+        <p className="mt-3 text-lg text-[#9a8fa8]">Register your salon or manage your partnership with Luxeluru.</p>
       </div>
 
       <div className="flex justify-center mb-8 border-b border-[#c9a962]/20">
@@ -211,15 +210,7 @@ export function PartnerWithUsPage() {
             <LogOut className="h-5 w-5" />
             Exit Platform
           </button>
-          <button
-            onClick={() => { setActiveTab('admin'); setError(''); setSuccessMsg(''); }}
-            className={`flex items-center gap-2 pb-4 text-xs sm:text-base font-semibold border-b-2 transition ${
-              activeTab === 'admin' ? 'border-[#c9a962] text-[#e8d5a3]' : 'border-transparent text-[#9a8fa8] hover:text-[#e8d5a3]'
-            }`}
-          >
-            <Lock className="h-5 w-5" />
-            Admin Login
-          </button>
+
         </div>
       </div>
 
@@ -308,6 +299,14 @@ export function PartnerWithUsPage() {
                 placeholder="Building, Street, Landmark, Bengaluru, Karnataka, PIN"
                 required
               />
+            </div>
+            <div>
+              <label className="luxe-label">Owner PAN Card Number *</label>
+              <input type="text" value={panCardOwner} onChange={(e) => setPanCardOwner(e.target.value.toUpperCase())} className="luxe-input" placeholder="e.g. ABCDE1234F" maxLength={10} required />
+            </div>
+            <div>
+              <label className="luxe-label">Business PAN Card Number *</label>
+              <input type="text" value={panCardBusiness} onChange={(e) => setPanCardBusiness(e.target.value.toUpperCase())} className="luxe-input" placeholder="e.g. AABCU9603R" maxLength={10} required />
             </div>
           </div>
 
@@ -586,46 +585,7 @@ export function PartnerWithUsPage() {
         </form>
       )}
 
-      {activeTab === 'admin' && (
-        <form onSubmit={handleAdminSubmit} className="luxe-card space-y-6 p-6 sm:p-8 max-w-md mx-auto animate-fade-in">
-          <div className="border-b border-[#c9a962]/10 pb-4 text-center">
-            <Lock className="h-8 w-8 text-[#c9a962] mx-auto mb-2" />
-            <h3 className="font-display text-2xl text-[#e8d5a3]">Admin Portal Login</h3>
-            <p className="text-xs text-[#9a8fa8] mt-1">Authorized personnel only.</p>
-          </div>
 
-          <div className="space-y-4">
-            <div>
-              <label className="mb-1.5 block text-sm text-[#9a8fa8]">Username</label>
-              <input
-                type="text"
-                value={adminUser}
-                onChange={(e) => setAdminUser(e.target.value)}
-                className="luxe-input"
-                placeholder=""
-                required
-              />
-            </div>
-            <div>
-              <label className="mb-1.5 block text-sm text-[#9a8fa8]">Password</label>
-              <input
-                type="password"
-                value={adminPass}
-                onChange={(e) => setAdminPass(e.target.value)}
-                className="luxe-input"
-                placeholder="••••••••"
-                required
-              />
-            </div>
-          </div>
-
-          <CaptchaChallenge onVerified={setAdminCaptchaValid} />
-
-          <button type="submit" disabled={!adminCaptchaValid} className="luxe-btn w-full disabled:opacity-50 disabled:cursor-not-allowed">
-            Log In as Admin
-          </button>
-        </form>
-      )}
     </div>
   );
 }

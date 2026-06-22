@@ -43,6 +43,8 @@ interface AppContextType {
     phone: string;
     phoneOwner: string;
     tradeLicenseUrl: string;
+    panCardOwner?: string;
+    panCardBusiness?: string;
   }) => Promise<string>;
   salonExit: (salonId: string, reason: string) => Promise<boolean>;
   logout: () => void;
@@ -69,6 +71,8 @@ interface AppContextType {
   rejectSalon: (salonId: string) => void;
   removeSalonForcefully: (salonId: string) => void;
   deleteSalonPermanently: (salonId: string) => Promise<void>;
+  updateSalonLocation: (salonId: string, address: string, lat: number, lng: number) => Promise<void>;
+  updateSalonStaff: (salonId: string, staff: Staff[]) => Promise<void>;
   blockUserForcefully: (userId: string, dateStr: string) => void;
   unblockUserForcefully: (userId: string) => void;
   isUserBlocked: (userId: string) => { blocked: boolean; reason?: string; until?: string };
@@ -708,6 +712,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     phone: string;
     phoneOwner: string;
     tradeLicenseUrl: string;
+    panCardOwner?: string;
+    panCardBusiness?: string;
   }): Promise<string> => {
     try {
       const res = await api.salonRegister(data);
@@ -757,7 +763,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         tradeLicenseUrl: data.tradeLicenseUrl,
         registeredAt: new Date().toISOString(),
         commissionDue: 0,
-        commissionPaidUntil: new Date().toISOString().split('T')[0]
+        commissionPaidUntil: new Date().toISOString().split('T')[0],
+        panCardOwner: data.panCardOwner || '',
+        panCardBusiness: data.panCardBusiness || ''
       };
       
       currentSalons.push(newSalon);
@@ -1375,6 +1383,50 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [addToast]);
 
+  const updateSalonLocation = useCallback(async (salonId: string, address: string, lat: number, lng: number) => {
+    try {
+      await api.updateSalonLocation(salonId, address, lat, lng);
+      setSalonsList(prev => prev.map(s => s.id === salonId ? { ...s, address, lat, lng, area: address.split(',')[0] || s.area } : s));
+      if (salon && salon.id === salonId) {
+        setSalon(prev => prev ? { ...prev, address, lat, lng, area: address.split(',')[0] || prev.area } : null);
+      }
+      addToast('success', 'Salon location updated successfully.');
+    } catch {
+      // Local fallback
+      setSalonsList(prev => {
+        const updated = prev.map(s => s.id === salonId ? { ...s, address, lat, lng, area: address.split(',')[0] || s.area } : s);
+        localStorage.setItem(STORAGE_KEYS.salons, JSON.stringify(updated));
+        return updated;
+      });
+      if (salon && salon.id === salonId) {
+        setSalon(prev => prev ? { ...prev, address, lat, lng, area: address.split(',')[0] || prev.area } : null);
+      }
+      addToast('success', 'Salon location updated successfully.');
+    }
+  }, [addToast, salon]);
+
+  const updateSalonStaff = useCallback(async (salonId: string, staff: Staff[]) => {
+    try {
+      await api.updateSalonStaff(salonId, staff);
+      setSalonsList(prev => prev.map(s => s.id === salonId ? { ...s, staff } : s));
+      if (salon && salon.id === salonId) {
+        setSalon(prev => prev ? { ...prev, staff } : null);
+      }
+      addToast('success', 'Team updated successfully.');
+    } catch {
+      // Local fallback
+      setSalonsList(prev => {
+        const updated = prev.map(s => s.id === salonId ? { ...s, staff } : s);
+        localStorage.setItem(STORAGE_KEYS.salons, JSON.stringify(updated));
+        return updated;
+      });
+      if (salon && salon.id === salonId) {
+        setSalon(prev => prev ? { ...prev, staff } : null);
+      }
+      addToast('success', 'Team updated successfully.');
+    }
+  }, [addToast, salon]);
+
   const blockUserForcefully = useCallback(async (userId: string, dateStr: string) => {
     try {
       await api.blockUser(userId, dateStr);
@@ -1490,6 +1542,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         rejectSalon,
         removeSalonForcefully,
         deleteSalonPermanently,
+        updateSalonLocation,
+        updateSalonStaff,
         blockUserForcefully,
         unblockUserForcefully,
         isUserBlocked,

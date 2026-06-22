@@ -18,6 +18,7 @@ import { ProfilePage } from './pages/ProfilePage';
 import { PartnerWithUsPage } from './pages/PartnerWithUsPage';
 import { SalonDashboardPage } from './pages/SalonDashboardPage';
 import { AdminDashboardPage } from './pages/AdminDashboardPage';
+import { AdminLoginPage } from './pages/AdminLoginPage';
 
 export default function App() {
   return (
@@ -41,6 +42,7 @@ export default function App() {
             <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
             <Route path="/partner-with-us" element={<PartnerWithUsPage />} />
             <Route path="/salon-dashboard" element={<SalonRoute><SalonDashboardPage /></SalonRoute>} />
+            <Route path="/admin" element={<AdminLoginPage />} />
             <Route path="/admin-dashboard" element={<AdminRoute><AdminDashboardPage /></AdminRoute>} />
           </Route>
         </Routes>

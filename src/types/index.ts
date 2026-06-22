@@ -67,6 +67,8 @@ export interface Salon {
   tradeLicenseUrl?: string;
   exitReason?: string;
   registeredAt?: string;
+  panCardOwner?: string;
+  panCardBusiness?: string;
 }
 
 export interface User {

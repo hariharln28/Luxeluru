@@ -18,7 +18,11 @@ import {
   Lock,
   Unlock,
   UserPlus,
-  RefreshCw
+  RefreshCw,
+  MapPin,
+  Edit3,
+  Trash2,
+  Users
 } from 'lucide-react';
 import type { PaymentMethod } from '../types';
 import { CheckoutModal } from '../components/CheckoutModal';
@@ -35,7 +39,9 @@ export function SalonDashboardPage() {
     fetchBlockedSlots,
     blockSlot,
     unblockSlot,
-    refreshData
+    refreshData,
+    updateSalonLocation,
+    updateSalonStaff
   } = useApp();
 
   const [refreshing, setRefreshing] = useState(false);
@@ -49,7 +55,7 @@ export function SalonDashboardPage() {
   const navigate = useNavigate();
   
   // Dashboard Tabs
-  const [activeTab, setActiveTab] = useState<'appointments' | 'slots' | 'insights'>('appointments');
+  const [activeTab, setActiveTab] = useState<'appointments' | 'slots' | 'insights' | 'location' | 'team'>('appointments');
 
   // Manage Slots state
   const [slotDate, setSlotDate] = useState(new Date().toISOString().split('T')[0]);
@@ -57,6 +63,17 @@ export function SalonDashboardPage() {
   const [blockReason, setBlockReason] = useState('');
   const [blockingTime, setBlockingTime] = useState<string | null>(null);
   const [showCheckout, setShowCheckout] = useState(false);
+
+  // Location state
+  const [editAddress, setEditAddress] = useState(salon?.address || '');
+  const [editLat, setEditLat] = useState(String(salon?.lat || ''));
+  const [editLng, setEditLng] = useState(String(salon?.lng || ''));
+
+  // Team management state
+  const [newStaffName, setNewStaffName] = useState('');
+  const [newStaffRole, setNewStaffRole] = useState('');
+  const [newStaffSpecialties, setNewStaffSpecialties] = useState('');
+  const [editingStaffId, setEditingStaffId] = useState<string | null>(null);
 
   const TIME_SLOTS = [
     '10:00 AM', '11:00 AM', '12:00 PM', '1:00 PM', '2:00 PM',
@@ -242,6 +259,22 @@ export function SalonDashboardPage() {
         >
           <TrendingUp className="h-4 w-4" />
           Insights
+        </button>
+        <button
+          onClick={() => setActiveTab('location')}
+          className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-xs font-semibold transition ${
+            activeTab === 'location' ? 'bg-[#c9a962] text-[#0f0d12]' : 'text-[#9a8fa8] hover:text-[#e8d5a3]'
+          }`}
+        >
+          <MapPin className="h-4 w-4" /> Location
+        </button>
+        <button
+          onClick={() => setActiveTab('team')}
+          className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-xs font-semibold transition ${
+            activeTab === 'team' ? 'bg-[#c9a962] text-[#0f0d12]' : 'text-[#9a8fa8] hover:text-[#e8d5a3]'
+          }`}
+        >
+          <Users className="h-4 w-4" /> Team
         </button>
       </div>
 
@@ -507,6 +540,148 @@ export function SalonDashboardPage() {
                 </table>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* LOCATION TAB */}
+      {activeTab === 'location' && (
+        <div className="space-y-6 animate-fade-in">
+          <div className="luxe-card p-6 space-y-4">
+            <h3 className="font-display text-xl text-[#e8d5a3] flex items-center gap-2">
+              <MapPin className="h-5 w-5 text-[#c9a962]" /> Salon Location
+            </h3>
+            <p className="text-xs text-[#9a8fa8]">Update your salon address. Changes are visible to customers on the platform.</p>
+            
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs text-[#9a8fa8] font-semibold block mb-1">Full Address</label>
+                <textarea
+                  value={editAddress}
+                  onChange={(e) => setEditAddress(e.target.value)}
+                  rows={2}
+                  className="luxe-input text-sm"
+                  placeholder="Enter complete salon address"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-[#9a8fa8] font-semibold block mb-1">Latitude</label>
+                  <input type="text" value={editLat} onChange={(e) => setEditLat(e.target.value)} className="luxe-input text-sm" placeholder="e.g. 12.9716" />
+                </div>
+                <div>
+                  <label className="text-xs text-[#9a8fa8] font-semibold block mb-1">Longitude</label>
+                  <input type="text" value={editLng} onChange={(e) => setEditLng(e.target.value)} className="luxe-input text-sm" placeholder="e.g. 77.5946" />
+                </div>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => {
+                    const lat = parseFloat(editLat) || 0;
+                    const lng = parseFloat(editLng) || 0;
+                    if (!editAddress.trim()) return;
+                    updateSalonLocation(salon.id, editAddress.trim(), lat, lng);
+                  }}
+                  className="luxe-btn text-sm py-2 px-6"
+                >
+                  Update Location
+                </button>
+                <a
+                  href={`https://www.google.com/maps?q=${editLat},${editLng}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="luxe-btn-outline text-sm py-2 px-6 flex items-center gap-2"
+                >
+                  <MapPin className="h-4 w-4" /> View on Google Maps
+                </a>
+              </div>
+            </div>
+            
+            <div className="mt-4 p-3 rounded-lg bg-[#0f0d12]/50 text-xs text-[#9a8fa8]">
+              <p><strong>Current Address:</strong> {salon.address}</p>
+              <p className="mt-1"><strong>Coordinates:</strong> {salon.lat}, {salon.lng}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TEAM MANAGEMENT TAB */}
+      {activeTab === 'team' && (
+        <div className="space-y-6 animate-fade-in">
+          <div className="luxe-card p-6 space-y-4">
+            <h3 className="font-display text-xl text-[#e8d5a3] flex items-center gap-2">
+              <Users className="h-5 w-5 text-[#c9a962]" /> Team Members
+            </h3>
+            <p className="text-xs text-[#9a8fa8]">Manage your salon staff. Changes are visible to customers when booking.</p>
+            
+            {/* Add new staff form */}
+            <div className="rounded-lg bg-[#0f0d12]/50 p-4 space-y-3">
+              <p className="text-xs text-[#c9a962] font-semibold">Add New Team Member</p>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <input type="text" value={newStaffName} onChange={(e) => setNewStaffName(e.target.value)} className="luxe-input text-sm" placeholder="Name" />
+                <input type="text" value={newStaffRole} onChange={(e) => setNewStaffRole(e.target.value)} className="luxe-input text-sm" placeholder="Role (e.g. Senior Stylist)" />
+                <input type="text" value={newStaffSpecialties} onChange={(e) => setNewStaffSpecialties(e.target.value)} className="luxe-input text-sm" placeholder="Specialties (comma-separated)" />
+              </div>
+              <button
+                onClick={() => {
+                  if (!newStaffName.trim() || !newStaffRole.trim()) return;
+                  const newMember = {
+                    id: `staff-${Date.now()}`,
+                    name: newStaffName.trim(),
+                    role: newStaffRole.trim(),
+                    rating: 5.0,
+                    reviewCount: 0,
+                    specialties: newStaffSpecialties.split(',').map(s => s.trim()).filter(Boolean),
+                    avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${newStaffName.trim()}`
+                  };
+                  updateSalonStaff(salon.id, [...salon.staff, newMember]);
+                  setNewStaffName('');
+                  setNewStaffRole('');
+                  setNewStaffSpecialties('');
+                }}
+                className="luxe-btn text-xs py-2 px-4 flex items-center gap-1.5"
+              >
+                <UserPlus className="h-3.5 w-3.5" /> Add Member
+              </button>
+            </div>
+
+            {/* Staff list */}
+            {salon.staff.length === 0 ? (
+              <div className="text-center py-8 text-[#9a8fa8] text-sm">
+                No team members yet. Add your first team member above.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {salon.staff.map(member => (
+                  <div key={member.id} className="rounded-lg border border-[#c9a962]/10 bg-[#0f0d12]/30 p-4 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <img src={member.avatar} alt={member.name} className="h-10 w-10 rounded-full bg-[#1a1520]" />
+                      <div>
+                        <p className="font-semibold text-[#e8d5a3] text-sm">{member.name}</p>
+                        <p className="text-xs text-[#9a8fa8]">{member.role}</p>
+                        {member.specialties.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {member.specialties.map(s => (
+                              <span key={s} className="rounded-full bg-[#c9a962]/10 px-2 py-0.5 text-[10px] text-[#c9a962]">{s}</span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        const updated = salon.staff.filter(s => s.id !== member.id);
+                        updateSalonStaff(salon.id, updated);
+                      }}
+                      className="text-red-400 hover:text-red-300 transition p-2"
+                      title="Remove member"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}

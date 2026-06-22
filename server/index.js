@@ -397,6 +397,8 @@ app.post('/api/salons/register', async (req, res) => {
     ownerName: data.ownerName,
     phoneOwner: data.phoneOwner,
     tradeLicenseUrl: data.tradeLicenseUrl,
+    panCardOwner: data.panCardOwner || '',
+    panCardBusiness: data.panCardBusiness || '',
     registeredAt: new Date().toISOString(),
     commissionDue: 0,
     commissionPaidUntil: new Date().toISOString().split('T')[0]
@@ -506,6 +508,30 @@ app.delete('/api/salons/:id', async (req, res) => {
 
   await db.deleteSalon(id);
   res.json({ success: true, message: `Salon "${salon.name}" permanently deleted.` });
+});
+
+// Update salon location
+app.post('/api/salons/:id/update-location', async (req, res) => {
+  try {
+    const { address, lat, lng } = req.body;
+    if (!address) return res.status(400).json({ success: false, message: 'Address is required' });
+    await db.updateSalon(req.params.id, { address, lat: lat || 0, lng: lng || 0 });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Update salon staff
+app.post('/api/salons/:id/update-staff', async (req, res) => {
+  try {
+    const { staff } = req.body;
+    if (!Array.isArray(staff)) return res.status(400).json({ success: false, message: 'staff must be an array' });
+    await db.updateSalon(req.params.id, { staff });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.post('/api/salons/:id/pay-commission', async (req, res) => {
