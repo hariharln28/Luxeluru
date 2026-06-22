@@ -334,7 +334,7 @@ export function SalonDetailPage() {
             <div className="mt-4 space-y-4">
               <div>
                 <label className="text-sm text-[#9a8fa8]">{tr('selectDate')}</label>
-                <input type="date" value={date} onChange={(e) => setDate(e.target.value)}
+                <input type="date" value={date} onChange={(e) => { setDate(e.target.value); setTime(''); }}
                   min={new Date().toISOString().split('T')[0]} className="luxe-input mt-1" />
               </div>
               <div>

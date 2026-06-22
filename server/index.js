@@ -384,6 +384,34 @@ app.post('/api/bookings', authenticateJWT, async (req, res) => {
     return res.status(403).json({ success: false, message: 'Unauthorized booking placement' });
   }
 
+  // ─── Double-booking prevention ───────────────────────
+  // Check for existing confirmed bookings at the same salon+date+time
+  const allBookings = await db.getBookings();
+  const conflictBooking = allBookings.find(
+    b => b.salonId === bookingData.salonId &&
+         b.date === bookingData.date &&
+         b.time === bookingData.time &&
+         b.status === 'confirmed'
+  );
+  if (conflictBooking) {
+    return res.status(409).json({
+      success: false,
+      message: `This time slot (${bookingData.time} on ${bookingData.date}) is already booked. Please choose a different time.`
+    });
+  }
+
+  // Check for blocked slots (walk-in customers)
+  const blockedSlots = await db.getBlockedSlots(bookingData.salonId);
+  const conflictBlock = blockedSlots.find(
+    bs => bs.date === bookingData.date && bs.time === bookingData.time
+  );
+  if (conflictBlock) {
+    return res.status(409).json({
+      success: false,
+      message: `This time slot (${bookingData.time} on ${bookingData.date}) is blocked by the salon. Please choose a different time.`
+    });
+  }
+
   const newBooking = {
     ...bookingData,
     id: `bk-${Date.now()}`,
@@ -419,6 +447,34 @@ app.post('/api/bookings/:id/reschedule', authenticateJWT, async (req, res) => {
     if (booking.userId !== req.user.id) {
       return res.status(403).json({ success: false, message: 'Unauthorized reschedule action' });
     }
+
+    // Conflict check: prevent rescheduling into an occupied slot
+    const allBookings = await db.getBookings();
+    const conflict = allBookings.find(
+      b => b.id !== id &&
+           b.salonId === booking.salonId &&
+           b.date === date &&
+           b.time === time &&
+           b.status === 'confirmed'
+    );
+    if (conflict) {
+      return res.status(409).json({
+        success: false,
+        message: `Cannot reschedule: ${time} on ${date} is already booked.`
+      });
+    }
+
+    const blockedSlots = await db.getBlockedSlots(booking.salonId);
+    const blockedConflict = blockedSlots.find(
+      bs => bs.date === date && bs.time === time
+    );
+    if (blockedConflict) {
+      return res.status(409).json({
+        success: false,
+        message: `Cannot reschedule: ${time} on ${date} is blocked by the salon.`
+      });
+    }
+
     await db.updateBooking(id, { date, time });
     res.json({ success: true });
   } else {
@@ -511,6 +567,15 @@ app.post('/api/salons/:id/block-slot', async (req, res) => {
     const { date, time, customerName, reason } = req.body;
     if (!date || !time) {
       return res.status(400).json({ error: 'date and time are required' });
+    }
+
+    // Prevent duplicate blocking
+    const existingSlots = await db.getBlockedSlots(req.params.id);
+    const alreadyBlocked = existingSlots.find(
+      bs => bs.date === date && bs.time === time
+    );
+    if (alreadyBlocked) {
+      return res.status(409).json({ error: 'This slot is already blocked' });
     }
     const slotData = {
       id: `bs-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
