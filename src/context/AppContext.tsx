@@ -411,7 +411,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // Compute activeSalons dynamically based on registration status, active flag, and commission status
+  // Exclude admin test salon from user-facing listings
+  const TEST_SALON_ID = 'LLLUX456';
   const activeSalons = salonsList.filter((s) => {
+    if (s.id === TEST_SALON_ID) return false; // Admin test salon — never show to users
     if (s.registrationStatus !== 'approved') return false;
     if (s.isActive === false) return false;
     if (!s.commissionPaidUntil) return true;
