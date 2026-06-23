@@ -687,12 +687,18 @@ export function AdminDashboardPage() {
                         <p><strong>Customer Phone:</strong> {customer?.phone || 'Unknown'}</p>
                         <p><strong>Appointment:</strong> {b.date} at {b.time}</p>
                       </div>
-
                       <div className="mt-2 text-red-200">
                         <p><strong>Salon Report Reason:</strong></p>
                         <p className="italic mt-0.5 text-[#9a8fa8]">"{b.fakeReportReason || 'No details provided'}"</p>
                       </div>
-{/* User Management List */}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* User Management List */}
           <div className="lg:col-span-2 space-y-4">
             <div className="border-b border-[#c9a962]/10 pb-2 flex items-start justify-between gap-4 flex-wrap">
               <div>
