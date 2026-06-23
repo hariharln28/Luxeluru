@@ -146,6 +146,7 @@ export function AdminDashboardPage() {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'hidden') {
         logout();
+        navigate('/');
       }
     };
 
@@ -159,17 +160,19 @@ export function AdminDashboardPage() {
       if (isOnDashboard.current) {
         isOnDashboard.current = false;
         logout();
+        navigate('/');
       }
     };
-  }, [logout]);
+  }, [logout, navigate]);
 
   // Also watch React router path changes as a secondary guard
   useEffect(() => {
     if (currentPath !== '/admin-dashboard' && isOnDashboard.current) {
       isOnDashboard.current = false;
       logout();
+      navigate('/');
     }
-  }, [currentPath, logout]);
+  }, [currentPath, logout, navigate]);
 
   // Guard page for unauthorized users
   if (!isAdmin) {
@@ -1272,10 +1275,10 @@ export function AdminDashboardPage() {
 
           <div className="flex justify-center mt-6">
             <button
-              onClick={() => navigate('/login')}
+              onClick={() => { logout(); navigate('/'); }}
               className="flex items-center gap-2 luxe-btn py-3 px-8 text-sm font-semibold"
             >
-              <LogOut className="h-4 w-4" /> Go to Login Page (auto-signs out)
+              <LogOut className="h-4 w-4" /> Sign Out
             </button>
           </div>
         </div>
