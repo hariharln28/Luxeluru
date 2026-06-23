@@ -177,8 +177,8 @@ export function PartnerWithUsPage() {
   return (
     <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6">
       <div className="text-center mb-10">
-        <h1 className="font-display text-4xl sm:text-5xl font-bold gold-gradient">Partner with us — Register</h1>
-        <p className="mt-3 text-lg text-[#9a8fa8]">Register your salon or manage your partnership with Luxeluru.</p>
+        <h1 className="font-display text-4xl sm:text-5xl font-bold gold-gradient">Luxeluru — Partner with us</h1>
+        <p className="mt-3 text-lg text-[#9a8fa8]">Register your salon with Luxeluru.</p>
       </div>
 
       <div className="flex justify-center mb-8 border-b border-[#c9a962]/20">
