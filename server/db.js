@@ -538,6 +538,7 @@ class DatabaseManager {
       await doc.save();
       return doc.toObject();
     } else {
+      await sqliteDb.run(
         `INSERT INTO bookings (id, userId, salonId, salonName, serviceIds, serviceNames, staffId, staffName,
          date, time, totalPrice, originalPrice, paymentMethod, status, createdAt, feedbackRequestedAt,
          feedbackSent, rating, review, isPackageChanged, updatedPackageId, updatedPackageName,
