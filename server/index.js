@@ -99,7 +99,8 @@ const authenticateJWT = async (req, res, next) => {
   }
 };
 
-// CORS: allow Vite dev server and any deployed frontend origin
+// CORS: open for all origins in production (frontend served from same Render domain),
+// restricted to localhost in development
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:3000',
@@ -109,16 +110,43 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (curl, Postman, same-origin in production)
+    // Allow requests with no origin (same-origin, curl, Postman, mobile apps)
     if (!origin) return callback(null, true);
-    if (allowedOrigins.includes(origin) || process.env.NODE_ENV === 'production') {
-      return callback(null, true);
-    }
+    // In production on Render: frontend and backend share the same domain,
+    // so all same-origin API calls have no Origin header — always allow them.
+    // Explicitly allow any origin in production to support all networks/WiFis.
+    if (process.env.NODE_ENV === 'production') return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
     callback(new Error(`CORS policy: origin ${origin} not allowed`));
   },
   credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-User-Id'],
 }));
-app.use(express.json());
+
+// Handle pre-flight OPTIONS requests quickly across all routes
+app.options('*', cors());
+
+// Increase JSON body size limit to handle base64 image uploads (up to 10MB)
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Add keep-alive and connection resilience headers to every response
+app.use((_req, res, next) => {
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('Keep-Alive', 'timeout=30, max=100');
+  next();
+});
+
+// Global 30-second request timeout — prevent hanging connections on slow networks
+app.use((req, res, next) => {
+  res.setTimeout(30000, () => {
+    if (!res.headersSent) {
+      res.status(503).json({ success: false, message: 'Request timed out. Please try again.' });
+    }
+  });
+  next();
+});
 
 // Log incoming API requests to the console in real-time
 app.use((req, res, next) => {

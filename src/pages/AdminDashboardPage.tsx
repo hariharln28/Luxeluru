@@ -59,6 +59,8 @@ export function AdminDashboardPage() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'pending' | 'salons' | 'users' | 'platform' | 'test-signin' | 'notifications'>('pending');
   const [refreshing, setRefreshing] = useState(false);
+  const [networkError, setNetworkError] = useState(false);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
 
   const adminNotifications = notifications.filter(n => n.target === 'admin');
   const adminUnreadCount = adminNotifications.filter(n => !n.read).length;
@@ -71,9 +73,27 @@ export function AdminDashboardPage() {
   // Auto-refresh data on mount and every 30 seconds
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
-    await refreshData();
-    setRefreshing(false);
+    setNetworkError(false);
+    try {
+      await refreshData();
+    } catch {
+      setNetworkError(true);
+    } finally {
+      setRefreshing(false);
+    }
   }, [refreshData]);
+
+  // Network online/offline detection — auto-retry refresh when connection returns
+  useEffect(() => {
+    const handleOnline = () => { setIsOnline(true); setNetworkError(false); handleRefresh(); };
+    const handleOffline = () => setIsOnline(false);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [handleRefresh]);
 
   useEffect(() => {
     // Refresh on mount to get latest data
@@ -263,6 +283,21 @@ export function AdminDashboardPage() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+
+      {/* Network status banners */}
+      {!isOnline && (
+        <div className="mb-4 flex items-center gap-3 rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+          <AlertCircle className="h-4 w-4 flex-shrink-0 text-red-400" />
+          <span><strong>No internet connection.</strong> You are offline — data may be outdated. Actions will fail until connection is restored.</span>
+        </div>
+      )}
+      {isOnline && networkError && (
+        <div className="mb-4 flex items-center gap-3 rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-300">
+          <AlertTriangle className="h-4 w-4 flex-shrink-0 text-amber-400" />
+          <span><strong>Network issue detected.</strong> Could not reach the server. Data shown may be stale. <button onClick={handleRefresh} className="underline ml-1">Retry now</button></span>
+        </div>
+      )}
+
       {/* Header */}
       <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-[#c9a962]/10 pb-6">
         <div>
