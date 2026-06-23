@@ -83,6 +83,8 @@ export const api = {
     phone: string;
     phoneOwner: string;
     tradeLicenseUrl: string;
+    panCardOwner?: string;
+    panCardBusiness?: string;
   }) =>
     request<{ success: boolean; salonId: string }>('/api/salons/register', {
       method: 'POST',
