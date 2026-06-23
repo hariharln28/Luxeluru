@@ -35,8 +35,16 @@ Luxeluru is a full-stack luxury salon discovery and booking platform built for B
 - **Multi-language** — English (default), Hindi, and Kannada throughout the entire UI
 
 ### 🤖 AI Stylr
-- Camera-based face analysis using MediaPipe FaceMesh (468 facial landmarks)
-- Detects face shape, skin tone, and undertone for personalised hair colour and style recommendations
+- Camera-based face analysis using **MediaPipe FaceMesh** (468 facial landmarks)
+- **Monk Skin Tone Scale (MST-1 to MST-10)** — Google's open 10-point skin tone standard; classification via **CIE-LAB color distance** (perceptually accurate across all skin tones, especially South Asian complexions)
+- Samples skin pixels from **4 cheek landmarks** for improved accuracy over single-point sampling
+- Visual **MST scale bar** in results — 10 coloured dots, your level highlighted with a gold ring
+- **Virtual Try-On** — live hair colour preview on the camera feed using a **Bézier-curve hair mask** drawn from FaceMesh temple + forehead + brow landmarks
+  - Toggle between face mesh mode and full try-on mode
+  - Adjustable intensity slider (15%–65%)
+  - Any selected colour updates the live preview instantly
+- **Gemini AI Style Advice** — after analysis, calls **Gemini 2.0 Flash** to generate a personalised natural-language consultation: headline, description, colour reason, style reason, and a care tip (requires `VITE_GEMINI_API_KEY`; gracefully hidden if not set)
+- Hair colour recommendations keyed to all 10 MST levels separately (not just 6 generic tiers)
 - Custom image upload (up to 20 MB) for tailored style advice
 - Style recommendations carry forward directly into the booking flow
 - Uploaded images visible to salon in appointment details on their dashboard
@@ -105,7 +113,7 @@ Luxeluru is a full-stack luxury salon discovery and booking platform built for B
 | **Database** | SQLite (production via Render) / MongoDB (optional) |
 | **Auth** | Supabase Auth (JWT), bcrypt password hashing |
 | **Payments** | Stripe (Card & UPI checkout simulation) |
-| **AI / ML** | MediaPipe FaceMesh (browser-side, no server calls) |
+| **AI / ML** | MediaPipe FaceMesh (browser-side), Monk Skin Tone Scale (CIE-LAB), Gemini 2.0 Flash (style advice) |
 | **Maps** | OpenStreetMap embed, Google Maps deep-link navigation |
 | **Encryption** | Web Crypto API — AES-GCM + PBKDF2 |
 | **Notifications** | WhatsApp (wa.me deep-link) |
@@ -139,6 +147,7 @@ VITE_SUPABASE_URL=your_supabase_url
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 VITE_STRIPE_PUBLISHABLE_KEY=your_stripe_key
 VITE_MSG_KEY=your_messaging_encryption_secret
+VITE_GEMINI_API_KEY=your_gemini_api_key   # Optional — enables AI Stylr natural-language advice
 ```
 
 Create `server/.env`:
