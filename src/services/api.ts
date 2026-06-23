@@ -183,6 +183,27 @@ export const api = {
       body: JSON.stringify({ reason }),
     }),
 
+  verifyBookingStatus: (bookingId: string, data: {
+    appointmentTaken?: boolean;
+    paymentVerifiedBySalon?: boolean;
+    paymentMethod?: string;
+    salonNotes?: string;
+  }) =>
+    request<{ success: boolean }>(`/api/bookings/${bookingId}/verify-status`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  modifyBookingServices: (bookingId: string, data: {
+    modifiedServices: string[];
+    modifiedServiceNames: string[];
+    modifiedPrice: number;
+  }) =>
+    request<{ success: boolean; newCommission: number; modifiedPrice: number }>(`/api/bookings/${bookingId}/modify-services`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
   // Blocked Slots
   getBlockedSlots: (salonId: string) =>
     request<BlockedSlot[]>(`/api/salons/${salonId}/blocked-slots`),

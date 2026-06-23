@@ -28,7 +28,7 @@ export function SalonDetailPage() {
   const [selectedStaff, setSelectedStaff] = useState('');
   const [date, setDate] = useState('');
   const [time, setTime] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('upi');
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('pay-at-salon');
   const [showBooking, setShowBooking] = useState(false);
   const [reviewStaff, setReviewStaff] = useState('');
   const [reviewRating, setReviewRating] = useState(5);
@@ -103,6 +103,7 @@ export function SalonDetailPage() {
       time,
       totalPrice: total,
       paymentMethod,
+      paymentStatus: (paymentMethod === 'card' || paymentMethod === 'upi') ? 'paid-online' as const : 'pending' as const,
     });
 
     sendWhatsAppConfirmation(user.phone, currentSalon.name, date, time, serviceNames);
@@ -387,22 +388,45 @@ export function SalonDetailPage() {
                 </select>
               </div>
               <div>
-                <label className="text-sm text-[#9a8fa8]">{tr('paymentMethod')}</label>
-                <div className="mt-2 flex gap-3">
-                  <button onClick={() => setPaymentMethod('cash')}
-                    className={`flex flex-1 items-center justify-center gap-2 rounded-lg py-3 transition ${
-                      paymentMethod === 'cash' ? 'bg-[#c9a962] text-[#0f0d12]' : 'border border-[#c9a962]/20'
-                    }`}>
-                    <Banknote className="h-5 w-5" /> {tr('cash')}
+                <p className="mb-2 text-xs font-semibold text-[#9a8fa8] uppercase tracking-wider">{tr('paymentMethod')}</p>
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod('card')}
+                    className={`flex items-center justify-center gap-1.5 rounded-lg border px-3 py-2.5 text-xs font-semibold transition ${
+                      paymentMethod === 'card'
+                        ? 'border-[#c9a962] bg-[#c9a962]/10 text-[#c9a962]'
+                        : 'border-[#c9a962]/20 text-[#9a8fa8] hover:border-[#c9a962]/40'
+                    }`}
+                  >
+                    <CreditCard className="h-4 w-4" /> Card
                   </button>
-                  <button onClick={() => setPaymentMethod('upi')}
-                    className={`flex flex-1 items-center justify-center gap-2 rounded-lg py-3 transition ${
-                      paymentMethod === 'upi' ? 'bg-[#c9a962] text-[#0f0d12]' : 'border border-[#c9a962]/20'
-                    }`}>
-                    <CreditCard className="h-5 w-5" /> {tr('upi')}
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod('upi')}
+                    className={`flex items-center justify-center gap-1.5 rounded-lg border px-3 py-2.5 text-xs font-semibold transition ${
+                      paymentMethod === 'upi'
+                        ? 'border-[#c9a962] bg-[#c9a962]/10 text-[#c9a962]'
+                        : 'border-[#c9a962]/20 text-[#9a8fa8] hover:border-[#c9a962]/40'
+                    }`}
+                  >
+                    <CreditCard className="h-4 w-4" /> UPI
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod('pay-at-salon')}
+                    className={`flex items-center justify-center gap-1.5 rounded-lg border px-3 py-2.5 text-xs font-semibold transition ${
+                      paymentMethod === 'pay-at-salon'
+                        ? 'border-[#c9a962] bg-[#c9a962]/10 text-[#c9a962]'
+                        : 'border-[#c9a962]/20 text-[#9a8fa8] hover:border-[#c9a962]/40'
+                    }`}
+                  >
+                    <Banknote className="h-4 w-4" /> At Salon
                   </button>
                 </div>
-                <p className="mt-2 text-xs text-[#9a8fa8]">{tr('payAtSalon')}</p>
+                <p className="mt-2 text-[10px] text-[#9a8fa8]">
+                  {paymentMethod === 'pay-at-salon' ? 'Pay cash or card when you arrive at the salon.' : paymentMethod === 'card' ? 'Secure card payment via Stripe.' : 'Pay via UPI at checkout.'}
+                </p>
               </div>
             </div>
 
