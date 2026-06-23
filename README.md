@@ -7,11 +7,9 @@
 *Discover · Book · Style — powered by AI and Smart Navigation*
 
 [![Live](https://img.shields.io/badge/Live%20on-Render-46E3B7?style=flat-square&logo=render)](https://luxeluru.onrender.com)
-[![Repo](https://img.shields.io/badge/GitHub-hariharln28%2FLuxeluru-181717?style=flat-square&logo=github)](https://github.com/hariharln28/Luxeluru)
-[![Stars](https://img.shields.io/github/stars/hariharln28/Luxeluru?style=flat-square&color=c9a962)](https://github.com/hariharln28/Luxeluru/stargazers)
-[![Forks](https://img.shields.io/github/forks/hariharln28/Luxeluru?style=flat-square&color=c9a962)](https://github.com/hariharln28/Luxeluru/forks)
 [![Tech](https://img.shields.io/badge/Stack-React%20%2B%20Node.js-61DAFB?style=flat-square&logo=react)](https://vitejs.dev)
 [![Language](https://img.shields.io/badge/Languages-EN%20%7C%20HI%20%7C%20KN-orange?style=flat-square)](#)
+[![Private](https://img.shields.io/badge/Repo-Private-red?style=flat-square&logo=github)](#)
 
 </div>
 
@@ -19,7 +17,7 @@
 
 ## Overview
 
-Luxeluru is a full-stack luxury salon discovery and booking platform built for Bengaluru. It connects users with curated premium salons through an AI-powered styling experience, smart location-based navigation, seamless appointment booking, and a complete salon management ecosystem — all on a mobile-first, publicly accessible web app.
+Luxeluru is a full-stack luxury salon discovery and booking platform built for Bengaluru. It connects users with curated premium salons through an AI-powered styling experience, smart location-based navigation, seamless appointment booking, and a complete salon management ecosystem — all on a mobile-first web app.
 
 ---
 
@@ -81,7 +79,7 @@ Luxeluru is a full-stack luxury salon discovery and booking platform built for B
 ### 🛠️ Admin Control Centre
 - **Pending Approvals** — Review and approve/reject new salon registration applications
 - **Salons tab** — Monitor all active salons, commission status, overdue payments; forceful removal and permanent deletion (test accounts protected)
-- **Users tab** — View all registered users; block/unblock accounts with configurable duration (test accounts protected)
+- **Users tab** — View all registered users with search, registration date, and booking count; block/unblock accounts (test accounts protected)
 - **Platform Analytics** — Revenue metrics, booking counts, blocked users, forcefully removed salons
 - **Messages tab** — Encrypted 1:1 conversations with each salon; broadcast announcements to all active salons with read-receipt tracking
 - **Exit Requests tab** — Approve or reject partner exit requests with mandatory rejection reason
@@ -130,7 +128,7 @@ Luxeluru is a full-stack luxury salon discovery and booking platform built for B
 ### Install & Run Locally
 
 ```bash
-git clone https://github.com/hariharln28/Luxeluru.git
+git clone <repo-url>
 cd Luxeluru
 npm install
 npm run dev
@@ -194,7 +192,7 @@ Luxeluru/
 │   ├── pages/            # All page components
 │   ├── services/         # API client, Supabase client
 │   ├── types/            # TypeScript interfaces
-│   └── utils/            # KNN, encryption, notifications
+│   └── utils/            # KNN, face analysis, encryption, notifications, Gemini
 ├── server/
 │   ├── index.js          # Express server, all API routes
 │   └── db.js             # SQLite + MongoDB abstraction layer
@@ -213,22 +211,10 @@ Luxeluru is deployed as a **monorepo on Render**:
 
 ---
 
-## Contributing
+## Notice
 
-This is an open project — contributions, bug reports, and suggestions are welcome.
-
-1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/your-feature`
-3. Commit your changes: `git commit -m 'feat: add your feature'`
-4. Push to your branch: `git push origin feature/your-feature`
-5. Open a Pull Request
-
-Please keep PRs focused and follow the existing code style.
+This is a **private repository**. The source code, design, and all associated assets are proprietary and confidential. Unauthorised copying, distribution, or use of any part of this codebase is strictly prohibited.
 
 ---
-
-## License
-
-MIT License — see [LICENSE](LICENSE) for details.
 
 © 2026 Luxeluru · Built in Bengaluru 🇮🇳
