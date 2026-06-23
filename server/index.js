@@ -127,9 +127,9 @@ app.use(cors({
 // Handle pre-flight OPTIONS requests quickly across all routes
 app.options('*', cors());
 
-// Increase JSON body size limit to handle base64 image uploads (up to 10MB)
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+// Increase JSON body size limit to handle base64 image uploads (up to 25MB)
+app.use(express.json({ limit: '25mb' }));
+app.use(express.urlencoded({ extended: true, limit: '25mb' }));
 
 // Add keep-alive and connection resilience headers to every response
 app.use((_req, res, next) => {
@@ -463,20 +463,21 @@ app.post('/api/salons/:id/approve-exit', async (req, res) => {
   await db.updateSalon(req.params.id, {
     isActive: false,
     registrationStatus: 'rejected',
-    exitRequestStatus: 'approved'
+    exitRequestStatus: 'approved',
+    exitRejectReason: null
   });
   
   res.json({ success: true });
 });
 
 app.post('/api/salons/:id/reject-exit', async (req, res) => {
+  const { rejectReason } = req.body;
   const salon = await db.getSalon(req.params.id);
   if (!salon) return res.status(404).json({ error: 'Salon not found' });
   
-  // Revert back to active and remove the pending exit status
   await db.updateSalon(req.params.id, {
-    exitRequestStatus: undefined,
-    exitReason: undefined
+    exitRequestStatus: 'rejected',
+    exitRejectReason: rejectReason || 'Your exit request was not approved at this time.'
   });
   
   res.json({ success: true });
@@ -1147,6 +1148,90 @@ app.post('/api/reviews', authenticateJWT, async (req, res) => {
   }
 
   res.json({ success: true, review: newReview });
+});
+
+// ─── Messages (E2E Encrypted 1:1 Conversations) ────────────────────────────
+
+app.get('/api/messages/:salonId', async (req, res) => {
+  try {
+    const messages = await db.getMessages(req.params.salonId);
+    res.json(messages);
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Failed to get messages' });
+  }
+});
+
+app.post('/api/messages/:salonId', async (req, res) => {
+  try {
+    const { sender, encryptedContent, context } = req.body;
+    if (!sender || !encryptedContent) {
+      return res.status(400).json({ success: false, message: 'sender and encryptedContent are required' });
+    }
+    const msg = {
+      id: `msg_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      salonId: req.params.salonId,
+      sender,
+      encryptedContent,
+      context: context || 'direct',
+      createdAt: new Date().toISOString(),
+      isRead: false
+    };
+    await db.createMessage(msg);
+    res.json({ success: true, message: msg });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Failed to send message' });
+  }
+});
+
+app.post('/api/messages/read/:id', async (req, res) => {
+  try {
+    await db.markMessageRead(req.params.id);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Failed to mark message read' });
+  }
+});
+
+// ─── Announcements (Admin Broadcast to All Salons) ─────────────────────────
+
+app.get('/api/announcements', async (req, res) => {
+  try {
+    const announcements = await db.getAnnouncements();
+    res.json(announcements);
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Failed to get announcements' });
+  }
+});
+
+app.post('/api/announcements', async (req, res) => {
+  try {
+    const { title, content } = req.body;
+    if (!title || !content) {
+      return res.status(400).json({ success: false, message: 'title and content are required' });
+    }
+    const announcement = {
+      id: `ann_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      title,
+      content,
+      createdAt: new Date().toISOString(),
+      readBy: []
+    };
+    await db.createAnnouncement(announcement);
+    res.json({ success: true, announcement });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Failed to create announcement' });
+  }
+});
+
+app.post('/api/announcements/:id/read', async (req, res) => {
+  try {
+    const { salonId } = req.body;
+    if (!salonId) return res.status(400).json({ success: false, message: 'salonId is required' });
+    await db.markAnnouncementReadBySalon(req.params.id, salonId);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Failed to mark announcement read' });
+  }
 });
 
 // Health check endpoint for frontend connectivity detection

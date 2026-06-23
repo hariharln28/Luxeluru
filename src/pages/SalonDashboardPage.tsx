@@ -24,7 +24,10 @@ import {
   Trash2,
   Users,
   Sparkles,
-  Bell
+  Bell,
+  MessageSquare,
+  Send,
+  Megaphone
 } from 'lucide-react';
 import type { PaymentMethod } from '../types';
 import { CheckoutModal } from '../components/CheckoutModal';
@@ -49,7 +52,11 @@ export function SalonDashboardPage() {
     notifications,
     fetchNotifications,
     markNotificationRead,
-    markAllNotificationsRead
+    markAllNotificationsRead,
+    messages,
+    announcements,
+    sendDirectMessage,
+    markAnnouncementRead
   } = useApp();
 
   const [refreshing, setRefreshing] = useState(false);
@@ -64,7 +71,10 @@ export function SalonDashboardPage() {
   const navigate = useNavigate();
   
   // Dashboard Tabs
-  const [activeTab, setActiveTab] = useState<'appointments' | 'slots' | 'insights' | 'location' | 'team' | 'notifications'>('appointments');
+  const [activeTab, setActiveTab] = useState<'appointments' | 'slots' | 'insights' | 'location' | 'team' | 'notifications' | 'messages'>('appointments');
+  const [activeSubTab, setActiveSubTab] = useState<'chat' | 'announcements'>('chat');
+  const [msgInput, setMsgInput] = useState('');
+  const [msgSending, setMsgSending] = useState(false);
 
   const salonNotifications = notifications.filter(n => n.target === salon?.id);
   const unreadCount = salonNotifications.filter(n => !n.read).length;
@@ -305,6 +315,26 @@ export function SalonDashboardPage() {
               {unreadCount > 9 ? '9+' : unreadCount}
             </span>
           )}
+        </button>
+        <button
+          onClick={() => setActiveTab('messages')}
+          className={`relative flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-xs font-semibold transition ${
+            activeTab === 'messages' ? 'bg-[#c9a962] text-[#0f0d12]' : 'text-[#9a8fa8] hover:text-[#e8d5a3]'
+          }`}
+          style={{ touchAction: 'manipulation' }}
+        >
+          <MessageSquare className="h-4 w-4" />
+          Messages
+          {(() => {
+            const salonMsgs = messages.filter(m => m.salonId === salon?.id && m.sender === 'admin' && !m.isRead);
+            const unreadAnn = announcements.filter(a => salon && !a.readBy.includes(salon.id));
+            const total = salonMsgs.length + unreadAnn.length;
+            return total > 0 ? (
+              <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white">
+                {total > 9 ? '9+' : total}
+              </span>
+            ) : null;
+          })()}
         </button>
       </div>
 
@@ -1223,6 +1253,155 @@ export function SalonDashboardPage() {
           </div>
         );
       })()}
+
+      {/* MESSAGES TAB */}
+      {activeTab === 'messages' && (
+        <div className="space-y-6 animate-fade-in">
+          {/* Sub-tab navigation */}
+          <div className="flex gap-1 rounded-xl bg-[#130f18]/60 p-1 border border-[#c9a962]/10">
+            <button
+              onClick={() => setActiveSubTab('chat')}
+              className={`flex-1 flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-medium transition ${
+                activeSubTab === 'chat' ? 'bg-[#c9a962] text-[#0f0d12]' : 'text-[#9a8fa8] hover:text-[#e8d5a3]'
+              }`}
+              style={{ touchAction: 'manipulation' }}
+            >
+              <Lock className="h-4 w-4" /> Direct Message Admin
+            </button>
+            <button
+              onClick={() => {
+                setActiveSubTab('announcements');
+                // Mark all unread announcements as read
+                if (salon) {
+                  announcements
+                    .filter(a => !a.readBy.includes(salon.id))
+                    .forEach(a => markAnnouncementRead(a.id));
+                }
+              }}
+              className={`flex-1 flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-medium transition relative ${
+                activeSubTab === 'announcements' ? 'bg-[#c9a962] text-[#0f0d12]' : 'text-[#9a8fa8] hover:text-[#e8d5a3]'
+              }`}
+              style={{ touchAction: 'manipulation' }}
+            >
+              <Megaphone className="h-4 w-4" /> Platform Announcements
+              {salon && announcements.filter(a => !a.readBy.includes(salon.id)).length > 0 && (
+                <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white">
+                  {announcements.filter(a => !a.readBy.includes(salon.id)).length}
+                </span>
+              )}
+            </button>
+          </div>
+
+          {/* Chat with admin */}
+          {activeSubTab === 'chat' && (
+            <div className="luxe-card p-5">
+              <div className="flex items-center gap-2 mb-4 border-b border-[#c9a962]/10 pb-3">
+                <Lock className="h-4 w-4 text-[#c9a962]" />
+                <h3 className="font-display text-lg text-[#e8d5a3]">Admin Conversation</h3>
+                <span className="ml-auto text-[10px] text-[#9a8fa8] bg-[#c9a962]/10 px-2 py-0.5 rounded-full">🔒 End-to-End Encrypted</span>
+              </div>
+
+              {/* Message thread */}
+              <div className="space-y-3 max-h-[55dvh] overflow-y-auto pr-1 mb-4">
+                {messages.filter(m => m.salonId === salon?.id && m.context !== 'exit-dispute').length === 0 ? (
+                  <div className="text-center py-12 text-[#9a8fa8]">
+                    <MessageSquare className="h-10 w-10 mx-auto mb-3 opacity-30" />
+                    <p className="text-sm">No messages yet. Start the conversation with admin.</p>
+                  </div>
+                ) : (
+                  messages
+                    .filter(m => m.salonId === salon?.id && m.context !== 'exit-dispute')
+                    .map((m) => (
+                      <div
+                        key={m.id}
+                        className={`flex ${
+                          m.sender === 'salon' ? 'justify-end' : 'justify-start'
+                        }`}
+                      >
+                        <div
+                          className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
+                            m.sender === 'salon'
+                              ? 'bg-[#c9a962] text-[#0f0d12] rounded-br-sm'
+                              : 'bg-[#221c28] border border-[#c9a962]/15 text-[#e8d5a3] rounded-bl-sm'
+                          }`}
+                        >
+                          {m.decryptedContent || m.encryptedContent}
+                        </div>
+                      </div>
+                    ))
+                )}
+              </div>
+
+              {/* Message input */}
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  if (!msgInput.trim() || !salon) return;
+                  setMsgSending(true);
+                  await sendDirectMessage(salon.id, msgInput.trim(), 'salon', 'direct');
+                  setMsgInput('');
+                  setMsgSending(false);
+                }}
+                className="flex gap-2"
+              >
+                <input
+                  value={msgInput}
+                  onChange={(e) => setMsgInput(e.target.value)}
+                  placeholder="Type a message to admin..."
+                  className="luxe-input flex-1"
+                  style={{ fontSize: 16 }}
+                  disabled={msgSending}
+                />
+                <button
+                  type="submit"
+                  disabled={!msgInput.trim() || msgSending}
+                  className="luxe-btn px-4 disabled:opacity-50 flex items-center gap-2"
+                  style={{ touchAction: 'manipulation', minHeight: 44 }}
+                >
+                  {msgSending ? <span className="animate-spin">⏳</span> : <Send className="h-4 w-4" />}
+                </button>
+              </form>
+            </div>
+          )}
+
+          {/* Announcements */}
+          {activeSubTab === 'announcements' && (
+            <div className="space-y-4">
+              {announcements.length === 0 ? (
+                <div className="luxe-card p-8 text-center text-[#9a8fa8]">
+                  <Megaphone className="h-10 w-10 mx-auto mb-3 opacity-30" />
+                  <p className="text-sm">No platform announcements yet.</p>
+                </div>
+              ) : (
+                announcements.map((a) => (
+                  <div
+                    key={a.id}
+                    className={`luxe-card p-4 border ${
+                      salon && !a.readBy.includes(salon.id)
+                        ? 'border-[#c9a962]/40 bg-[#c9a962]/5'
+                        : 'border-[#c9a962]/10'
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <Megaphone className="h-5 w-5 text-[#c9a962] shrink-0 mt-0.5" />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2 mb-1">
+                          <p className="font-semibold text-sm text-[#e8d5a3] truncate">{a.title}</p>
+                          {salon && !a.readBy.includes(salon.id) && (
+                            <span className="shrink-0 text-[9px] bg-red-500 text-white rounded-full px-2 py-0.5 font-bold">NEW</span>
+                          )}
+                        </div>
+                        <p className="text-sm text-[#9a8fa8] leading-relaxed whitespace-pre-wrap">{a.content}</p>
+                        <p className="text-[10px] text-[#6b6175] mt-2">{new Date(a.createdAt).toLocaleString('en-IN')}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* NOTIFICATIONS PANEL */}
       {activeTab === 'notifications' && (

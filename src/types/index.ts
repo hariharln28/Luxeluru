@@ -69,7 +69,8 @@ export interface Salon {
   registeredAt?: string;
   panCardOwner?: string;
   panCardBusiness?: string;
-  exitRequestStatus?: 'pending' | 'approved';
+  exitRequestStatus?: 'pending' | 'approved' | 'rejected';
+  exitRejectReason?: string;
 }
 
 export interface User {
@@ -179,4 +180,24 @@ export interface Notification {
   message: string;
   createdAt: string;
   read: boolean;
+}
+
+export interface Message {
+  id: string;
+  salonId: string;
+  sender: 'admin' | 'salon';
+  encryptedContent: string;
+  context: 'direct' | 'exit-dispute';
+  createdAt: string;
+  isRead: boolean;
+  // decryptedContent is added client-side after decryption
+  decryptedContent?: string;
+}
+
+export interface Announcement {
+  id: string;
+  title: string;
+  content: string;
+  createdAt: string;
+  readBy: string[]; // array of salonIds that have read this
 }
