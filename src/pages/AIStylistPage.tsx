@@ -10,6 +10,7 @@ import {
   HAIR_STYLE_OPTIONS_FEMALE,
   HAIR_STYLE_OPTIONS_MALE,
   HAIR_COLOR_HEX,
+  MONK_SCALE,
 } from '../utils/faceAnalysis';
 
 // Declare global FaceMesh from CDN
@@ -170,6 +171,8 @@ export function AIStylistPage() {
   const [customColor, setCustomColor] = useState('');
   const [customStyle, setCustomStyle] = useState('');
   const [faceDetected, setFaceDetected] = useState(false);
+  const [tryOnIntensity, setTryOnIntensity] = useState(35); // 0-100
+  const [tryOnMode, setTryOnMode] = useState(false); // full try-on vs mesh dots
   const streamRef = useRef<MediaStream | null>(null);
   const faceMeshRef = useRef<any>(null);
   const landmarksRef = useRef<{ x: number; y: number }[]>([]);
@@ -179,7 +182,7 @@ export function AIStylistPage() {
   const colorOptions = gender === 'male' ? HAIR_COLOR_OPTIONS_MALE : HAIR_COLOR_OPTIONS_FEMALE;
   const styleOptions = gender === 'male' ? HAIR_STYLE_OPTIONS_MALE : HAIR_STYLE_OPTIONS_FEMALE;
 
-  // Draw face mesh overlay + hair color preview on canvas
+  // Draw face mesh overlay + enhanced hair try-on on canvas
   const drawOverlay = useCallback(() => {
     const video = videoRef.current;
     const canvas = canvasRef.current;
@@ -201,38 +204,75 @@ export function AIStylistPage() {
     if (landmarks.length > 400) {
       setFaceDetected(true);
 
-      // Draw face mesh dots
-      ctx.fillStyle = 'rgba(201, 169, 98, 0.25)';
-      for (let i = 0; i < landmarks.length; i += 3) {
-        const x = (1 - landmarks[i].x) * w;
-        const y = landmarks[i].y * h;
-        ctx.beginPath();
-        ctx.arc(x, y, 1, 0, Math.PI * 2);
-        ctx.fill();
+      // Show face mesh dots (when not in full try-on mode)
+      if (!tryOnMode) {
+        ctx.fillStyle = 'rgba(201, 169, 98, 0.25)';
+        for (let i = 0; i < landmarks.length; i += 3) {
+          const x = (1 - landmarks[i].x) * w;
+          const y = landmarks[i].y * h;
+          ctx.beginPath();
+          ctx.arc(x, y, 1, 0, Math.PI * 2);
+          ctx.fill();
+        }
       }
 
-      // Draw hair color tint preview
+      // Enhanced hair color try-on using full hairline polygon
       const activeColor = customColor || styleRecommendation?.suggestedHairColors?.[0];
       if (activeColor) {
         const hex = HAIR_COLOR_HEX[activeColor];
         if (hex) {
-          const forehead = landmarks[10];
-          const templeL = landmarks[21];
-          const templeR = landmarks[251];
+          // Key landmarks for accurate hair region
+          const forehead  = landmarks[10];
+          const templeL   = landmarks[21];
+          const templeR   = landmarks[251];
+          const topHead   = landmarks[10];
+          const brow_L    = landmarks[70];
+          const brow_R    = landmarks[300];
+
           if (forehead && templeL && templeR) {
-            const fx = (1 - forehead.x) * w;
-            const fy = forehead.y * h;
+            const fx  = (1 - forehead.x) * w;
+            const fy  = forehead.y * h;
             const tlx = (1 - templeL.x) * w;
+            const tly = templeL.y * h;
             const trx = (1 - templeR.x) * w;
-            const hairWidth = Math.abs(trx - tlx) * 1.5;
-            const hairHeight = fy * 0.55;
+            const try_ = templeR.y * h;
+            const blx  = brow_L ? (1 - brow_L.x) * w : tlx;
+            const bly  = brow_L ? brow_L.y * h : tly;
+            const brx  = brow_R ? (1 - brow_R.x) * w : trx;
+            const bry_  = brow_R ? brow_R.y * h : try_;
+
+            const hairWidth  = Math.abs(trx - tlx) * 1.6;
+            const hairHeight = fy * 0.65;
+            const alpha      = tryOnIntensity / 100;
 
             ctx.save();
-            ctx.globalAlpha = 0.25;
-            ctx.globalCompositeOperation = 'overlay';
+            ctx.globalAlpha = alpha;
+            ctx.globalCompositeOperation = tryOnMode ? 'multiply' : 'overlay';
             ctx.fillStyle = hex;
+
+            // Draw a more realistic hair shape using bezier curves
             ctx.beginPath();
-            ctx.ellipse(fx, fy - hairHeight * 0.35, hairWidth / 2, hairHeight / 2, 0, 0, Math.PI * 2);
+            // Start at left temple
+            ctx.moveTo(tlx, tly);
+            // Curve up to forehead top
+            ctx.bezierCurveTo(
+              tlx - hairWidth * 0.1, fy - hairHeight * 0.5,
+              fx - hairWidth * 0.4, fy - hairHeight * 0.9,
+              fx, fy - hairHeight
+            );
+            // Curve down to right temple
+            ctx.bezierCurveTo(
+              fx + hairWidth * 0.4, fy - hairHeight * 0.9,
+              trx + hairWidth * 0.1, fy - hairHeight * 0.5,
+              trx, try_
+            );
+            // Bottom edge across hairline (brow-level)
+            ctx.bezierCurveTo(
+              brx + hairWidth * 0.05, bry_ + 10,
+              blx - hairWidth * 0.05, bly + 10,
+              tlx, tly
+            );
+            ctx.closePath();
             ctx.fill();
             ctx.restore();
           }
@@ -248,7 +288,7 @@ export function AIStylistPage() {
     }
 
     animFrameRef.current = requestAnimationFrame(drawOverlay);
-  }, [customColor, styleRecommendation]);
+  }, [customColor, styleRecommendation, tryOnIntensity, tryOnMode]);
 
   const startCamera = useCallback(async () => {
     try {
@@ -465,14 +505,42 @@ export function AIStylistPage() {
           </div>
 
           {cameraOn && activeColor && (
-            <div className="mt-3 flex items-center gap-2 rounded-lg bg-[#0f0d12]/60 px-3 py-2">
-              <span
-                className="h-4 w-4 rounded-full border border-white/20 flex-shrink-0"
-                style={{ backgroundColor: HAIR_COLOR_HEX[activeColor] || '#888' }}
-              />
-              <span className="text-xs text-[#9a8fa8]">
-                Previewing: <span className="text-[#e8d5a3]">{activeColor}</span>
-              </span>
+            <div className="mt-3 space-y-2">
+              <div className="flex items-center justify-between gap-2 rounded-lg bg-[#0f0d12]/60 px-3 py-2">
+                <div className="flex items-center gap-2">
+                  <span
+                    className="h-4 w-4 rounded-full border border-white/20 flex-shrink-0"
+                    style={{ backgroundColor: HAIR_COLOR_HEX[activeColor] || '#888' }}
+                  />
+                  <span className="text-xs text-[#9a8fa8]">
+                    Previewing: <span className="text-[#e8d5a3]">{activeColor}</span>
+                  </span>
+                </div>
+                {/* Try-On Mode Toggle */}
+                <button
+                  onClick={() => setTryOnMode(m => !m)}
+                  className={`text-[10px] font-semibold px-2 py-1 rounded-md transition ${
+                    tryOnMode
+                      ? 'bg-[#c9a962] text-[#0f0d12]'
+                      : 'border border-[#c9a962]/30 text-[#c9a962]'
+                  }`}
+                >
+                  {tryOnMode ? '✓ Try-On' : 'Try-On'}
+                </button>
+              </div>
+              {/* Intensity slider */}
+              <div className="flex items-center gap-2 px-1">
+                <span className="text-[10px] text-[#9a8fa8] w-14">Intensity</span>
+                <input
+                  type="range"
+                  min={15}
+                  max={65}
+                  value={tryOnIntensity}
+                  onChange={e => setTryOnIntensity(Number(e.target.value))}
+                  className="flex-1 accent-[#c9a962] h-1"
+                />
+                <span className="text-[10px] text-[#c9a962] w-8">{tryOnIntensity}%</span>
+              </div>
             </div>
           )}
         </div>
@@ -481,19 +549,47 @@ export function AIStylistPage() {
         <div>
           {styleRecommendation ? (
             <div className="luxe-card space-y-5 p-5 sm:p-6 animate-fade-in">
-              {/* Detected Properties */}
-              <div className="grid grid-cols-3 gap-3">
+              {/* Detected Properties — 4 cards now including MST */}
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                 {[
-                  { label: tr('faceShape'), value: styleRecommendation.faceShape },
-                  { label: tr('skinTone'), value: styleRecommendation.skinTone },
-                  { label: 'Gender', value: styleRecommendation.gender },
+                  { label: 'Face Shape', value: styleRecommendation.faceShape },
+                  { label: 'Skin Tone',  value: styleRecommendation.skinTone },
+                  { label: 'Monk Scale', value: styleRecommendation.monkLabel ?? '—' },
+                  { label: 'Undertone',  value: styleRecommendation.monkUndertone ?? '—' },
                 ].map(({ label, value }) => (
                   <div key={label} className="rounded-lg bg-[#0f0d12]/60 p-3 text-center">
                     <p className="text-[10px] uppercase tracking-wider text-[#9a8fa8]">{label}</p>
-                    <p className="mt-1 font-display text-lg text-[#c9a962] capitalize">{value}</p>
+                    <p className="mt-1 font-display text-base sm:text-lg text-[#c9a962] capitalize leading-tight">{value}</p>
                   </div>
                 ))}
               </div>
+
+              {/* Monk Scale Visual Bar */}
+              {styleRecommendation.monkLevel && (
+                <div>
+                  <p className="mb-2 text-xs text-[#9a8fa8]">Monk Skin Tone Scale (MST-1 to MST-10)</p>
+                  <div className="flex items-center gap-1.5">
+                    {MONK_SCALE.map(mst => {
+                      const isActive = mst.level === styleRecommendation.monkLevel;
+                      return (
+                        <div
+                          key={mst.level}
+                          title={`${mst.label} · ${mst.name}`}
+                          className={`flex-1 rounded-full transition-all ${
+                            isActive
+                              ? 'h-5 ring-2 ring-[#c9a962] ring-offset-1 ring-offset-[#1a1520]'
+                              : 'h-3 opacity-70'
+                          }`}
+                          style={{ backgroundColor: mst.hex }}
+                        />
+                      );
+                    })}
+                  </div>
+                  <div className="mt-1 flex justify-between text-[9px] text-[#9a8fa8]/60">
+                    <span>MST-1</span><span>MST-5</span><span>MST-10</span>
+                  </div>
+                </div>
+              )}
 
               {/* AI Recommended Colors */}
               <div>
