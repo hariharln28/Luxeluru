@@ -5,6 +5,7 @@ import { useApp } from '../context/AppContext';
 import { useT } from '../hooks/useT';
 import type { Language } from '../types';
 import logoUrl from '../assets/logo.png.jpeg';
+import { supabase } from '../services/supabaseClient';
 
 export function RegisterPage() {
   const [name, setName] = useState('');
@@ -67,6 +68,11 @@ export function RegisterPage() {
       setError('Registration failed. Please check the message above and try again.');
       return;
     }
+
+    // Supabase auto-signs-in after signUp — sign out immediately so the user
+    // must log in manually (GuestRoute would redirect a logged-in user to /dashboard)
+    await supabase.auth.signOut();
+
     navigate('/login', { state: { fromRegister: true, email: email.trim().toLowerCase() } });
   }
 
