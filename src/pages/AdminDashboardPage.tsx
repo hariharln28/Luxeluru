@@ -617,23 +617,31 @@ export function AdminDashboardPage() {
                         </span>
                       </td>
                       <td className="px-6 py-4 text-center">
-                        {s.isActive !== false && !s.exitReason?.includes('exited') && (
-                          <button
-                            onClick={() => removeSalonForcefully(s.id)}
-                            className="flex items-center gap-1.5 text-xs text-red-400 hover:text-red-300 transition-colors mx-auto font-semibold hover:underline"
-                            title="Forcefully remove this salon"
-                          >
-                            <Trash2 className="h-4 w-4" /> Remove Forcefully
-                          </button>
-                        )}
-                        {(s.isActive === false || s.exitReason?.includes('exited')) && (
-                          <button
-                            onClick={() => setDeletingSalonId(s.id)}
-                            className="flex items-center gap-1.5 text-xs text-red-500 hover:text-red-400 transition-colors mx-auto font-semibold hover:underline"
-                            title="Permanently delete this salon"
-                          >
-                            <XCircle className="h-4 w-4" /> Delete Permanently
-                          </button>
+                        {s.id === 'LLLUX456' ? (
+                          <span className="inline-flex items-center gap-1 text-[10px] text-[#c9a962] font-semibold bg-[#c9a962]/10 px-2 py-1 rounded-full">
+                            🛡️ Test Account
+                          </span>
+                        ) : (
+                          <>
+                            {s.isActive !== false && !s.exitReason?.includes('exited') && (
+                              <button
+                                onClick={() => removeSalonForcefully(s.id)}
+                                className="flex items-center gap-1.5 text-xs text-red-400 hover:text-red-300 transition-colors mx-auto font-semibold hover:underline"
+                                title="Forcefully remove this salon"
+                              >
+                                <Trash2 className="h-4 w-4" /> Remove Forcefully
+                              </button>
+                            )}
+                            {(s.isActive === false || s.exitReason?.includes('exited')) && (
+                              <button
+                                onClick={() => setDeletingSalonId(s.id)}
+                                className="flex items-center gap-1.5 text-xs text-red-500 hover:text-red-400 transition-colors mx-auto font-semibold hover:underline"
+                                title="Permanently delete this salon"
+                              >
+                                <XCircle className="h-4 w-4" /> Delete Permanently
+                              </button>
+                            )}
+                          </>
                         )}
                       </td>
                     </tr>
@@ -730,7 +738,11 @@ export function AdminDashboardPage() {
                           </span>
                         </td>
                         <td className="px-5 py-3 text-center">
-                          {isBlocked ? (
+                          {(u.id === 'usr-admin-test' || u.email === 'adminuser1@test.com') ? (
+                            <span className="inline-flex items-center gap-1 text-[10px] text-[#c9a962] font-semibold bg-[#c9a962]/10 px-2 py-1 rounded-full">
+                              🛡️ Test Account
+                            </span>
+                          ) : isBlocked ? (
                             <button
                               onClick={() => unblockUserForcefully(u.id)}
                               className="flex items-center justify-center gap-1 text-[10px] font-semibold text-green-400 hover:text-green-300 hover:underline mx-auto transition-colors"
