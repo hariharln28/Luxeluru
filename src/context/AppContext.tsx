@@ -14,6 +14,7 @@ import type {
   StaffReview,
   StyleRecommendation,
   Salon,
+  Staff,
   PaymentMethod,
   BlockedSlot,
   Notification,

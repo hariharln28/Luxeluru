@@ -379,13 +379,26 @@ export function SalonDetailPage() {
                 <label className="text-sm text-[#9a8fa8]">{tr('selectTime')}</label>
                 <div className="mt-2 grid grid-cols-3 gap-2">
                   {TIME_SLOTS.map((slot) => {
+                    const today = new Date().toISOString().split('T')[0];
+                    const now = new Date();
                     const isBlockedSlot = date && blockedSlots.some(
                       (bs) => bs.salonId === currentSalon.id && bs.date === date && bs.time === slot
                     );
                     const isAlreadyBooked = date && bookings.some(
                       (b) => b.salonId === currentSalon.id && b.date === date && b.time === slot && b.status === 'confirmed'
                     );
-                    const isUnavailable = isBlockedSlot || isAlreadyBooked;
+                    // Disable slots that have already passed today
+                    let isPast = false;
+                    if (date === today) {
+                      const [timePart, ampm] = slot.split(' ');
+                      let [h, m] = timePart.split(':').map(Number);
+                      if (ampm === 'PM' && h !== 12) h += 12;
+                      if (ampm === 'AM' && h === 12) h = 0;
+                      const slotTime = new Date();
+                      slotTime.setHours(h, m, 0, 0);
+                      isPast = slotTime <= now;
+                    }
+                    const isUnavailable = isBlockedSlot || isAlreadyBooked || isPast;
                     return (
                       <button key={slot}
                         onClick={() => !isUnavailable && setTime(slot)}
@@ -398,7 +411,8 @@ export function SalonDetailPage() {
                             : 'border border-[#c9a962]/20 hover:border-[#c9a962]/50'
                         }`}>
                         {slot}
-                        {isUnavailable && <span className="block text-[9px] opacity-60 mt-0.5">Booked</span>}
+                        {isPast && <span className="block text-[9px] opacity-60 mt-0.5">Past</span>}
+                        {!isPast && isUnavailable && <span className="block text-[9px] opacity-60 mt-0.5">Booked</span>}
                       </button>
                     );
                   })}
@@ -563,7 +577,7 @@ export function SalonDetailPage() {
           amount={total}
           salonName={currentSalon.name}
           paymentMethod={paymentMethod as 'card' | 'upi'}
-          onSuccess={() => finaliseBooking(pendingBookingData, pendingBookingData.serviceNames, total)}
+          onSuccess={() => pendingBookingData && finaliseBooking(pendingBookingData, pendingBookingData.serviceNames, total)}
           onClose={() => { setShowCheckout(false); setShowBooking(true); }}
         />
       )}

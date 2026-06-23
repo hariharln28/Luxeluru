@@ -689,7 +689,7 @@ export function AIStylistPage() {
       <div className="mt-8 flex items-center justify-center gap-2 text-center">
         <AlertTriangle className="h-3.5 w-3.5 text-[#9a8fa8]/60 flex-shrink-0" />
         <p className="text-xs text-[#9a8fa8]/60">
-          AI Stylr is AI and AI can make mistakes
+          AI Stylr uses AI — results are suggestions and may not always be accurate.
         </p>
       </div>
     </div>

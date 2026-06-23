@@ -28,6 +28,15 @@ function parseSlotTime(slot: string): Date {
   return d;
 }
 
+/** Convert "2:00 PM" → "14:00:00" for ISO date string construction */
+function convertTo24(slot: string): string {
+  const [timePart, ampm] = slot.split(' ');
+  let [h, m] = timePart.split(':').map(Number);
+  if (ampm === 'PM' && h !== 12) h += 12;
+  if (ampm === 'AM' && h === 12) h = 0;
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00`;
+}
+
 /** Returns the earliest available slot (up to 7 days ahead) for a given salon */
 function getNextAvailableSlot(
   salonId: string,
@@ -553,13 +562,4 @@ export function PanicModal({ onClose }: PanicModalProps) {
       </div>
     </div>
   );
-}
-
-/** Convert "2:00 PM" → "14:00:00" for ISO date string construction */
-function convertTo24(slot: string): string {
-  const [timePart, ampm] = slot.split(' ');
-  let [h, m] = timePart.split(':').map(Number);
-  if (ampm === 'PM' && h !== 12) h += 12;
-  if (ampm === 'AM' && h === 12) h = 0;
-  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00`;
 }
