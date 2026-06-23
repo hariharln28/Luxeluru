@@ -79,6 +79,7 @@ export function AdminDashboardPage() {
   const [blockingUserId, setBlockingUserId] = useState<string | null>(null);
   const [blockDays, setBlockDays] = useState('3');
   const [deletingSalonId, setDeletingSalonId] = useState<string | null>(null);
+  const [userSearch, setUserSearch] = useState('');
 
   // Exit rejection modal state
   const [rejectExitId, setRejectExitId] = useState<string | null>(null);
@@ -691,76 +692,109 @@ export function AdminDashboardPage() {
                         <p><strong>Salon Report Reason:</strong></p>
                         <p className="italic mt-0.5 text-[#9a8fa8]">"{b.fakeReportReason || 'No details provided'}"</p>
                       </div>
-                    </div>
-                  );
-                })}
+{/* User Management List */}
+          <div className="lg:col-span-2 space-y-4">
+            <div className="border-b border-[#c9a962]/10 pb-2 flex items-start justify-between gap-4 flex-wrap">
+              <div>
+                <h3 className="font-display text-2xl text-[#e8d5a3]">Registered Users</h3>
+                <p className="text-xs text-[#9a8fa8] mt-0.5">
+                  {users.length} total registered &middot; Block users who spam fake bookings.
+                </p>
               </div>
-            )}
-          </div>
-
-          {/* User Management List */}
-          <div className="lg:col-span-2 space-y-6">
-            <div className="border-b border-[#c9a962]/10 pb-2">
-              <h3 className="font-display text-2xl text-[#e8d5a3]">Registered Users & Dues Enforcement</h3>
-              <p className="text-xs text-[#9a8fa8] mt-0.5">Block fake-booking users to prevent them from locking down services.</p>
             </div>
 
+            {/* Search bar */}
+            <input
+              type="text"
+              placeholder="Search by name, email, phone or user ID..."
+              value={userSearch}
+              onChange={e => setUserSearch(e.target.value)}
+              className="luxe-input text-xs w-full"
+            />
+            
             <div className="overflow-x-auto rounded-xl border border-[#c9a962]/15 bg-[#1a1520]/60">
               <table className="w-full text-left border-collapse text-xs">
                 <thead>
                   <tr className="border-b border-[#c9a962]/20 bg-[#0f0d12] text-[#9a8fa8] font-semibold text-[10px] uppercase tracking-wider">
-                    <th className="px-5 py-3">Customer Name</th>
-                    <th className="px-5 py-3">Contact details</th>
-                    <th className="px-5 py-3">Status</th>
-                    <th className="px-5 py-3 text-center">Action</th>
+                    <th className="px-4 py-3">Customer</th>
+                    <th className="px-4 py-3">Contact</th>
+                    <th className="px-4 py-3">Registered</th>
+                    <th className="px-4 py-3">Bookings</th>
+                    <th className="px-4 py-3">Status</th>
+                    <th className="px-4 py-3 text-center">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#c9a962]/10">
-                  {users.map((u) => {
-                    const todayStr = new Date().toISOString().split('T')[0];
-                    const isBlocked = u.blockedUntil && u.blockedUntil >= todayStr;
-
-                    return (
-                      <tr key={u.id} className="hover:bg-[#c9a962]/5 transition-colors">
-                        <td className="px-5 py-3">
-                          <p className="font-semibold text-[#e8d5a3]">{u.name}</p>
-                          <p className="text-[10px] text-[#9a8fa8] font-mono mt-0.5">User ID: {u.id}</p>
-                        </td>
-                        <td className="px-5 py-3">
-                          <p className="text-[#e8d5a3]">{u.email}</p>
-                          <p className="text-[#9a8fa8] mt-0.5">{u.phone}</p>
-                        </td>
-                        <td className="px-5 py-3">
-                          <span className={`inline-flex rounded-full px-2 py-0.5 text-[9px] font-bold ${
-                            isBlocked ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400'
-                          }`}>
-                            {isBlocked ? `Blocked until ${u.blockedUntil}` : 'Active'}
-                          </span>
-                        </td>
-                        <td className="px-5 py-3 text-center">
-                          {(u.id === 'usr-admin-test' || u.email === 'adminuser1@test.com') ? (
-                            <span className="inline-flex items-center gap-1 text-[10px] text-[#c9a962] font-semibold bg-[#c9a962]/10 px-2 py-1 rounded-full">
-                              🛡️ Test Account
-                            </span>
-                          ) : isBlocked ? (
-                            <button
-                              onClick={() => unblockUserForcefully(u.id)}
-                              className="flex items-center justify-center gap-1 text-[10px] font-semibold text-green-400 hover:text-green-300 hover:underline mx-auto transition-colors"
-                            >
-                              <Unlock className="h-3.5 w-3.5" /> Unblock User
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => setBlockingUserId(u.id)}
-                              className="flex items-center justify-center gap-1 text-[10px] font-semibold text-red-400 hover:text-red-300 hover:underline mx-auto transition-colors"
-                            >
-                              <Lock className="h-3.5 w-3.5" /> Block User...
-                            </button>
-                          )}
-                        </td>
-                      </tr>
+                  {(() => {
+                    const q = userSearch.toLowerCase();
+                    const filtered = users.filter(u =>
+                      !q ||
+                      u.name?.toLowerCase().includes(q) ||
+                      u.email?.toLowerCase().includes(q) ||
+                      u.phone?.includes(q) ||
+                      u.id?.toLowerCase().includes(q)
                     );
-                  })}
+                    if (filtered.length === 0) return (
+                      <tr><td colSpan={6} className="px-5 py-8 text-center text-[#9a8fa8] text-xs">No users match your search.</td></tr>
+                    );
+                    return filtered.map((u) => {
+                      const todayStr = new Date().toISOString().split('T')[0];
+                      const isBlocked = u.blockedUntil && u.blockedUntil >= todayStr;
+                      const userBookings = bookings.filter(b => b.userId === u.id).length;
+                      // Name: if it looks like just an email-prefix (no spaces, short), show email below more prominently
+                      const displayName = u.name && u.name.length > 1 ? u.name : u.email?.split('@')[0] ?? 'Unknown';
+                      const registeredDate = u.createdAt
+                        ? new Date(u.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+                        : 'Unknown';
+
+                      return (
+                        <tr key={u.id} className="hover:bg-[#c9a962]/5 transition-colors">
+                          <td className="px-4 py-3">
+                            <p className="font-semibold text-[#e8d5a3] capitalize">{displayName}</p>
+                            <p className="text-[10px] text-[#9a8fa8] font-mono mt-0.5 truncate max-w-[140px]" title={u.id}>ID: {u.id}</p>
+                          </td>
+                          <td className="px-4 py-3">
+                            <p className="text-[#e8d5a3] truncate max-w-[180px]" title={u.email}>{u.email}</p>
+                            <p className="text-[#9a8fa8] mt-0.5">{u.phone || <span className="italic opacity-50">No phone</span>}</p>
+                          </td>
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            <p className="text-[#e8d5a3]">{registeredDate}</p>
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            <span className="text-[#c9a962] font-semibold">{userBookings}</span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className={`inline-flex rounded-full px-2 py-0.5 text-[9px] font-bold ${
+                              isBlocked ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400'
+                            }`}>
+                              {isBlocked ? `Blocked until ${u.blockedUntil}` : 'Active'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            {(u.id === 'usr-admin-test' || u.email === 'adminuser1@test.com') ? (
+                              <span className="inline-flex items-center gap-1 text-[10px] text-[#c9a962] font-semibold bg-[#c9a962]/10 px-2 py-1 rounded-full">
+                                🛡️ Test Account
+                              </span>
+                            ) : isBlocked ? (
+                              <button
+                                onClick={() => unblockUserForcefully(u.id)}
+                                className="flex items-center justify-center gap-1 text-[10px] font-semibold text-green-400 hover:text-green-300 hover:underline mx-auto transition-colors"
+                              >
+                                <Unlock className="h-3.5 w-3.5" /> Unblock
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => setBlockingUserId(u.id)}
+                                className="flex items-center justify-center gap-1 text-[10px] font-semibold text-red-400 hover:text-red-300 hover:underline mx-auto transition-colors"
+                              >
+                                <Lock className="h-3.5 w-3.5" /> Block...
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    });
+                  })()}
                 </tbody>
               </table>
             </div>
