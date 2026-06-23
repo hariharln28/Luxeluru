@@ -162,7 +162,7 @@ export function SalonDetailPage() {
   return (
     <div className={`mx-auto max-w-7xl px-4 py-8 sm:px-6 ${total > 0 ? 'pb-28 lg:pb-8' : ''}`}>
       <div className="relative h-56 overflow-hidden rounded-2xl sm:h-72">
-        <img src={currentSalon.image} alt={currentSalon.name} className="h-full w-full object-cover" />
+        <img src={currentSalon.image} alt={currentSalon.name} loading="lazy" decoding="async" className="h-full w-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-t from-[#0f0d12] via-transparent to-transparent" />
         <div className="absolute bottom-4 left-4 right-4">
           <div className="flex flex-wrap items-baseline gap-2.5">

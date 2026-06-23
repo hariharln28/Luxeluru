@@ -44,7 +44,7 @@ export function NavigatorPage() {
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#c9a962]/20 font-display text-lg text-[#c9a962]">
                 {idx + 1}
               </div>
-              <img src={item.image} alt={item.name} className="h-16 w-16 shrink-0 rounded-lg object-cover" />
+              <img src={item.image} alt={item.name} className="h-16 w-16 shrink-0 rounded-lg object-cover" loading="lazy" />
               <div className="flex-1 min-w-0">
                 <h3 className="font-display text-base sm:text-lg text-[#e8d5a3] truncate">{item.name}</h3>
                 <p className="flex items-center gap-1 text-xs text-[#9a8fa8] truncate">
@@ -65,14 +65,14 @@ export function NavigatorPage() {
                 href={getGoogleMapsNavigateUrl(item.lat, item.lng)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="luxe-btn flex items-center gap-1.5 text-sm py-2 px-3"
+                className="luxe-btn flex items-center gap-1.5 text-sm py-3 px-3"
               >
                 <Navigation className="h-4 w-4" /> {tr('navigate')}
               </a>
-              <a href={`tel:${item.phone}`} className="luxe-btn-outline flex items-center gap-1.5 text-sm py-2 px-3">
+              <a href={`tel:${item.phone}`} className="luxe-btn-outline flex items-center gap-1.5 text-sm py-3 px-3">
                 <Phone className="h-4 w-4" /> {tr('callSalon')}
               </a>
-              <Link to={`/salons/${item.id}`} className="luxe-btn-outline flex items-center gap-1.5 text-sm py-2 px-3">
+              <Link to={`/salons/${item.id}`} className="luxe-btn-outline flex items-center gap-1.5 text-sm py-3 px-3">
                 <ExternalLink className="h-4 w-4" /> {tr('bookNow')}
               </Link>
             </div>

@@ -15,10 +15,18 @@
 
 * {
   box-sizing: border-box;
+  /* Remove grey flash on tap (iOS/Android) */
+  -webkit-tap-highlight-color: transparent;
 }
 
 html {
   scroll-behavior: smooth;
+  overscroll-behavior: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .animate-fade-in, .animate-slide-up, .panic-pulse { animation: none !important; }
 }
 
 body {
@@ -27,11 +35,16 @@ body {
   background: var(--color-luxe-bg);
   color: #f5f0eb;
   min-height: 100vh;
+  min-height: 100dvh;
   -webkit-font-smoothing: antialiased;
+  /* Prevent font size adjust on orientation change */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 #root {
   min-height: 100vh;
+  min-height: 100dvh;
 }
 
 .font-display {
@@ -61,11 +74,25 @@ body {
   padding: 0.75rem 1.5rem;
   cursor: pointer;
   transition: transform 0.2s, box-shadow 0.2s;
+  /* No 300ms tap delay, min 44px iOS touch target */
+  touch-action: manipulation;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .luxe-btn:hover {
   transform: translateY(-1px);
   box-shadow: 0 8px 24px rgba(201, 169, 98, 0.35);
+}
+
+.luxe-btn:active {
+  transform: scale(0.98);
+  box-shadow: none;
 }
 
 .luxe-btn-outline {
@@ -77,11 +104,24 @@ body {
   padding: 0.75rem 1.5rem;
   cursor: pointer;
   transition: all 0.2s;
+  touch-action: manipulation;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .luxe-btn-outline:hover {
   border-color: #c9a962;
   background: rgba(201, 169, 98, 0.08);
+}
+
+.luxe-btn-outline:active {
+  background: rgba(201, 169, 98, 0.12);
+  transform: scale(0.98);
 }
 
 .luxe-input {
@@ -92,17 +132,43 @@ body {
   padding: 0.875rem 1rem;
   color: #f5f0eb;
   font-family: var(--font-body);
-  font-size: 0.95rem;
+  /* CRITICAL: 16px prevents iOS auto-zoom on input focus */
+  font-size: 16px;
   outline: none;
-  transition: border-color 0.2s;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  -webkit-appearance: none;
+  appearance: none;
+  touch-action: manipulation;
 }
 
 .luxe-input:focus {
   border-color: rgba(201, 169, 98, 0.6);
+  box-shadow: 0 0 0 3px rgba(201, 169, 98, 0.1);
 }
 
 .luxe-input::placeholder {
   color: #6b6175;
+}
+
+/* Safe area padding for iOS home indicator */
+.pb-safe {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+.pt-safe {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+/* Loading skeleton */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #221c28 25%, #2d2438 50%, #221c28 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 0.5rem;
 }
 
 @keyframes pulse-gold {
@@ -123,9 +189,27 @@ body {
   animation: fadeIn 0.4s ease-out;
 }
 
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-slide-up {
+  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Hide scrollbar on horizontal scroll containers */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 4px;
+  height: 4px;
 }
 
 ::-webkit-scrollbar-track {
@@ -139,4 +223,9 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #c9a962;
+}
+
+/* Overscroll contain — prevent page scroll bleed when inside modals */
+.modal-scroll {
+  overscroll-behavior: contain;
 }

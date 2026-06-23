@@ -23,7 +23,7 @@ export function CategoriesPage() {
             <Link
               key={cat}
               to={`/salons?category=${cat}`}
-              className={`luxe-card group overflow-hidden bg-gradient-to-br ${meta.color} p-6 transition hover:border-[#c9a962]/40`}
+              className={`luxe-card group overflow-hidden bg-gradient-to-br ${meta.color} p-6 transition hover:border-[#c9a962]/40 active:scale-95 select-none`}
             >
               <span className="text-4xl">{meta.icon}</span>
               <h2 className="mt-4 font-display text-2xl text-[#e8d5a3] group-hover:text-[#c9a962]">

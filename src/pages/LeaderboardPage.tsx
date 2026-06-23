@@ -61,7 +61,7 @@ export function LeaderboardPage() {
                 className="luxe-card flex items-center gap-4 p-4 transition hover:border-[#c9a962]/40"
               >
                 <span className="w-8 text-center text-lg">{idx < 3 ? medals[idx] : `#${idx + 1}`}</span>
-                <img src={salon.image} alt={salon.name} className="h-12 w-12 rounded-lg object-cover" />
+                <img src={salon.image} alt={salon.name} className="h-12 w-12 rounded-lg object-cover" loading="lazy" />
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-[#e8d5a3] truncate">{salon.name}</p>
                   <p className="text-xs text-[#9a8fa8]">{salon.area}</p>
@@ -90,7 +90,7 @@ export function LeaderboardPage() {
                 className="luxe-card flex items-center gap-4 p-4 transition hover:border-[#c9a962]/40"
               >
                 <span className="w-8 text-center text-lg">{idx < 3 ? medals[idx] : `#${idx + 1}`}</span>
-                <img src={stylist.avatar} alt={stylist.name} className="h-12 w-12 rounded-full bg-[#1a1520]" />
+                <img src={stylist.avatar} alt={stylist.name} className="h-12 w-12 rounded-full bg-[#1a1520]" loading="lazy" />
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-[#e8d5a3] truncate">{stylist.name}</p>
                   <p className="text-xs text-[#9a8fa8] truncate">{stylist.salonName}</p>

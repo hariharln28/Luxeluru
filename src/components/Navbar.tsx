@@ -52,6 +52,11 @@ export function Navbar() {
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
+  // Close mobile menu on route change
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [location.pathname]);
+
   const navLinks = isAdmin
     ? [{ to: '/admin-dashboard', icon: LayoutDashboard, label: 'Admin Dashboard' }]
     : salon
@@ -206,7 +211,12 @@ export function Navbar() {
             )}
           </div>
 
-          <button className="lg:hidden text-[#c9a962]" onClick={() => setMobileOpen(!mobileOpen)}>
+          <button
+            className="lg:hidden text-[#c9a962] flex items-center justify-center rounded-lg"
+            onClick={() => setMobileOpen(!mobileOpen)}
+            style={{ minWidth: 44, minHeight: 44, touchAction: 'manipulation' }}
+            aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
+          >
             {mobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </button>
         </div>
@@ -225,35 +235,50 @@ export function Navbar() {
             
             {navLinks.map(({ to, icon: Icon, label }) => (
               <Link key={to} to={to} onClick={() => setMobileOpen(false)}
-                className="flex items-center gap-3 py-3 text-[#f5f0eb] border-b border-[#c9a962]/5">
-                <Icon className="h-5 w-5 text-[#c9a962]" /> {label}
+                className={`flex items-center gap-3 py-4 text-[#f5f0eb] border-b border-[#c9a962]/5 ${
+                  location.pathname === to ? 'text-[#c9a962]' : ''
+                }`}
+                style={{ minHeight: 52, touchAction: 'manipulation' }}
+              >
+                <Icon className="h-5 w-5 text-[#c9a962] shrink-0" /> {label}
               </Link>
             ))}
             {!hideLanguageChoice && (
-              <div className="mt-4 flex gap-2">
+              <div className="mt-4 flex gap-2 flex-wrap">
                 {langs.map(({ code, label }) => (
                   <button key={code} onClick={() => setLanguage(code)}
-                    className={`rounded-lg px-3 py-1.5 text-sm ${language === code ? 'bg-[#c9a962] text-[#0f0d12]' : 'border border-[#c9a962]/30'}`}>
+                    style={{ touchAction: 'manipulation', minHeight: 40 }}
+                    className={`rounded-lg px-4 py-2 text-sm font-medium ${
+                      language === code ? 'bg-[#c9a962] text-[#0f0d12]' : 'border border-[#c9a962]/30 text-[#9a8fa8]'
+                    }`}>
                     {label}
                   </button>
                 ))}
               </div>
             )}
             {isAdmin || salon || user ? (
-              <div className="mt-4 space-y-2">
-                <button onClick={() => { logout(); setMobileOpen(false); }} className="flex items-center gap-2 text-red-400">
+              <div className="mt-4 space-y-1">
+                <button
+                  onClick={() => { logout(); setMobileOpen(false); }}
+                  className="flex w-full items-center gap-2 rounded-lg px-3 py-3 text-red-400 hover:bg-red-500/10"
+                  style={{ touchAction: 'manipulation', minHeight: 48 }}
+                >
                   <LogOut className="h-4 w-4" /> {tr('logout')}
                 </button>
                 {user && (
-                  <button onClick={() => { setDeleteOpen(true); setMobileOpen(false); }} className="flex items-center gap-2 text-red-500/70 text-sm">
+                  <button
+                    onClick={() => { setDeleteOpen(true); setMobileOpen(false); }}
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-3 text-red-500/70 text-sm hover:bg-red-500/10"
+                    style={{ touchAction: 'manipulation', minHeight: 48 }}
+                  >
                     <Trash2 className="h-4 w-4" /> Delete Account
                   </button>
                 )}
               </div>
             ) : (
               <div className="mt-4 flex gap-2">
-                <Link to="/login" className="luxe-btn-outline flex-1 text-center" onClick={() => setMobileOpen(false)}>{tr('login')}</Link>
-                <Link to="/register" className="luxe-btn flex-1 text-center" onClick={() => setMobileOpen(false)}>{tr('register')}</Link>
+                <Link to="/login" className="luxe-btn-outline flex-1 text-center" onClick={() => setMobileOpen(false)} style={{ minHeight: 48 }}>{tr('login')}</Link>
+                <Link to="/register" className="luxe-btn flex-1 text-center" onClick={() => setMobileOpen(false)} style={{ minHeight: 48 }}>{tr('register')}</Link>
               </div>
             )}
           </div>

@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Search } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useT } from '../hooks/useT';
 import { SalonCard } from '../components/SalonCard';
@@ -31,41 +31,109 @@ export function SalonsPage() {
   }, [activeSalons, search, category, featuredOnly]);
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+    <div className="mx-auto max-w-7xl px-4 py-6 sm:py-8 sm:px-6">
       <h1 className="font-display text-3xl gold-gradient">{tr('salons')}</h1>
-      <p className="mt-2 text-[#9a8fa8]">{activeSalons.length} luxury salons across Bengaluru</p>
+      <p className="mt-1 text-sm text-[#9a8fa8]">{activeSalons.length} luxury salons across Bengaluru</p>
 
-      <div className="mt-6 flex flex-col gap-4 sm:flex-row">
-        <div className="relative flex-1">
+      <div className="mt-5 space-y-3">
+        {/* Search — full-width with clear button */}
+        <div className="relative">
           <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-[#9a8fa8]" />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={tr('search')}
-            className="luxe-input pl-10"
+            inputMode="search"
+            className="luxe-input pl-10 pr-10"
           />
+          {search && (
+            <button
+              onClick={() => setSearch('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center justify-center text-[#9a8fa8] hover:text-white"
+              style={{ touchAction: 'manipulation', minWidth: 32, minHeight: 32 }}
+              aria-label="Clear search"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
         </div>
-        <select
-          value={category}
-          onChange={(e) => setCategory(e.target.value as SalonCategory | 'all')}
-          className="luxe-input w-full sm:w-48"
-        >
-          <option value="all">{tr('all')}</option>
+
+        {/* Category chips — horizontal scroll on mobile */}
+        <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
+          <button
+            onClick={() => setCategory('all')}
+            className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium transition ${
+              category === 'all'
+                ? 'bg-[#c9a962] text-[#0f0d12]'
+                : 'border border-[#c9a962]/30 text-[#9a8fa8] hover:border-[#c9a962]/60'
+            }`}
+            style={{ touchAction: 'manipulation', minHeight: 38 }}
+          >
+            {tr('all')}
+          </button>
           {ALL_CATEGORIES.map((c) => (
-            <option key={c} value={c}>{tr(c)}</option>
+            <button
+              key={c}
+              onClick={() => setCategory(c === category ? 'all' : c)}
+              className={`shrink-0 rounded-full px-4 py-2 text-sm font-medium capitalize transition ${
+                category === c
+                  ? 'bg-[#c9a962] text-[#0f0d12]'
+                  : 'border border-[#c9a962]/30 text-[#9a8fa8] hover:border-[#c9a962]/60'
+              }`}
+              style={{ touchAction: 'manipulation', minHeight: 38 }}
+            >
+              {tr(c)}
+            </button>
           ))}
-        </select>
-        <label className="flex items-center gap-2 text-sm text-[#9a8fa8]">
-          <input type="checkbox" checked={featuredOnly} onChange={(e) => setFeaturedOnly(e.target.checked)}
-            className="rounded border-[#c9a962]/30" />
-          {tr('featured')}
+        </div>
+
+        {/* Featured toggle — custom toggle switch */}
+        <label className="inline-flex items-center gap-3 cursor-pointer select-none" style={{ touchAction: 'manipulation' }}>
+          <div
+            onClick={() => setFeaturedOnly(!featuredOnly)}
+            role="switch"
+            aria-checked={featuredOnly}
+            className={`relative h-6 w-11 rounded-full transition-colors cursor-pointer ${
+              featuredOnly ? 'bg-[#c9a962]' : 'bg-[#3d3347]'
+            }`}
+          >
+            <div className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow transition-transform ${
+              featuredOnly ? 'translate-x-6' : 'translate-x-1'
+            }`} />
+          </div>
+          <span className="text-sm text-[#9a8fa8]">{tr('featured')} only</span>
         </label>
       </div>
 
+      {/* Results count */}
+      <p className="mt-4 text-xs text-[#6b6175]">
+        {filtered.length} salon{filtered.length !== 1 ? 's' : ''} found
+        {(search || category !== 'all' || featuredOnly) && (
+          <button
+            onClick={() => { setSearch(''); setCategory('all'); setFeaturedOnly(false); }}
+            className="ml-3 text-[#c9a962] hover:underline"
+            style={{ touchAction: 'manipulation' }}
+          >
+            Clear filters
+          </button>
+        )}
+      </p>
+
       {filtered.length === 0 ? (
-        <p className="mt-12 text-center text-[#9a8fa8]">{tr('noSalonsFound')}</p>
+        <div className="mt-12 text-center">
+          <p className="text-4xl mb-3">🔍</p>
+          <p className="text-[#9a8fa8] font-medium">{tr('noSalonsFound')}</p>
+          <p className="mt-1 text-sm text-[#6b6175]">Try a different search or category</p>
+          <button
+            onClick={() => { setSearch(''); setCategory('all'); setFeaturedOnly(false); }}
+            className="luxe-btn-outline mt-4 inline-flex"
+            style={{ touchAction: 'manipulation' }}
+          >
+            Clear filters
+          </button>
+        </div>
       ) : (
-        <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((salon) => (
             <SalonCard key={salon.id} salon={salon} />
           ))}

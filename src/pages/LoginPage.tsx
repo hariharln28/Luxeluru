@@ -95,7 +95,7 @@ export function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-[calc(100vh-140px)] items-center justify-center px-4 py-12">
+    <div className="flex min-h-[calc(100dvh-140px)] items-center justify-center px-4 py-12">
       <div className="w-full max-w-md animate-fade-in">
         <div className="mb-8 text-center">
           <img src={logoUrl} alt="Luxeluru" className="mx-auto h-20 w-auto object-contain mix-blend-screen" />
@@ -154,6 +154,8 @@ export function LoginPage() {
                   className="luxe-input"
                   placeholder="you@example.com or +91 98765 43210"
                   autoComplete="email"
+                  inputMode="email"
+                  style={{ fontSize: '16px' }}
                 />
               </div>
               <div>
@@ -166,11 +168,12 @@ export function LoginPage() {
                     className="luxe-input pr-10"
                     placeholder="••••••••"
                     autoComplete="current-password"
+                    style={{ fontSize: '16px' }}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPass(!showPass)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9a8fa8] hover:text-[#e8d5a3] transition"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-2 -m-2 text-[#9a8fa8] hover:text-[#e8d5a3] transition"
                   >
                     {showPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
@@ -179,7 +182,7 @@ export function LoginPage() {
                   <button
                     type="button"
                     onClick={() => { setForgotOpen(true); setResetEmail(emailOrPhone.includes('@') ? emailOrPhone : ''); setResetSent(false); }}
-                    className="text-xs text-[#c9a962] hover:underline"
+                    className="text-xs text-[#c9a962] hover:underline py-1 px-2 -mx-2"
                   >
                     Forgot Password?
                   </button>
@@ -227,11 +230,12 @@ export function LoginPage() {
                     onChange={(e) => setSalonPassword(e.target.value)}
                     className="luxe-input pr-10"
                     placeholder="••••••••"
+                    style={{ fontSize: '16px' }}
                   />
                   <button
                     type="button"
                     onClick={() => setShowSalonPass(!showSalonPass)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9a8fa8] hover:text-[#e8d5a3] transition"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-2 -m-2 text-[#9a8fa8] hover:text-[#e8d5a3] transition"
                   >
                     {showSalonPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
@@ -280,7 +284,7 @@ export function LoginPage() {
               <button
                 type="button"
                 onClick={loginWithGoogle}
-                className="flex w-full items-center justify-center gap-3 rounded-lg border border-[#c9a962]/20 bg-[#1a1520] px-4 py-2.5 text-sm font-medium text-[#e8d5a3] transition hover:bg-[#c9a962]/10 hover:border-[#c9a962]/40"
+                className="flex w-full items-center justify-center gap-3 rounded-lg border border-[#c9a962]/20 bg-[#1a1520] px-4 py-2.5 text-sm font-medium text-[#e8d5a3] transition hover:bg-[#c9a962]/10 hover:border-[#c9a962]/40 min-h-[44px]"
               >
                 <svg className="h-5 w-5" viewBox="0 0 24 24">
                   <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
