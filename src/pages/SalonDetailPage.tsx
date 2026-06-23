@@ -362,15 +362,19 @@ export function SalonDetailPage() {
 
       {showBooking && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
-          <div className="luxe-card w-full max-w-md max-h-[90vh] overflow-y-auto p-6 animate-fade-in">
-            <h3 className="font-display text-2xl text-[#e8d5a3]">{tr('confirmBooking')}</h3>
+          <div className="luxe-card w-full max-w-lg max-h-[92vh] overflow-y-auto p-6 animate-fade-in">
+            <h3 className="font-display text-2xl text-[#e8d5a3]">Book Appointment</h3>
+            <p className="text-xs text-[#9a8fa8] mt-0.5">{currentSalon.name}</p>
 
-            <div className="mt-4 space-y-4">
+            <div className="mt-5 space-y-4">
+              {/* Date */}
               <div>
                 <label className="text-sm text-[#9a8fa8]">{tr('selectDate')}</label>
                 <input type="date" value={date} onChange={(e) => { setDate(e.target.value); setTime(''); }}
                   min={new Date().toISOString().split('T')[0]} className="luxe-input mt-1" />
               </div>
+
+              {/* Time */}
               <div>
                 <label className="text-sm text-[#9a8fa8]">{tr('selectTime')}</label>
                 <div className="mt-2 grid grid-cols-3 gap-2">
@@ -382,7 +386,6 @@ export function SalonDetailPage() {
                       (b) => b.salonId === currentSalon.id && b.date === date && b.time === slot && b.status === 'confirmed'
                     );
                     const isUnavailable = isBlockedSlot || isAlreadyBooked;
-
                     return (
                       <button key={slot}
                         onClick={() => !isUnavailable && setTime(slot)}
@@ -395,14 +398,14 @@ export function SalonDetailPage() {
                             : 'border border-[#c9a962]/20 hover:border-[#c9a962]/50'
                         }`}>
                         {slot}
-                        {isUnavailable && (
-                          <span className="block text-[9px] opacity-60 mt-0.5">Booked</span>
-                        )}
+                        {isUnavailable && <span className="block text-[9px] opacity-60 mt-0.5">Booked</span>}
                       </button>
                     );
                   })}
                 </div>
               </div>
+
+              {/* Staff */}
               <div>
                 <label className="text-sm text-[#9a8fa8]">{tr('selectStaff')}</label>
                 <select value={selectedStaff} onChange={(e) => setSelectedStaff(e.target.value)} className="luxe-input mt-1">
@@ -412,57 +415,98 @@ export function SalonDetailPage() {
                   ))}
                 </select>
               </div>
+
+              {/* Payment Method */}
               <div>
                 <p className="mb-2 text-xs font-semibold text-[#9a8fa8] uppercase tracking-wider">{tr('paymentMethod')}</p>
                 <div className="grid grid-cols-3 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod('card')}
+                  <button type="button" onClick={() => setPaymentMethod('card')}
                     className={`flex items-center justify-center gap-1.5 rounded-lg border px-3 py-2.5 text-xs font-semibold transition ${
-                      paymentMethod === 'card'
-                        ? 'border-[#c9a962] bg-[#c9a962]/10 text-[#c9a962]'
-                        : 'border-[#c9a962]/20 text-[#9a8fa8] hover:border-[#c9a962]/40'
-                    }`}
-                  >
+                      paymentMethod === 'card' ? 'border-[#c9a962] bg-[#c9a962]/10 text-[#c9a962]' : 'border-[#c9a962]/20 text-[#9a8fa8] hover:border-[#c9a962]/40'
+                    }`}>
                     <CreditCard className="h-4 w-4" /> Card
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod('upi')}
+                  <button type="button" onClick={() => setPaymentMethod('upi')}
                     className={`flex items-center justify-center gap-1.5 rounded-lg border px-3 py-2.5 text-xs font-semibold transition ${
-                      paymentMethod === 'upi'
-                        ? 'border-[#c9a962] bg-[#c9a962]/10 text-[#c9a962]'
-                        : 'border-[#c9a962]/20 text-[#9a8fa8] hover:border-[#c9a962]/40'
-                    }`}
-                  >
+                      paymentMethod === 'upi' ? 'border-[#c9a962] bg-[#c9a962]/10 text-[#c9a962]' : 'border-[#c9a962]/20 text-[#9a8fa8] hover:border-[#c9a962]/40'
+                    }`}>
                     <CreditCard className="h-4 w-4" /> UPI
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod('pay-at-salon')}
+                  <button type="button" onClick={() => setPaymentMethod('pay-at-salon')}
                     className={`flex items-center justify-center gap-1.5 rounded-lg border px-3 py-2.5 text-xs font-semibold transition ${
-                      paymentMethod === 'pay-at-salon'
-                        ? 'border-[#c9a962] bg-[#c9a962]/10 text-[#c9a962]'
-                        : 'border-[#c9a962]/20 text-[#9a8fa8] hover:border-[#c9a962]/40'
-                    }`}
-                  >
+                      paymentMethod === 'pay-at-salon' ? 'border-[#c9a962] bg-[#c9a962]/10 text-[#c9a962]' : 'border-[#c9a962]/20 text-[#9a8fa8] hover:border-[#c9a962]/40'
+                    }`}>
                     <Banknote className="h-4 w-4" /> At Salon
                   </button>
                 </div>
-                <p className="mt-2 text-[10px] text-[#9a8fa8]">
-                  {paymentMethod === 'pay-at-salon' ? 'Pay cash or card when you arrive at the salon.' : paymentMethod === 'card' ? 'Secure card payment via Stripe.' : 'Pay via UPI at checkout.'}
-                </p>
               </div>
             </div>
 
-            {user && isUserBlocked(user.id).blocked && (
-              <div className="mt-4 rounded-lg bg-red-500/10 border border-red-500/20 p-3 text-xs text-red-400">
-                {isUserBlocked(user.id).reason}
-              </div>
-            )}
+            {/* ── CALCULATED BILL SUMMARY ───────────────────────── */}
+            <div className="mt-5 rounded-2xl border border-[#c9a962]/30 bg-[#0f0d12]/70 p-4">
+              <p className="text-xs font-bold text-[#c9a962] uppercase tracking-widest mb-3">Your Bill</p>
 
-          <div className="mt-4 rounded-lg bg-[#c9a962]/5 p-3 text-[10px] text-[#9a8fa8] border border-[#c9a962]/10">
-              <p className="font-semibold text-[#e8d5a3] mb-1">Cancellation Policy</p>
+              {/* Services / Package list */}
+              <div className="space-y-1.5 mb-3">
+                {pkg ? (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-[#e8d5a3]">📦 {pkg.name}</span>
+                    <span className="text-[#c9a962] font-semibold">₹{pkg.price.toLocaleString('en-IN')}</span>
+                  </div>
+                ) : selectedServices.map((sid) => {
+                  const svc = currentSalon.services.find(sv => sv.id === sid);
+                  return svc ? (
+                    <div key={sid} className="flex justify-between text-sm">
+                      <span className="text-[#e8d5a3]">✂️ {svc.name}</span>
+                      <span className="text-[#c9a962] font-semibold">₹{svc.price.toLocaleString('en-IN')}</span>
+                    </div>
+                  ) : null;
+                })}
+              </div>
+
+              {/* Staff / Date / Time summary if chosen */}
+              {(date || time || selectedStaff) && (
+                <div className="border-t border-[#c9a962]/10 pt-3 mb-3 space-y-1 text-xs text-[#9a8fa8]">
+                  {date && <p>📅 Date: <span className="text-[#e8d5a3]">{date}</span></p>}
+                  {time && <p>⏰ Time: <span className="text-[#e8d5a3]">{time}</span></p>}
+                  {selectedStaff && <p>💇 Stylist: <span className="text-[#e8d5a3]">{currentSalon.staff.find(s => s.id === selectedStaff)?.name}</span></p>}
+                </div>
+              )}
+
+              {/* Total */}
+              <div className="border-t border-[#c9a962]/20 pt-3 flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-[#9a8fa8]">Total Amount</p>
+                  <p className="font-display text-2xl font-bold text-[#c9a962]">₹{total.toLocaleString('en-IN')}</p>
+                </div>
+                <div className="text-right">
+                  <p className="text-[10px] text-[#9a8fa8]">Payment via</p>
+                  <p className="text-xs font-semibold text-[#e8d5a3]">
+                    {paymentMethod === 'card' ? '💳 Card (Online)' :
+                     paymentMethod === 'upi'  ? '📱 UPI (Online)'  :
+                     '💵 Pay at Salon'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Card/UPI note */}
+              {(paymentMethod === 'card' || paymentMethod === 'upi') && (
+                <div className="mt-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 px-3 py-2 text-[11px] text-emerald-400">
+                  ✅ Your appointment will be <strong>automatically confirmed</strong> once payment is completed.
+                </div>
+              )}
+
+              {/* Pay-at-salon note */}
+              {paymentMethod === 'pay-at-salon' && (
+                <div className="mt-3 rounded-xl bg-amber-500/10 border border-amber-500/20 px-3 py-2 text-[11px] text-amber-400">
+                  💵 Pay cash or card directly when you arrive at the salon.
+                </div>
+              )}
+            </div>
+
+            {/* Cancellation policy */}
+            <div className="mt-3 rounded-xl bg-[#c9a962]/5 p-3 text-[10px] text-[#9a8fa8] border border-[#c9a962]/10">
+              <p className="font-semibold text-[#e8d5a3] mb-1">Cancellation & Refund Policy</p>
               <p>• Same day: <span className="text-amber-400">20% refund</span></p>
               <p>• 1 day before: <span className="text-amber-400">50% refund</span></p>
               <p>• 2 days before: <span className="text-emerald-400">70% refund</span></p>
@@ -470,15 +514,44 @@ export function SalonDetailPage() {
               <p className="mt-1 opacity-60">(Applies to Card/UPI payments only)</p>
             </div>
 
-            <div className="mt-6 flex gap-3">
-              <button onClick={() => setShowBooking(false)} className="luxe-btn-outline flex-1">{tr('cancel')}</button>
-              <button 
-                onClick={handleBook} 
-                disabled={user ? isUserBlocked(user.id).blocked : false}
-                className={`luxe-btn flex-1 ${user && isUserBlocked(user.id).blocked ? 'opacity-50 cursor-not-allowed' : ''}`}
-              >
-                {paymentMethod === 'card' || paymentMethod === 'upi' ? '💳 Proceed to Pay' : tr('confirmBooking')}
+            {/* Blocked user warning */}
+            {user && isUserBlocked(user.id).blocked && (
+              <div className="mt-3 rounded-lg bg-red-500/10 border border-red-500/20 p-3 text-xs text-red-400">
+                {isUserBlocked(user.id).reason}
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="mt-5 flex gap-3">
+              <button onClick={() => setShowBooking(false)} className="luxe-btn-outline flex-1">
+                Back
               </button>
+
+              {(paymentMethod === 'card' || paymentMethod === 'upi') ? (
+                /* Card/UPI — opens checkout modal, auto-books on payment success */
+                <button
+                  onClick={handleBook}
+                  disabled={!date || !time || total === 0 || (user ? isUserBlocked(user.id).blocked : true)}
+                  className={`flex-1 luxe-btn flex items-center justify-center gap-2 ${
+                    (!date || !time || total === 0) ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
+                >
+                  <CreditCard className="h-4 w-4" />
+                  Pay ₹{total.toLocaleString('en-IN')} &amp; Book
+                </button>
+              ) : (
+                /* Pay-at-salon — directly confirms booking */
+                <button
+                  onClick={handleBook}
+                  disabled={!date || !time || total === 0 || (user ? isUserBlocked(user.id).blocked : true)}
+                  className={`flex-1 luxe-btn flex items-center justify-center gap-2 ${
+                    (!date || !time || total === 0) ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
+                >
+                  <Banknote className="h-4 w-4" />
+                  Confirm Booking
+                </button>
+              )}
             </div>
           </div>
         </div>
