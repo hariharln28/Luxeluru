@@ -1,6 +1,6 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { Camera, Sparkles, RefreshCw, User, AlertTriangle } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Camera, Sparkles, RefreshCw, User, AlertTriangle, Upload, X } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useT } from '../hooks/useT';
 import {
@@ -33,8 +33,135 @@ function loadFaceMeshScript(): Promise<void> {
 }
 
 export function AIStylistPage() {
-  const { styleRecommendation, setStyleRecommendation } = useApp();
+  const { styleRecommendation, setStyleRecommendation, addToast } = useApp();
   const tr = useT();
+  const navigate = useNavigate();
+
+  const [uploadedImage, setUploadedImage] = useState<string>('');
+  const [customMessageText, setCustomMessageText] = useState<string>('');
+
+  useEffect(() => {
+    if (styleRecommendation) {
+      setUploadedImage(styleRecommendation.customImageUrl || '');
+      setCustomMessageText(styleRecommendation.customMessage || '');
+    } else {
+      setUploadedImage('');
+      setCustomMessageText('');
+    }
+  }, [styleRecommendation]);
+
+  function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      alert('Please upload an image smaller than 2MB.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64String = reader.result as string;
+      setUploadedImage(base64String);
+      if (styleRecommendation) {
+        setStyleRecommendation({
+          ...styleRecommendation,
+          customImageUrl: base64String
+        });
+      }
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function handleMessageChange(msg: string) {
+    setCustomMessageText(msg);
+    if (styleRecommendation) {
+      setStyleRecommendation({
+        ...styleRecommendation,
+        customMessage: msg
+      });
+    }
+  }
+
+  function handleRemoveImage() {
+    setUploadedImage('');
+    if (styleRecommendation) {
+      setStyleRecommendation({
+        ...styleRecommendation,
+        customImageUrl: undefined
+      });
+    }
+  }
+
+  function handleSaveCustomPreference() {
+    if (!uploadedImage && !customMessageText.trim()) {
+      addToast('error', 'Please upload an image or write a custom message first.');
+      return;
+    }
+
+    setStyleRecommendation({
+      faceShape: 'Custom Upload',
+      skinTone: 'Custom Upload',
+      gender: gender,
+      suggestedHairColors: [],
+      suggestedStyles: [],
+      customImageUrl: uploadedImage || undefined,
+      customMessage: customMessageText || undefined
+    });
+
+    addToast('success', 'Custom preference saved! Redirecting to salons...');
+    navigate('/salons?category=hair');
+  }
+
+  const customPreferenceMarkup = (
+    <div className="border-t border-[#c9a962]/10 pt-4 space-y-4">
+      <p className="text-sm font-medium text-[#e8d5a3]">Custom Preference Reference</p>
+      
+      {/* File Upload Dropzone */}
+      <div className="space-y-2">
+        <p className="text-xs text-[#9a8fa8]">Upload an image of your preferred style/color:</p>
+        {uploadedImage ? (
+          <div className="relative inline-block">
+            <img src={uploadedImage} alt="Custom Preference" className="h-32 w-32 object-cover rounded-xl border border-[#c9a962]/30" />
+            <button 
+              onClick={handleRemoveImage}
+              className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition"
+              title="Remove Image"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        ) : (
+          <div className="border border-dashed border-[#c9a962]/30 rounded-xl p-6 bg-[#0f0d12]/40 text-center hover:border-[#c9a962]/60 transition">
+            <input 
+              type="file" 
+              accept="image/*" 
+              onChange={handleImageUpload} 
+              className="hidden" 
+              id="custom-pref-file-upload" 
+            />
+            <label htmlFor="custom-pref-file-upload" className="cursor-pointer flex flex-col items-center gap-2">
+              <Upload className="h-8 w-8 text-[#c9a962]/60" />
+              <span className="text-xs text-[#c9a962]">Click to upload reference image</span>
+              <span className="text-[10px] text-[#9a8fa8]/60">PNG, JPG up to 2MB</span>
+            </label>
+          </div>
+        )}
+      </div>
+
+      {/* Message textarea */}
+      <div className="space-y-1">
+        <label className="text-xs text-[#9a8fa8] block">Custom message or coloring instructions:</label>
+        <textarea
+          value={customMessageText}
+          onChange={(e) => handleMessageChange(e.target.value)}
+          placeholder="e.g. I want this specific haircut but with cherry red highlights..."
+          className="luxe-input min-h-[80px] text-xs resize-none"
+        />
+      </div>
+    </div>
+  );
+
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [cameraOn, setCameraOn] = useState(false);
@@ -482,18 +609,77 @@ export function AIStylistPage() {
                 </div>
               )}
 
-              <Link to="/salons?category=hair" className="luxe-btn block text-center">
+              {customPreferenceMarkup}
+
+              <Link to="/salons?category=hair" className="luxe-btn block text-center mt-4">
                 {tr('applySuggestion')}
               </Link>
             </div>
           ) : (
-            <div className="luxe-card flex h-full min-h-[300px] flex-col items-center justify-center p-6 text-center">
-              <Sparkles className="h-12 w-12 text-[#c9a962]/30 mb-4" />
-              <p className="text-[#e8d5a3] font-medium">Ready to discover your look?</p>
-              <p className="mt-2 text-sm text-[#9a8fa8] max-w-xs">
-                Select your gender, enable camera, and tap <strong className="text-[#c9a962]">Analyze Face</strong> to
-                get personalized hair color and style recommendations.
-              </p>
+            <div className="luxe-card p-6 flex flex-col gap-6">
+              <div className="text-center">
+                <Sparkles className="mx-auto h-10 w-10 text-[#c9a962]/30 mb-2" />
+                <p className="text-[#e8d5a3] font-medium">Ready to discover your look?</p>
+                <p className="mt-2 text-xs text-[#9a8fa8] max-w-xs mx-auto">
+                  Select your gender, enable camera, and tap <strong className="text-[#c9a962]">Analyze Face</strong> to
+                  get personalized hair color and style recommendations.
+                </p>
+              </div>
+              
+              <div className="border-t border-[#c9a962]/10 pt-4 space-y-4">
+                <p className="text-xs font-semibold text-[#c9a962]/80 uppercase tracking-wider text-center">— OR —</p>
+                <p className="text-sm font-medium text-[#e8d5a3] text-center">Book with Custom Preference</p>
+                
+                {/* File Upload Dropzone */}
+                <div className="space-y-2">
+                  <p className="text-xs text-[#9a8fa8]">Upload preference image:</p>
+                  {uploadedImage ? (
+                    <div className="relative inline-block">
+                      <img src={uploadedImage} alt="Custom Preference" className="h-32 w-32 object-cover rounded-xl border border-[#c9a962]/30" />
+                      <button 
+                        onClick={handleRemoveImage}
+                        className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition"
+                        title="Remove Image"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="border border-dashed border-[#c9a962]/30 rounded-xl p-5 bg-[#0f0d12]/40 text-center hover:border-[#c9a962]/60 transition">
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        onChange={handleImageUpload} 
+                        className="hidden" 
+                        id="custom-pref-file-upload-direct" 
+                      />
+                      <label htmlFor="custom-pref-file-upload-direct" className="cursor-pointer flex flex-col items-center gap-2">
+                        <Upload className="h-6 w-6 text-[#c9a962]/60" />
+                        <span className="text-xs text-[#c9a962]">Click to upload style image</span>
+                        <span className="text-[10px] text-[#9a8fa8]/60">PNG, JPG up to 2MB</span>
+                      </label>
+                    </div>
+                  )}
+                </div>
+
+                {/* Message textarea */}
+                <div className="space-y-1">
+                  <label className="text-xs text-[#9a8fa8] block">Custom style preference message:</label>
+                  <textarea
+                    value={customMessageText}
+                    onChange={(e) => handleMessageChange(e.target.value)}
+                    placeholder="Describe your desired hair style or color..."
+                    className="luxe-input min-h-[80px] text-xs resize-none"
+                  />
+                </div>
+                
+                <button
+                  onClick={handleSaveCustomPreference}
+                  className="luxe-btn w-full text-center"
+                >
+                  Book with Custom Preference
+                </button>
+              </div>
             </div>
           )}
         </div>

@@ -408,21 +408,50 @@ app.post('/api/salons/register', async (req, res) => {
   res.json({ success: true, salonId: tempId });
 });
 
-app.post('/api/salons/:id/exit', async (req, res) => {
-  const { id } = req.params;
+app.post('/api/salons/:id/exit', authenticateJWT, async (req, res) => {
   const { reason } = req.body;
+  const salon = await db.getSalon(req.params.id);
   
-  const salon = await db.getSalon(id);
-  if (salon) {
-    await db.updateSalon(id, {
-      isActive: false,
-      registrationStatus: 'rejected',
-      exitReason: reason
-    });
-    res.json({ success: true });
-  } else {
-    res.status(404).json({ success: false, message: 'Salon not found' });
+  if (!salon) {
+    return res.status(404).json({ error: 'Salon not found' });
   }
+
+  if ((salon.commissionDue || 0) > 0) {
+    return res.status(400).json({ error: 'Cannot exit platform with pending commission dues' });
+  }
+
+  await db.updateSalon(req.params.id, {
+    exitRequestStatus: 'pending',
+    exitReason: reason
+  });
+  
+  res.json({ success: true });
+});
+
+app.post('/api/salons/:id/approve-exit', async (req, res) => {
+  const salon = await db.getSalon(req.params.id);
+  if (!salon) return res.status(404).json({ error: 'Salon not found' });
+  
+  await db.updateSalon(req.params.id, {
+    isActive: false,
+    registrationStatus: 'rejected',
+    exitRequestStatus: 'approved'
+  });
+  
+  res.json({ success: true });
+});
+
+app.post('/api/salons/:id/reject-exit', async (req, res) => {
+  const salon = await db.getSalon(req.params.id);
+  if (!salon) return res.status(404).json({ error: 'Salon not found' });
+  
+  // Revert back to active and remove the pending exit status
+  await db.updateSalon(req.params.id, {
+    exitRequestStatus: undefined,
+    exitReason: undefined
+  });
+  
+  res.json({ success: true });
 });
 
 app.post('/api/salons/:id/approve', async (req, res) => {
@@ -655,6 +684,21 @@ app.post('/api/bookings', authenticateJWT, async (req, res) => {
     });
   }
 
+  // Notify salon of new online payment booking
+  const isOnlinePay = newBooking.paymentStatus === 'paid-online'
+    || newBooking.paymentMethod === 'card'
+    || newBooking.paymentMethod === 'upi';
+  if (isOnlinePay) {
+    await db.createNotification({
+      id: `notif-payment-${newBooking.id}-${Date.now()}`,
+      target: bookingData.salonId,
+      type: 'payment_received',
+      message: `💳 Online payment of ₹${(bookingData.totalPrice || 0).toLocaleString('en-IN')} received for new Appointment #${newBooking.id} on ${bookingData.date} at ${bookingData.time}.`,
+      createdAt: new Date().toISOString(),
+      read: false
+    });
+  }
+
   res.json({ success: true, booking: newBooking });
 });
 
@@ -666,9 +710,45 @@ app.post('/api/bookings/:id/cancel', authenticateJWT, async (req, res) => {
     if (booking.userId !== req.user.id) {
       return res.status(403).json({ success: false, message: 'Unauthorized cancel action' });
     }
-    await db.updateBooking(id, { status: 'cancelled' });
 
-    // Reverse commission on cancellation
+    // Calculate calendar-day difference (ignoring time) to appointment date
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const apptDate = new Date(booking.date);
+    apptDate.setHours(0, 0, 0, 0);
+    const msPerDay = 24 * 60 * 60 * 1000;
+    const diffDays = Math.round((apptDate.getTime() - today.getTime()) / msPerDay);
+
+    let refundPercent = 0;
+    let refundAmount = 0;
+    const isOnlinePayment = booking.paymentStatus === 'paid-online'
+      || booking.paymentMethod === 'card'
+      || booking.paymentMethod === 'upi';
+
+    if (isOnlinePayment) {
+      if (diffDays <= 0) {
+        // Same day as appointment: 20% refund
+        refundPercent = 20;
+      } else if (diffDays === 1) {
+        // 1 day before: 50% refund
+        refundPercent = 50;
+      } else if (diffDays === 2) {
+        // 2 days before: 70% refund
+        refundPercent = 70;
+      } else {
+        // More than 2 days before: 100% refund
+        refundPercent = 100;
+      }
+      refundAmount = Math.round(booking.totalPrice * refundPercent / 100);
+    }
+
+    await db.updateBooking(id, {
+      status: 'cancelled',
+      refundAmount,
+      payoutStatus: 'pending'
+    });
+
+    // Reverse commission from salon's due since appointment didn't happen
     if (booking.commissionAmount) {
       const salon = await db.getSalon(booking.salonId);
       if (salon) {
@@ -678,7 +758,7 @@ app.post('/api/bookings/:id/cancel', authenticateJWT, async (req, res) => {
       }
     }
 
-    res.json({ success: true });
+    res.json({ success: true, refundAmount, refundPercent });
   } else {
     res.status(404).json({ success: false, message: 'Booking not found' });
   }
@@ -761,8 +841,13 @@ app.post('/api/bookings/:id/update', async (req, res) => {
   const newCommission = Math.round(finalPrice * 0.03);
   const oldCommission = booking.commissionAmount || 0;
   const commissionDiff = newCommission - oldCommission;
+  const payoutAmount = finalPrice - newCommission;
 
-  // Update booking fields
+  const isOnlinePayment = booking.paymentStatus === 'paid-online'
+    || booking.paymentMethod === 'card'
+    || booking.paymentMethod === 'upi';
+
+  // Update booking with completion details and payout info
   await db.updateBooking(id, {
     status: 'completed',
     paymentMethod,
@@ -773,13 +858,70 @@ app.post('/api/bookings/:id/update', async (req, res) => {
     updatedPackageName,
     paymentUpdatedBySalon: true,
     commissionAmount: newCommission,
-    commissionPaid: false
+    commissionPaid: isOnlinePayment,
+    payoutAmount,
+    payoutStatus: isOnlinePayment ? 'paid' : 'pay-at-salon'
   });
 
-  // Adjust salon's commissionDue only by the difference (commission was already added at booking time)
-  if (commissionDiff !== 0) {
+  if (isOnlinePayment) {
+    // Online payment: commission already collected — do NOT add to commissionDue.
+    // Only adjust if the commission amount changed (e.g. package switch).
+    if (commissionDiff !== 0) {
+      await db.updateSalon(booking.salonId, {
+        commissionDue: Math.max(0, (salon.commissionDue || 0) + commissionDiff)
+      });
+    }
+    // Remove any commission that was added at booking time since it's auto-collected now
+    // (booking creation adds to commissionDue; completion reverses it for online payments)
     await db.updateSalon(booking.salonId, {
-      commissionDue: Math.max(0, (salon.commissionDue || 0) + commissionDiff)
+      commissionDue: Math.max(0, (salon.commissionDue || 0) - newCommission)
+    });
+
+    // Notify salon of payout
+    await db.createNotification({
+      id: `notif-payout-salon-${id}-${Date.now()}`,
+      target: booking.salonId,
+      type: 'payout',
+      message: `✅ Payout of ₹${payoutAmount.toLocaleString('en-IN')} has been sent to your account for Appointment #${id}. (Bill: ₹${finalPrice.toLocaleString('en-IN')} − 3% commission ₹${newCommission.toLocaleString('en-IN')} = Net ₹${payoutAmount.toLocaleString('en-IN')})`,
+      createdAt: new Date().toISOString(),
+      read: false
+    });
+
+    // Notify admin of payout
+    await db.createNotification({
+      id: `notif-payout-admin-${id}-${Date.now()}`,
+      target: 'admin',
+      type: 'payout',
+      message: `💰 Payout of ₹${payoutAmount.toLocaleString('en-IN')} sent to salon "${salon.name}" for Appointment #${id}. (Bill: ₹${finalPrice.toLocaleString('en-IN')} − 3% commission ₹${newCommission.toLocaleString('en-IN')} = Net ₹${payoutAmount.toLocaleString('en-IN')} retained by platform)`,
+      createdAt: new Date().toISOString(),
+      read: false
+    });
+  } else {
+    // Pay-at-salon: add commission to dues as before
+    if (commissionDiff !== 0) {
+      await db.updateSalon(booking.salonId, {
+        commissionDue: Math.max(0, (salon.commissionDue || 0) + commissionDiff)
+      });
+    }
+
+    // Notify salon of commission due
+    await db.createNotification({
+      id: `notif-commission-salon-${id}-${Date.now()}`,
+      target: booking.salonId,
+      type: 'commission_due',
+      message: `📋 Appointment #${id} completed (pay-at-salon). Commission of ₹${newCommission.toLocaleString('en-IN')} (3% of ₹${finalPrice.toLocaleString('en-IN')}) added to your outstanding dues.`,
+      createdAt: new Date().toISOString(),
+      read: false
+    });
+
+    // Notify admin of commission due
+    await db.createNotification({
+      id: `notif-commission-admin-${id}-${Date.now()}`,
+      target: 'admin',
+      type: 'commission_due',
+      message: `📋 Appointment #${id} at salon "${salon.name}" completed (pay-at-salon). Commission of ₹${newCommission.toLocaleString('en-IN')} added to their outstanding dues.`,
+      createdAt: new Date().toISOString(),
+      read: false
     });
   }
 
@@ -1046,6 +1188,37 @@ process.on('unhandledRejection', (reason, promise) => {
 
 process.on('uncaughtException', (err) => {
   console.error('[FATAL] Uncaught Exception:', err);
+});
+
+// Notification endpoints
+app.get('/api/notifications', async (req, res) => {
+  try {
+    const { target } = req.query;
+    const notifications = await db.getNotifications(target || null);
+    res.json(notifications);
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Failed to get notifications' });
+  }
+});
+
+app.post('/api/notifications/:id/read', async (req, res) => {
+  try {
+    await db.markNotificationRead(req.params.id);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Failed to mark notification read' });
+  }
+});
+
+app.post('/api/notifications/mark-all-read', async (req, res) => {
+  try {
+    const { target } = req.body;
+    if (!target) return res.status(400).json({ success: false, message: 'target is required' });
+    await db.markAllNotificationsRead(target);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Failed to mark all read' });
+  }
 });
 
 // Express global error middleware

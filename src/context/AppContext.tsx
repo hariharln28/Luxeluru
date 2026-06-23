@@ -16,6 +16,7 @@ import type {
   Salon,
   PaymentMethod,
   BlockedSlot,
+  Notification,
 } from '../types';
 import { salons as defaultSalons } from '../data/salons';
 import { scheduleFeedbackRequest } from '../utils/notifications';
@@ -47,6 +48,8 @@ interface AppContextType {
     panCardBusiness?: string;
   }) => Promise<string>;
   salonExit: (salonId: string, reason: string) => Promise<boolean>;
+  approveSalonExit: (salonId: string) => Promise<boolean>;
+  rejectSalonExit: (salonId: string) => Promise<boolean>;
   logout: () => void;
   bookings: Booking[];
   createBooking: (booking: Omit<Booking, 'id' | 'createdAt' | 'status' | 'userId'>) => Promise<Booking>;
@@ -83,6 +86,10 @@ interface AppContextType {
   blockSlot: (salonId: string, date: string, time: string, customerName?: string, reason?: string) => Promise<boolean>;
   unblockSlot: (salonId: string, slotId: string) => Promise<boolean>;
   refreshData: () => Promise<void>;
+  notifications: Notification[];
+  fetchNotifications: (target: string) => Promise<void>;
+  markNotificationRead: (id: string) => Promise<void>;
+  markAllNotificationsRead: (target: string) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -238,6 +245,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [staffReviews, setStaffReviews] = useState<StaffReview[]>([]);
   const [blockedSlots, setBlockedSlots] = useState<BlockedSlot[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   
   const [user, setUser] = useState<User | null>(null);
   const [salon, setSalon] = useState<Salon | null>(null);
@@ -353,6 +361,47 @@ export function AppProvider({ children }: { children: ReactNode }) {
       console.warn('refreshData failed:', err);
     }
   }, []);
+
+  // Notification methods
+  const fetchNotifications = useCallback(async (target: string) => {
+    try {
+      const data = await api.getNotifications(target);
+      setNotifications(prev => {
+        // Merge: keep all existing for different targets, replace for this target
+        const filtered = prev.filter(n => n.target !== target);
+        return [...filtered, ...data];
+      });
+    } catch (err) {
+      console.warn('Failed to fetch notifications:', err);
+    }
+  }, []);
+
+  const markNotificationRead = useCallback(async (id: string) => {
+    try {
+      await api.markNotificationRead(id);
+      setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+    } catch (err) {
+      console.warn('Failed to mark notification read:', err);
+    }
+  }, []);
+
+  const markAllNotificationsRead = useCallback(async (target: string) => {
+    try {
+      await api.markAllNotificationsRead(target);
+      setNotifications(prev => prev.map(n => n.target === target ? { ...n, read: true } : n));
+    } catch (err) {
+      console.warn('Failed to mark all notifications read:', err);
+    }
+  }, []);
+
+  // Poll notifications every 30s when salon or admin is logged in
+  useEffect(() => {
+    const target = isAdmin ? 'admin' : salon ? salon.id : null;
+    if (!target) return;
+    fetchNotifications(target);
+    const interval = setInterval(() => fetchNotifications(target), 30000);
+    return () => clearInterval(interval);
+  }, [isAdmin, salon, fetchNotifications]);
 
   // Listen for Supabase Authentication State Changes
   useEffect(() => {
@@ -784,10 +833,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     try {
       const res = await api.salonExit(salonId, reason);
       if (res.success) {
-        setSalonsList(prev => prev.map(s => s.id === salonId ? { ...s, isActive: false, registrationStatus: 'rejected', exitReason: reason } : s));
+        setSalonsList(prev => prev.map(s => s.id === salonId ? { ...s, exitRequestStatus: 'pending', exitReason: reason } : s));
         const updated = salonsList.find(s => s.id === salonId);
         if (updated) {
-          addToast('success', `Exit request processed for ${updated.name}`);
+          addToast('success', `Exit request sent to Admin for ${updated.name}`);
         }
         return true;
       }
@@ -799,18 +848,67 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (idx >= 0) {
         currentSalons[idx] = {
           ...currentSalons[idx],
-          isActive: false,
-          registrationStatus: 'rejected' as const,
+          exitRequestStatus: 'pending' as const,
           exitReason: reason,
         };
         localStorage.setItem(STORAGE_KEYS.salons, JSON.stringify(currentSalons));
         setSalonsList(currentSalons);
-        addToast('success', `Exit request processed for ${currentSalons[idx].name}`);
+        addToast('success', `Exit request sent to Admin for ${currentSalons[idx].name}`);
         return true;
       }
       return false;
     }
   }, [addToast, salonsList]);
+
+  const approveSalonExit = useCallback(async (salonId: string): Promise<boolean> => {
+    try {
+      const res = await api.approveSalonExit(salonId);
+      if (res.success) {
+        setSalonsList(prev => prev.map(s => s.id === salonId ? { ...s, isActive: false, registrationStatus: 'rejected', exitRequestStatus: 'approved' } : s));
+        addToast('success', `Salon exit approved.`);
+        return true;
+      }
+      return false;
+    } catch {
+      // Local fallback
+      setSalonsList(prev => {
+        const updated = prev.map(s => s.id === salonId ? { ...s, isActive: false, registrationStatus: 'rejected' as const, exitRequestStatus: 'approved' as const } : s);
+        localStorage.setItem(STORAGE_KEYS.salons, JSON.stringify(updated));
+        return updated;
+      });
+      addToast('success', `Salon exit approved.`);
+      return true;
+    }
+  }, [addToast]);
+
+  const rejectSalonExit = useCallback(async (salonId: string): Promise<boolean> => {
+    try {
+      const res = await api.rejectSalonExit(salonId);
+      if (res.success) {
+        setSalonsList(prev => prev.map(s => s.id === salonId ? { ...s, exitRequestStatus: undefined, exitReason: undefined } : s));
+        addToast('success', `Salon exit request rejected.`);
+        return true;
+      }
+      return false;
+    } catch {
+      // Local fallback
+      setSalonsList(prev => {
+        const updated = prev.map(s => {
+          if (s.id === salonId) {
+            const copy = { ...s };
+            delete copy.exitRequestStatus;
+            delete copy.exitReason;
+            return copy;
+          }
+          return s;
+        });
+        localStorage.setItem(STORAGE_KEYS.salons, JSON.stringify(updated));
+        return updated;
+      });
+      addToast('success', `Salon exit request rejected.`);
+      return true;
+    }
+  }, [addToast]);
 
   const logout = useCallback(() => {
     // Clear all authentication state
@@ -962,13 +1060,29 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const cancelBooking = useCallback(async (id: string) => {
     try {
-      await api.cancelBooking(id);
-      setBookings(prev => prev.map(b => b.id === id ? { ...b, status: 'cancelled' as const } : b));
+      const res = await api.cancelBooking(id);
+      setBookings(prev => prev.map(b => b.id === id ? { ...b, status: 'cancelled' as const, refundAmount: res.refundAmount } : b));
     } catch {
-      // Local fallback
-      const updated = bookings.map((b) =>
-        b.id === id ? { ...b, status: 'cancelled' as const } : b
-      );
+      // Local fallback (when backend unreachable)
+      const updated = bookings.map((b) => {
+        if (b.id === id) {
+          let refundAmount = 0;
+          const isOnline = b.paymentStatus === 'paid-online' || b.paymentMethod === 'card' || b.paymentMethod === 'upi';
+          if (isOnline) {
+            const today = new Date(); today.setHours(0,0,0,0);
+            const apptDate = new Date(b.date); apptDate.setHours(0,0,0,0);
+            const diffDays = Math.round((apptDate.getTime() - today.getTime()) / (24*60*60*1000));
+            let percent = 0;
+            if (diffDays <= 0) percent = 20;
+            else if (diffDays === 1) percent = 50;
+            else if (diffDays === 2) percent = 70;
+            else percent = 100;
+            refundAmount = Math.round(b.totalPrice * percent / 100);
+          }
+          return { ...b, status: 'cancelled' as const, refundAmount };
+        }
+        return b;
+      });
       setBookings(updated);
       localStorage.setItem(STORAGE_KEYS.bookings, JSON.stringify(updated));
     }
@@ -1631,6 +1745,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         blockSlot,
         unblockSlot,
         refreshData,
+        notifications,
+        fetchNotifications,
+        markNotificationRead,
+        markAllNotificationsRead,
       }}
     >
       {children}

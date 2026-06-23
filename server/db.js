@@ -25,7 +25,7 @@ async function ensureDataDir() {
 // ==========================================
 // MongoDB Schema Definitions
 // ==========================================
-let MongoUser, MongoSalon, MongoBooking, MongoReview, MongoBlockedSlot;
+let MongoUser, MongoSalon, MongoBooking, MongoReview, MongoBlockedSlot, MongoNotification;
 
 function initMongoModels() {
   if (MongoUser) return;
@@ -99,7 +99,10 @@ function initMongoModels() {
     commissionAmount: { type: Number, default: 0 },
     commissionPaid: { type: Boolean, default: false },
     reportedAsFake: { type: Boolean, default: false },
-    fakeReportReason: { type: String }
+    fakeReportReason: { type: String },
+    customImageUrl: { type: String },
+    customMessage: { type: String },
+    aiStyleRecommendation: { type: Object }
   });
 
   const reviewSchema = new mongoose.Schema({
@@ -126,11 +129,21 @@ function initMongoModels() {
     createdAt: { type: String, required: true }
   });
 
+  const notificationSchema = new mongoose.Schema({
+    id: { type: String, required: true, unique: true },
+    target: { type: String, required: true },
+    type: { type: String },
+    message: { type: String },
+    createdAt: { type: String },
+    read: { type: Boolean, default: false }
+  });
+
   MongoUser = mongoose.model('User', userSchema);
   MongoSalon = mongoose.model('Salon', salonSchema);
   MongoBooking = mongoose.model('Booking', bookingSchema);
   MongoReview = mongoose.model('Review', reviewSchema);
   MongoBlockedSlot = mongoose.model('BlockedSlot', blockedSlotSchema);
+  MongoNotification = mongoose.model('Notification', notificationSchema);
 }
 
 // ==========================================
@@ -215,7 +228,10 @@ async function initSqlite() {
       commissionAmount REAL,
       commissionPaid INTEGER,
       reportedAsFake INTEGER,
-      fakeReportReason TEXT
+      fakeReportReason TEXT,
+      customImageUrl TEXT,
+      customMessage TEXT,
+      aiStyleRecommendation TEXT
     );
 
     CREATE TABLE IF NOT EXISTS reviews (
@@ -241,7 +257,32 @@ async function initSqlite() {
       reason TEXT,
       createdAt TEXT
     );
+
+    CREATE TABLE IF NOT EXISTS notifications (
+      id TEXT PRIMARY KEY,
+      target TEXT,
+      type TEXT,
+      message TEXT,
+      createdAt TEXT,
+      read INTEGER DEFAULT 0
+    );
   `);
+
+  try {
+    await sqliteDb.run("ALTER TABLE bookings ADD COLUMN customImageUrl TEXT");
+  } catch (e) { /* already exists */ }
+  try {
+    await sqliteDb.run("ALTER TABLE bookings ADD COLUMN customMessage TEXT");
+  } catch (e) { /* already exists */ }
+  try {
+    await sqliteDb.run("ALTER TABLE bookings ADD COLUMN aiStyleRecommendation TEXT");
+  } catch (e) { /* already exists */ }
+  try {
+    await sqliteDb.run("ALTER TABLE bookings ADD COLUMN payoutAmount REAL");
+  } catch (e) { /* already exists */ }
+  try {
+    await sqliteDb.run("ALTER TABLE bookings ADD COLUMN payoutStatus TEXT");
+  } catch (e) { /* already exists */ }
 }
 
 // Helper to convert SQLite row objects back to standard JS objects (parsing JSON strings)
@@ -273,7 +314,8 @@ function mapSqlBooking(b) {
     commissionPaid: Boolean(b.commissionPaid),
     reportedAsFake: Boolean(b.reportedAsFake),
     serviceIds: b.serviceIds ? JSON.parse(b.serviceIds) : [],
-    serviceNames: b.serviceNames ? JSON.parse(b.serviceNames) : []
+    serviceNames: b.serviceNames ? JSON.parse(b.serviceNames) : [],
+    aiStyleRecommendation: b.aiStyleRecommendation ? JSON.parse(b.aiStyleRecommendation) : undefined
   };
 }
 
@@ -496,12 +538,12 @@ class DatabaseManager {
       await doc.save();
       return doc.toObject();
     } else {
-      await sqliteDb.run(
         `INSERT INTO bookings (id, userId, salonId, salonName, serviceIds, serviceNames, staffId, staffName,
          date, time, totalPrice, originalPrice, paymentMethod, status, createdAt, feedbackRequestedAt,
          feedbackSent, rating, review, isPackageChanged, updatedPackageId, updatedPackageName,
-         paymentUpdatedBySalon, commissionAmount, commissionPaid, reportedAsFake, fakeReportReason)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         paymentUpdatedBySalon, commissionAmount, commissionPaid, reportedAsFake, fakeReportReason,
+         customImageUrl, customMessage, aiStyleRecommendation)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         bData.id,
         bData.userId,
         bData.salonId,
@@ -528,7 +570,10 @@ class DatabaseManager {
         bData.commissionAmount || 0,
         bData.commissionPaid ? 1 : 0,
         bData.reportedAsFake ? 1 : 0,
-        bData.fakeReportReason || null
+        bData.fakeReportReason || null,
+        bData.customImageUrl || null,
+        bData.customMessage || null,
+        bData.aiStyleRecommendation ? JSON.stringify(bData.aiStyleRecommendation) : null
       );
       return bData;
     }
@@ -633,6 +678,58 @@ class DatabaseManager {
       await MongoBlockedSlot.deleteOne({ id });
     } else {
       await sqliteDb.run('DELETE FROM blocked_slots WHERE id = ?', id);
+    }
+    return true;
+  }
+
+  // NOTIFICATIONS
+  async getNotifications(target) {
+    if (this.mode === 'mongodb') {
+      const docs = target
+        ? await MongoNotification.find({ target })
+        : await MongoNotification.find({});
+      return docs.map(d => d.toObject());
+    } else {
+      const rows = target
+        ? await sqliteDb.all('SELECT * FROM notifications WHERE target = ? ORDER BY createdAt DESC', target)
+        : await sqliteDb.all('SELECT * FROM notifications ORDER BY createdAt DESC');
+      return rows.map(r => ({ ...r, read: Boolean(r.read) }));
+    }
+  }
+
+  async createNotification(nData) {
+    if (this.mode === 'mongodb') {
+      const doc = new MongoNotification(nData);
+      await doc.save();
+      return doc.toObject();
+    } else {
+      await sqliteDb.run(
+        `INSERT INTO notifications (id, target, type, message, createdAt, read) VALUES (?, ?, ?, ?, ?, ?)`,
+        nData.id,
+        nData.target,
+        nData.type || null,
+        nData.message || null,
+        nData.createdAt || new Date().toISOString(),
+        0
+      );
+      return nData;
+    }
+  }
+
+  async markNotificationRead(id) {
+    if (this.mode === 'mongodb') {
+      await MongoNotification.findOneAndUpdate({ id }, { $set: { read: true } });
+    } else {
+      await sqliteDb.run('UPDATE notifications SET read = 1 WHERE id = ?', id);
+    }
+    return true;
+  }
+
+  async markAllNotificationsRead(target) {
+    if (this.mode === 'mongodb') {
+      await MongoNotification.updateMany({ target }, { $set: { read: true } });
+    } else {
+      await sqliteDb.run('UPDATE notifications SET read = 1 WHERE target = ?', target);
     }
     return true;
   }
