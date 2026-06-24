@@ -1917,6 +1917,62 @@ db.connect(MONGODB_URI).then(async () => {
     console.warn('[Patch] Test salon password patch failed:', e.message);
   }
 
+  // ─── Seed Approved Partner Salons From Environment Variable ─────────────────
+  // Any salon approved by admin can be persisted across Render redeploys by adding
+  // its data to the SEED_SALONS env var (JSON array) in the Render dashboard.
+  // Format: [{"id":"LLXXX123","name":"Salon Name","email":"owner@email.com","password":"their_password","ownerName":"Owner Name"}]
+  // The password here is the PLAIN TEXT password the salon uses to login.
+  try {
+    const seedSalonsEnv = process.env.SEED_SALONS;
+    if (seedSalonsEnv) {
+      const seedList = JSON.parse(seedSalonsEnv);
+      for (const s of seedList) {
+        if (!s.id || !s.email || !s.password) continue;
+        const existing = await db.getSalon(s.id);
+        if (!existing) {
+          await db.createSalon({
+            id: s.id,
+            name: s.name || s.id,
+            tagline: s.tagline || 'Premium Salon Experience',
+            area: s.area || (s.address ? s.address.split(',')[0] : 'Bengaluru'),
+            address: s.address || 'Bengaluru, Karnataka',
+            lat: s.lat || 12.9716,
+            lng: s.lng || 77.5946,
+            rating: s.rating || 5.0,
+            reviewCount: s.reviewCount || 0,
+            categories: s.categories || ['hair', 'skin', 'wellness'],
+            image: s.image || 'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=800&q=80',
+            openHours: s.openHours || '10:00 AM - 8:00 PM',
+            phone: s.phone || '',
+            email: s.email,
+            services: s.services || [],
+            packages: s.packages || [],
+            staff: s.staff || [],
+            featured: s.featured || false,
+            password: hashPassword(s.password),
+            isActive: true,
+            registrationStatus: 'approved',
+            ownerName: s.ownerName || '',
+            phoneOwner: s.phoneOwner || s.phone || '',
+            tradeLicenseUrl: s.tradeLicenseUrl || '',
+            registeredAt: s.registeredAt || new Date().toISOString(),
+            commissionDue: s.commissionDue || 0,
+          });
+          console.log(`[Seed] Partner salon ${s.id} (${s.name}) re-created from SEED_SALONS env.`);
+        } else {
+          // Always refresh password + status from env to ensure consistency
+          await db.updateSalon(s.id, {
+            password: hashPassword(s.password),
+            registrationStatus: 'approved',
+            isActive: true,
+          });
+          console.log(`[Seed] Partner salon ${s.id} credentials refreshed from SEED_SALONS env.`);
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('[Seed] SEED_SALONS parse/seed failed:', e.message);
+  }
 
   // ─── Ensure Test User Exists in DB ─────────────────────────────────────────
   // Seeds adminuser1@test.com with hashed password so backend login works without Supabase.
