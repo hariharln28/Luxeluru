@@ -399,6 +399,7 @@ Luxeluru is deployed as a **monorepo on Render**:
 - **Render free tier cold start** — first request after inactivity may take 30–60 seconds
 - **In-memory rate limiting** — resets on server restart; production would use Redis-backed rate limiting
 - **Trade license storage** — Uploaded as base64 `data:` URLs in SQLite; production would use cloud object storage (S3/GCS) for large files
+- **SQLite on Render** — Test salon (`LLLUX456`) and test user (`adminuser1@test.com`) are auto-created on every server startup, so credentials always work even after a fresh deploy with an empty database
 
 ---
 
