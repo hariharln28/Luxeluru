@@ -14,6 +14,7 @@
 [![Stack](https://img.shields.io/badge/Stack-React%20%2B%20Node.js%20%2B%20Express-61DAFB?style=for-the-badge&logo=react)](https://vitejs.dev)
 [![AI](https://img.shields.io/badge/AI-MediaPipe%20%2B%20Gemini%202.0-orange?style=for-the-badge&logo=google)](https://ai.google.dev)
 [![Languages](https://img.shields.io/badge/i18n-EN%20%7C%20HI%20%7C%20KN-blueviolet?style=for-the-badge)](#)
+[![GitHub](https://img.shields.io/badge/GitHub-hariharln28%2FLuxeluru-181717?style=for-the-badge&logo=github)](https://github.com/hariharln28/Luxeluru)
 
 <br/>
 
@@ -239,7 +240,7 @@ Commission accumulates throughout the month
 ### Install & Run Locally
 
 ```bash
-git clone <repo-url>
+git clone https://github.com/hariharln28/Luxeluru.git
 cd Luxeluru
 npm install
 npm run dev
@@ -383,9 +384,9 @@ Luxeluru is deployed as a **monorepo on Render**:
 
 ---
 
-## Notice
+## Open Source
 
-This is a **private repository**. The source code, design system, and all associated assets are the intellectual property of the Luxeluru team. Unauthorised copying, distribution, or commercial use of any part of this codebase is strictly prohibited.
+This repository is publicly available on [GitHub](https://github.com/hariharln28/Luxeluru). The source code is the intellectual property of the Luxeluru team. You are welcome to explore, fork, and learn from this codebase. Commercial use or redistribution without explicit permission from the team is not permitted.
 
 ---
 
