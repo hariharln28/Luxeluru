@@ -601,11 +601,26 @@ export function AdminDashboardPage() {
                       <p className="text-[#9a8fa8]">{s.email}</p>
                     </div>
                     <div className="text-xs text-[#9a8fa8] min-w-[80px]">{s.area}</div>
-                    <div className="text-xs min-w-[100px]">
-                      <p className="font-semibold text-amber-300">₹{(s.commissionDue ?? 0).toLocaleString('en-IN')}</p>
-                      <p className="text-[10px] text-[#9a8fa8] mt-0.5">Paid: {s.commissionPaidUntil || 'N/A'}</p>
+                    <div className="text-xs min-w-[120px]">
+                      <p className={`font-semibold ${(s.commissionDue ?? 0) > 0 ? 'text-amber-300' : 'text-green-400'}`}>₹{(s.commissionDue ?? 0).toLocaleString('en-IN')}</p>
+                      <p className="text-[10px] text-[#9a8fa8] mt-0.5">
+                        {s.commissionPaymentStatus === 'submitted' ? (
+                          <span className="text-blue-400 font-semibold">🕐 Pending Verify</span>
+                        ) : s.commissionPaymentStatus === 'verified' ? (
+                          <span className="text-green-400 font-semibold">✅ Cleared</span>
+                        ) : (s.commissionDue ?? 0) > 0 ? (
+                          <span className="text-amber-400">⚠ Unpaid</span>
+                        ) : (
+                          'No dues'
+                        )}
+                      </p>
                     </div>
                     <div className="flex items-center gap-3">
+                      {s.commissionPaymentStatus === 'submitted' && (
+                        <span className="inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold bg-blue-500/20 text-blue-400 animate-pulse">
+                          💳 Verify Payment
+                        </span>
+                      )}
                       <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold ${
                         statusText === 'Active' ? 'bg-green-500/20 text-green-400' :
                         statusText === 'Deactivated (Overdue)' ? 'bg-orange-500/20 text-orange-400' :
@@ -698,6 +713,72 @@ export function AdminDashboardPage() {
                           ) : (
                             <p className="text-xs text-[#9a8fa8] italic">No bank accounts configured</p>
                           )}
+
+                          {/* Commission Dues Management */}
+                          <div className="mt-3 pt-3 border-t border-[#c9a962]/10 space-y-2">
+                            <p className="text-[10px] font-bold uppercase tracking-wider text-[#c9a962] mb-1">Commission Dues (Pay-at-Salon)</p>
+                            <div className="rounded-lg bg-[#0f0d12]/60 px-3 py-3 border border-amber-500/10 space-y-1.5">
+                              <div className="flex items-center justify-between">
+                                <span className="text-[#9a8fa8]">Outstanding: </span>
+                                <span className={`font-bold text-sm ${(s.commissionDue ?? 0) > 0 ? 'text-amber-400' : 'text-green-400'}`}>
+                                  ₹{(s.commissionDue ?? 0).toLocaleString('en-IN')}
+                                </span>
+                              </div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-[#9a8fa8]">Payment Status: </span>
+                                <span className={`text-xs font-semibold ${
+                                  s.commissionPaymentStatus === 'verified' ? 'text-green-400' :
+                                  s.commissionPaymentStatus === 'submitted' ? 'text-blue-400' :
+                                  (s.commissionDue ?? 0) > 0 ? 'text-amber-400' : 'text-[#9a8fa8]'
+                                }`}>
+                                  {s.commissionPaymentStatus === 'verified' ? '✅ Cleared'
+                                    : s.commissionPaymentStatus === 'submitted' ? '🕐 Submitted — Pending Verification'
+                                    : (s.commissionDue ?? 0) > 0 ? '⚠️ Unpaid' : 'No dues'}
+                                </span>
+                              </div>
+                              {s.commissionPaymentRef && (
+                                <div className="flex items-center justify-between">
+                                  <span className="text-[#9a8fa8]">Payment Ref: </span>
+                                  <span className="font-mono text-xs text-[#e8d5a3]">{s.commissionPaymentRef}</span>
+                                </div>
+                              )}
+                              {s.commissionSubmittedAt && (
+                                <div className="flex items-center justify-between">
+                                  <span className="text-[#9a8fa8]">Submitted: </span>
+                                  <span className="text-xs text-[#9a8fa8]">{new Date(s.commissionSubmittedAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                                </div>
+                              )}
+                              {s.commissionLastClearedAt && (
+                                <div className="flex items-center justify-between">
+                                  <span className="text-[#9a8fa8]">Last Cleared: </span>
+                                  <span className="text-xs text-green-400">₹{(s.commissionLastClearedAmount ?? 0).toLocaleString('en-IN')} on {new Date(s.commissionLastClearedAt).toLocaleDateString('en-IN')}</span>
+                                </div>
+                              )}
+                              {/* Verify Payment Button */}
+                              {s.commissionPaymentStatus === 'submitted' && s.id !== 'LLLUX456' && (
+                                <button
+                                  onClick={async (e) => {
+                                    e.stopPropagation();
+                                    if (!confirm(`Verify commission payment of ₹${(s.commissionDue ?? 0).toLocaleString('en-IN')} from "${s.name}"? This will clear their dues.`)) return;
+                                    try {
+                                      const res = await fetch(`/api/salons/${s.id}/verify-commission-payment`, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+                                      const data = await res.json();
+                                      if (data.success) {
+                                        alert(`✅ Commission cleared for ${s.name}. ₹${(s.commissionDue ?? 0).toLocaleString('en-IN')} dues removed.`);
+                                        refreshData();
+                                      } else {
+                                        alert(data.message || 'Failed to verify.');
+                                      }
+                                    } catch { alert('Network error. Try again.'); }
+                                  }}
+                                  className="mt-2 w-full flex items-center justify-center gap-1.5 rounded-lg bg-blue-500/10 border border-blue-500/30 px-3 py-2 text-xs text-blue-400 font-semibold hover:bg-blue-500/20 transition"
+                                  style={{ touchAction: 'manipulation' }}
+                                >
+                                  ✅ Verify & Clear Commission Payment
+                                </button>
+                              )}
+                            </div>
+                          </div>
                         </div>
 
                         <div className="mt-3 pt-3 border-t border-[#c9a962]/10">

@@ -1332,6 +1332,166 @@ app.post('/api/announcements/:id/read', async (req, res) => {
   }
 });
 
+// ─── Platform Payment Details (public) ─────────────────────────────────────
+// Platform's own bank/UPI details where salons send commission
+const PLATFORM_PAYMENT = {
+  upi: [
+    { upiId: 'luxeluru@hdfcbank', holderName: 'Luxeluru Technologies' },
+    { upiId: 'luxeluru@ybl',      holderName: 'Luxeluru Technologies' }
+  ],
+  bank: {
+    accountHolderName: 'Luxeluru Technologies Pvt Ltd',
+    bankName: 'HDFC Bank',
+    accountNumber: '50200098765432',
+    ifscCode: 'HDFC0000001',
+    accountType: 'Current',
+    branch: 'Koramangala, Bengaluru'
+  }
+};
+
+app.get('/api/platform/payment-details', (req, res) => {
+  res.json({ success: true, payment: PLATFORM_PAYMENT });
+});
+
+// ─── Commission Summary for a Salon ────────────────────────────────────────
+app.get('/api/salons/:id/commission-summary', async (req, res) => {
+  try {
+    const salon = await db.getSalon(req.params.id);
+    if (!salon) return res.status(404).json({ success: false, message: 'Salon not found' });
+
+    // Get all bookings for this salon that are pay-at-salon and completed
+    const allBookings = await db.getBookings();
+    const payAtSalonBookings = allBookings.filter(b =>
+      b.salonId === req.params.id &&
+      b.status === 'completed' &&
+      (b.payoutStatus === 'pay-at-salon' || b.paymentMethod === 'cash' || b.paymentMethod === 'pay-at-salon')
+    );
+
+    // Calculate due date: end of current month + 5 grace days
+    const now = new Date();
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0); // last day of current month
+    const gracePeriodEnd = new Date(endOfMonth);
+    gracePeriodEnd.setDate(gracePeriodEnd.getDate() + 5);
+
+    // Determine commission status
+    let commissionStatus = 'current';
+    if (now > gracePeriodEnd) commissionStatus = 'overdue';
+    else if (now > endOfMonth) commissionStatus = 'due';
+
+    // Per-booking breakdown
+    const breakdown = payAtSalonBookings.map(b => ({
+      bookingId: b.id,
+      date: b.date,
+      time: b.time,
+      serviceNames: b.serviceNames || [],
+      totalBill: b.totalPrice || 0,
+      commissionRate: 3,
+      commissionAmount: b.commissionAmount || Math.round((b.totalPrice || 0) * 0.03),
+      payoutAmount: b.payoutAmount || ((b.totalPrice || 0) - Math.round((b.totalPrice || 0) * 0.03)),
+      completedAt: b.payoutInitiatedAt || b.createdAt
+    }));
+
+    const totalCommissionDue = breakdown.reduce((sum, b) => sum + b.commissionAmount, 0);
+    const totalRevenue = breakdown.reduce((sum, b) => sum + b.totalBill, 0);
+
+    res.json({
+      success: true,
+      salonId: req.params.id,
+      salonName: salon.name,
+      breakdown,
+      totalCommissionDue: salon.commissionDue || 0,
+      totalRevenue,
+      appointmentCount: breakdown.length,
+      commissionRate: 3,
+      dueDate: endOfMonth.toISOString().split('T')[0],
+      gracePeriodEnd: gracePeriodEnd.toISOString().split('T')[0],
+      commissionStatus,
+      commissionPaymentStatus: salon.commissionPaymentStatus || 'pending',
+      commissionPaymentRef: salon.commissionPaymentRef || null,
+      commissionSubmittedAt: salon.commissionSubmittedAt || null,
+      commissionLastClearedAt: salon.commissionLastClearedAt || null,
+      commissionLastClearedAmount: salon.commissionLastClearedAmount || 0,
+      platformPayment: PLATFORM_PAYMENT
+    });
+  } catch (err) {
+    console.error('Commission summary error:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ─── Submit Commission Payment (Salon) ─────────────────────────────────────
+app.post('/api/salons/:id/submit-commission-payment', async (req, res) => {
+  try {
+    const { paymentRef, paymentMethod, amount, screenshotNote } = req.body;
+    const salon = await db.getSalon(req.params.id);
+    if (!salon) return res.status(404).json({ success: false, message: 'Salon not found' });
+
+    if (!paymentRef || !paymentRef.trim())
+      return res.status(400).json({ success: false, message: 'Payment reference/UTR number is required.' });
+
+    await db.updateSalon(req.params.id, {
+      commissionPaymentStatus: 'submitted',
+      commissionPaymentRef: paymentRef.trim(),
+      commissionSubmittedAt: new Date().toISOString()
+    });
+
+    // Notify admin
+    await db.createNotification({
+      id: `notif-comm-submit-${req.params.id}-${Date.now()}`,
+      target: 'admin',
+      type: 'commission',
+      message: `💳 "${salon.name}" has submitted commission payment of ₹${(amount || salon.commissionDue || 0).toLocaleString('en-IN')} via ${paymentMethod || 'UPI/Bank'}. UTR/Ref: ${paymentRef}. Please verify and clear their dues.`,
+      createdAt: new Date().toISOString(),
+      read: false
+    });
+
+    // Notify salon
+    await db.createNotification({
+      id: `notif-comm-salon-${req.params.id}-${Date.now()}`,
+      target: req.params.id,
+      type: 'commission',
+      message: `✅ Your commission payment (Ref: ${paymentRef}) has been submitted for verification. Admin will clear your dues within 24 hours.`,
+      createdAt: new Date().toISOString(),
+      read: false
+    });
+
+    res.json({ success: true, message: 'Payment submitted for verification.' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ─── Verify & Clear Commission (Admin) ─────────────────────────────────────
+app.post('/api/salons/:id/verify-commission-payment', async (req, res) => {
+  try {
+    const salon = await db.getSalon(req.params.id);
+    if (!salon) return res.status(404).json({ success: false, message: 'Salon not found' });
+
+    const clearedAmount = salon.commissionDue || 0;
+
+    await db.updateSalon(req.params.id, {
+      commissionDue: 0,
+      commissionPaymentStatus: 'verified',
+      commissionLastClearedAt: new Date().toISOString(),
+      commissionLastClearedAmount: clearedAmount
+    });
+
+    // Notify salon that dues are cleared
+    await db.createNotification({
+      id: `notif-comm-cleared-${req.params.id}-${Date.now()}`,
+      target: req.params.id,
+      type: 'commission',
+      message: `🎉 Your commission payment of ₹${clearedAmount.toLocaleString('en-IN')} has been verified and your account dues are now cleared. Thank you!`,
+      createdAt: new Date().toISOString(),
+      read: false
+    });
+
+    res.json({ success: true, message: `Commission cleared. ₹${clearedAmount} dues removed.` });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // Health check endpoint for frontend connectivity detection
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', uptime: process.uptime(), timestamp: new Date().toISOString(), dbMode: db.mode });

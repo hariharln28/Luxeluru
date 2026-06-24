@@ -79,7 +79,7 @@ export function SalonDashboardPage() {
   const navigate = useNavigate();
   
   // Dashboard Tabs
-  const [activeTab, setActiveTab] = useState<'appointments' | 'slots' | 'insights' | 'location' | 'team' | 'notifications' | 'messages' | 'settings'>('appointments');
+  const [activeTab, setActiveTab] = useState<'appointments' | 'slots' | 'insights' | 'location' | 'team' | 'notifications' | 'messages' | 'settings' | 'dues'>('appointments');
   const [activeSubTab, setActiveSubTab] = useState<'chat' | 'announcements'>('chat');
   const [msgInput, setMsgInput] = useState('');
   const [msgSending, setMsgSending] = useState(false);
@@ -103,6 +103,37 @@ export function SalonDashboardPage() {
   const [addingUpi, setAddingUpi] = useState(false);
   const [newBank, setNewBank] = useState({ accountHolderName: '', accountNumber: '', ifscCode: '', bankName: '', accountType: 'savings' as 'savings' | 'current' });
   const [newUpi, setNewUpi] = useState({ upiId: '', holderName: '' });
+
+  // Commission dues state
+  const [commSummary, setCommSummary] = useState<any>(null);
+  const [commSummaryLoading, setCommSummaryLoading] = useState(false);
+  const [commPayRef, setCommPayRef] = useState('');
+  const [commPayMethod, setCommPayMethod] = useState<'upi' | 'neft'>('upi');
+  const [commSubmitting, setCommSubmitting] = useState(false);
+  const [commMsg, setCommMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
+  const copyToClipboard = (text: string, key: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedKey(key);
+      setTimeout(() => setCopiedKey(null), 2000);
+    });
+  };
+
+  const fetchCommSummary = async () => {
+    if (!salon) return;
+    setCommSummaryLoading(true);
+    try {
+      const res = await fetch(`/api/salons/${salon.id}/commission-summary`);
+      const data = await res.json();
+      if (data.success) setCommSummary(data);
+    } catch (e) {
+      console.error('Failed to load commission summary', e);
+    } finally {
+      setCommSummaryLoading(false);
+    }
+  };
+
 
   // Location state
   const [editAddress, setEditAddress] = useState(salon?.address || '');
@@ -364,6 +395,21 @@ export function SalonDashboardPage() {
           <Settings className="h-4 w-4" />
           Settings
         </button>
+        <button
+          onClick={() => { setActiveTab('dues'); fetchCommSummary(); }}
+          className={`relative flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-xs font-semibold transition ${
+            activeTab === 'dues' ? 'bg-amber-500 text-[#0f0d12]' : 'text-[#9a8fa8] hover:text-[#e8d5a3]'
+          }`}
+          style={{ touchAction: 'manipulation' }}
+        >
+          <IndianRupee className="h-4 w-4" />
+          Dues
+          {(salon?.commissionDue ?? 0) > 0 && (
+            <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-[9px] font-bold text-[#0f0d12]">
+              !
+            </span>
+          )}
+        </button>
       </div>
 
       {/* APPOINTMENTS VIEW */}
@@ -371,13 +417,21 @@ export function SalonDashboardPage() {
         <>
           {/* Dashboard Stats */}
           <div className="grid gap-6 md:grid-cols-3 mb-10">
-            <div className="luxe-card p-6">
-              <p className="text-xs text-[#9a8fa8] uppercase tracking-wider font-semibold">Total Commission Due</p>
-              <p className="mt-2 flex items-baseline gap-1 font-display text-4xl font-bold text-[#c9a962]">
-                <IndianRupee className="h-8 w-8 text-[#c9a962]" />
-                {totalCommissionDue.toLocaleString('en-IN')}
+            {/* Commission Due — now links to Dues tab */}
+            <div className={`luxe-card p-6 border ${(salon?.commissionDue ?? 0) > 0 ? 'border-amber-500/30 bg-amber-500/5' : 'border-[#c9a962]/15'}`}>
+              <p className="text-xs text-[#9a8fa8] uppercase tracking-wider font-semibold">Commission Due (Pay-at-Salon)</p>
+              <p className={`mt-2 flex items-baseline gap-1 font-display text-4xl font-bold ${(salon?.commissionDue ?? 0) > 0 ? 'text-amber-400' : 'text-[#c9a962]'}`}>
+                <IndianRupee className="h-8 w-8" />
+                {(salon?.commissionDue ?? 0).toLocaleString('en-IN')}
               </p>
-              <p className="mt-2 text-xs text-[#9a8fa8]">3% of final bills from completed appointments.</p>
+              <p className="mt-2 text-xs text-[#9a8fa8]">3% of cash appointments. Due by month end + 5 day grace.</p>
+              <button
+                onClick={() => { setActiveTab('dues'); fetchCommSummary(); }}
+                className="mt-3 text-xs text-amber-400 hover:underline font-semibold flex items-center gap-1"
+                style={{ touchAction: 'manipulation' }}
+              >
+                View Breakdown & Pay →
+              </button>
             </div>
 
             <div className="luxe-card p-6">
@@ -1538,6 +1592,279 @@ export function SalonDashboardPage() {
             />
             <p className="mt-2 text-center text-xs text-[#9a8fa8]">Tap anywhere outside or × to close</p>
           </div>
+        </div>
+      )}
+
+      {/* COMMISSION DUES TAB */}
+      {activeTab === 'dues' && (
+        <div className="animate-fade-in space-y-8 max-w-4xl">
+          {/* Header */}
+          <div className="flex items-center gap-3 border-b border-[#c9a962]/10 pb-4">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/10">
+              <IndianRupee className="h-5 w-5 text-amber-400" />
+            </div>
+            <div>
+              <h2 className="font-display text-2xl text-[#e8d5a3]">Commission Dues</h2>
+              <p className="text-sm text-[#9a8fa8]">Pay-at-salon appointments — 3% commission payable to Luxeluru by month end (+5 day grace).</p>
+            </div>
+            <button onClick={fetchCommSummary} className="ml-auto luxe-btn-outline text-xs px-3 py-2 flex items-center gap-1.5" style={{ touchAction: 'manipulation' }}>
+              <RefreshCw className={`h-3.5 w-3.5 ${commSummaryLoading ? 'animate-spin' : ''}`} /> Refresh
+            </button>
+          </div>
+
+          {commMsg && (
+            <div className={`flex items-center gap-3 rounded-xl border px-4 py-3 text-sm ${commMsg.type === 'success' ? 'border-green-500/30 bg-green-500/10 text-green-300' : 'border-red-500/30 bg-red-500/10 text-red-300'}`}>
+              {commMsg.type === 'success' ? <BadgeCheck className="h-5 w-5 shrink-0" /> : <AlertCircle className="h-5 w-5 shrink-0" />}
+              {commMsg.text}
+            </div>
+          )}
+
+          {commSummaryLoading ? (
+            <div className="space-y-4">
+              {[1,2,3].map(i => <div key={i} className="skeleton h-16 w-full rounded-xl" />)}
+            </div>
+          ) : commSummary ? (
+            <>
+              {/* Status Banner */}
+              {(() => {
+                const status = commSummary.commissionStatus;
+                const payStatus = commSummary.commissionPaymentStatus;
+                const due = commSummary.totalCommissionDue;
+                const config = payStatus === 'verified'
+                  ? { bg: 'bg-green-500/5 border-green-500/20', icon: '✅', text: 'text-green-300', label: 'Commission Cleared', sub: `₹${(commSummary.commissionLastClearedAmount || 0).toLocaleString('en-IN')} cleared on ${commSummary.commissionLastClearedAt ? new Date(commSummary.commissionLastClearedAt).toLocaleDateString('en-IN') : 'N/A'}` }
+                  : payStatus === 'submitted'
+                  ? { bg: 'bg-blue-500/5 border-blue-500/20', icon: '🕐', text: 'text-blue-300', label: 'Payment Under Review', sub: `Ref: ${commSummary.commissionPaymentRef} · Submitted ${commSummary.commissionSubmittedAt ? new Date(commSummary.commissionSubmittedAt).toLocaleDateString('en-IN') : ''}` }
+                  : status === 'overdue'
+                  ? { bg: 'bg-red-500/5 border-red-500/20', icon: '🚨', text: 'text-red-300', label: `Overdue — ₹${due.toLocaleString('en-IN')} pending`, sub: 'Grace period has ended. Pay immediately to avoid suspension.' }
+                  : status === 'due'
+                  ? { bg: 'bg-amber-500/5 border-amber-500/20', icon: '⚠️', text: 'text-amber-300', label: `Due Now — ₹${due.toLocaleString('en-IN')} pending`, sub: `Grace ends ${commSummary.gracePeriodEnd}. Pay by then to avoid suspension.` }
+                  : due > 0
+                  ? { bg: 'bg-amber-500/5 border-amber-500/20', icon: '📋', text: 'text-amber-300', label: `₹${due.toLocaleString('en-IN')} Commission Accumulated`, sub: `Due by ${commSummary.dueDate}. 5-day grace until ${commSummary.gracePeriodEnd}.` }
+                  : { bg: 'bg-green-500/5 border-green-500/20', icon: '✅', text: 'text-green-300', label: 'No Dues Outstanding', sub: 'All commissions are settled.' };
+                return (
+                  <div className={`rounded-xl border p-4 flex items-start gap-4 ${config.bg}`}>
+                    <span className="text-2xl shrink-0">{config.icon}</span>
+                    <div>
+                      <p className={`font-semibold text-sm ${config.text}`}>{config.label}</p>
+                      <p className="text-xs text-[#9a8fa8] mt-0.5">{config.sub}</p>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* Summary Cards */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                {[
+                  { label: 'Pay-at-Salon Appointments', value: commSummary.appointmentCount, color: 'text-[#e8d5a3]' },
+                  { label: 'Total Revenue (Cash)', value: `₹${(commSummary.totalRevenue || 0).toLocaleString('en-IN')}`, color: 'text-[#c9a962]' },
+                  { label: 'Commission Rate', value: `${commSummary.commissionRate || 3}%`, color: 'text-[#9a8fa8]' },
+                  { label: 'Commission Due', value: `₹${(commSummary.totalCommissionDue || 0).toLocaleString('en-IN')}`, color: 'text-amber-400' },
+                ].map(card => (
+                  <div key={card.label} className="luxe-card p-4">
+                    <p className="text-[10px] text-[#9a8fa8] uppercase tracking-wide">{card.label}</p>
+                    <p className={`mt-1 font-bold text-lg ${card.color}`}>{card.value}</p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Per-appointment Breakdown Table */}
+              {commSummary.breakdown && commSummary.breakdown.length > 0 ? (
+                <div className="luxe-card overflow-hidden">
+                  <div className="px-5 py-4 border-b border-[#c9a962]/10 flex items-center justify-between">
+                    <h3 className="font-semibold text-[#e8d5a3] flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-[#c9a962]" />
+                      Appointment Bill Breakdown
+                    </h3>
+                    <span className="text-xs text-[#9a8fa8]">{commSummary.breakdown.length} appointments</span>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="border-b border-[#c9a962]/10 bg-[#0f0d12]/40">
+                          <th className="text-left px-4 py-3 text-[#9a8fa8] font-semibold uppercase tracking-wide">Date</th>
+                          <th className="text-left px-4 py-3 text-[#9a8fa8] font-semibold uppercase tracking-wide">Services</th>
+                          <th className="text-right px-4 py-3 text-[#9a8fa8] font-semibold uppercase tracking-wide">Bill</th>
+                          <th className="text-right px-4 py-3 text-[#9a8fa8] font-semibold uppercase tracking-wide">Commission (3%)</th>
+                          <th className="text-right px-4 py-3 text-[#9a8fa8] font-semibold uppercase tracking-wide">Your Share</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {commSummary.breakdown.map((row: any, i: number) => (
+                          <tr key={row.bookingId || i} className="border-b border-[#c9a962]/5 hover:bg-[#c9a962]/3 transition">
+                            <td className="px-4 py-3 text-[#9a8fa8] font-mono whitespace-nowrap">{row.date} {row.time}</td>
+                            <td className="px-4 py-3 text-[#e8d5a3] max-w-[180px] truncate">{(row.serviceNames || []).join(', ') || '—'}</td>
+                            <td className="px-4 py-3 text-right text-[#e8d5a3] font-medium">₹{(row.totalBill || 0).toLocaleString('en-IN')}</td>
+                            <td className="px-4 py-3 text-right text-amber-400 font-semibold">₹{(row.commissionAmount || 0).toLocaleString('en-IN')}</td>
+                            <td className="px-4 py-3 text-right text-green-400 font-semibold">₹{(row.payoutAmount || 0).toLocaleString('en-IN')}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                      <tfoot>
+                        <tr className="border-t border-[#c9a962]/20 bg-[#c9a962]/5 font-bold">
+                          <td className="px-4 py-3 text-[#c9a962] font-semibold" colSpan={2}>Total</td>
+                          <td className="px-4 py-3 text-right text-[#e8d5a3]">₹{(commSummary.totalRevenue || 0).toLocaleString('en-IN')}</td>
+                          <td className="px-4 py-3 text-right text-amber-400">₹{(commSummary.totalCommissionDue || 0).toLocaleString('en-IN')}</td>
+                          <td className="px-4 py-3 text-right text-green-400">₹{((commSummary.totalRevenue || 0) - (commSummary.totalCommissionDue || 0)).toLocaleString('en-IN')}</td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                </div>
+              ) : (
+                <div className="luxe-card p-8 text-center text-[#9a8fa8]">
+                  <IndianRupee className="mx-auto h-10 w-10 text-[#3d3347] mb-3" />
+                  <p>No pay-at-salon appointments yet. Commission accrues when customers pay in cash.</p>
+                </div>
+              )}
+
+              {/* Platform Payment Details — where to pay commission */}
+              {(commSummary.totalCommissionDue > 0 || commSummary.commissionPaymentStatus === 'submitted') && commSummary.platformPayment && (
+                <div className="luxe-card p-6 space-y-5">
+                  <div className="flex items-center gap-2">
+                    <Banknote className="h-5 w-5 text-[#c9a962]" />
+                    <h3 className="font-semibold text-[#e8d5a3]">Pay Commission To — Platform Details</h3>
+                  </div>
+                  <p className="text-xs text-[#9a8fa8]">Transfer <span className="font-bold text-amber-400">₹{(commSummary.totalCommissionDue || 0).toLocaleString('en-IN')}</span> to Luxeluru using any of the options below, then submit the UTR/reference number.</p>
+
+                  {/* UPI Options */}
+                  <div className="space-y-2">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-[#c9a962]">UPI (Instant · Recommended)</p>
+                    {commSummary.platformPayment.upi.map((u: any, i: number) => (
+                      <div key={i} className="flex items-center justify-between rounded-xl bg-[#0f0d12]/60 px-4 py-3 border border-[#c9a962]/10">
+                        <div>
+                          <p className="font-mono text-sm text-[#e8d5a3]">{u.upiId}</p>
+                          <p className="text-[10px] text-[#9a8fa8]">{u.holderName}</p>
+                        </div>
+                        <button
+                          onClick={() => copyToClipboard(u.upiId, `upi-${i}`)}
+                          className="flex items-center gap-1.5 rounded-lg border border-[#c9a962]/30 px-3 py-1.5 text-xs text-[#c9a962] hover:bg-[#c9a962]/10 transition shrink-0"
+                          style={{ touchAction: 'manipulation' }}
+                        >
+                          {copiedKey === `upi-${i}` ? <BadgeCheck className="h-3.5 w-3.5" /> : <CreditCard className="h-3.5 w-3.5" />}
+                          {copiedKey === `upi-${i}` ? 'Copied!' : 'Copy'}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Bank Transfer */}
+                  <div className="space-y-2">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-[#c9a962]">Bank Transfer — NEFT/IMPS</p>
+                    <div className="rounded-xl bg-[#0f0d12]/60 px-4 py-4 border border-[#c9a962]/10 space-y-2 text-xs">
+                      {[
+                        { label: 'Account Holder', value: commSummary.platformPayment.bank.accountHolderName, key: 'holder' },
+                        { label: 'Bank', value: `${commSummary.platformPayment.bank.bankName} — ${commSummary.platformPayment.bank.branch}`, key: 'bank' },
+                        { label: 'Account Number', value: commSummary.platformPayment.bank.accountNumber, key: 'acc' },
+                        { label: 'IFSC Code', value: commSummary.platformPayment.bank.ifscCode, key: 'ifsc' },
+                        { label: 'Account Type', value: commSummary.platformPayment.bank.accountType, key: 'type' },
+                      ].map(({ label, value, key }) => (
+                        <div key={key} className="flex items-center justify-between gap-3">
+                          <div>
+                            <span className="text-[#9a8fa8]">{label}: </span>
+                            <span className="font-mono text-[#e8d5a3]">{value}</span>
+                          </div>
+                          <button
+                            onClick={() => copyToClipboard(value, key)}
+                            className="shrink-0 text-[10px] text-[#c9a962] hover:underline"
+                            style={{ touchAction: 'manipulation' }}
+                          >
+                            {copiedKey === key ? '✓ Copied' : 'Copy'}
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Submit Payment Reference */}
+              {commSummary.totalCommissionDue > 0 && commSummary.commissionPaymentStatus !== 'submitted' && commSummary.commissionPaymentStatus !== 'verified' && (
+                <div className="luxe-card p-6 space-y-4">
+                  <h3 className="font-semibold text-[#e8d5a3] flex items-center gap-2">
+                    <ShieldCheck className="h-5 w-5 text-[#c9a962]" />
+                    Submit Payment Confirmation
+                  </h3>
+                  <p className="text-xs text-[#9a8fa8]">After making the payment, enter your UTR/transaction reference number below. Admin will verify and clear your dues within 24 hours.</p>
+
+                  <div className="space-y-3">
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => setCommPayMethod('upi')}
+                        className={`flex-1 rounded-lg border px-3 py-2 text-xs font-semibold transition ${commPayMethod === 'upi' ? 'border-[#c9a962] bg-[#c9a962]/10 text-[#c9a962]' : 'border-[#c9a962]/20 text-[#9a8fa8]'}`}
+                        style={{ touchAction: 'manipulation' }}
+                      >
+                        📱 UPI
+                      </button>
+                      <button
+                        onClick={() => setCommPayMethod('neft')}
+                        className={`flex-1 rounded-lg border px-3 py-2 text-xs font-semibold transition ${commPayMethod === 'neft' ? 'border-[#c9a962] bg-[#c9a962]/10 text-[#c9a962]' : 'border-[#c9a962]/20 text-[#9a8fa8]'}`}
+                        style={{ touchAction: 'manipulation' }}
+                      >
+                        🏦 NEFT/IMPS
+                      </button>
+                    </div>
+                    <input
+                      className="luxe-input"
+                      placeholder={commPayMethod === 'upi' ? 'UPI Transaction ID / UTR (e.g. 425612389456)' : 'NEFT/IMPS UTR Number (e.g. HDFC0025611234)'}
+                      value={commPayRef}
+                      onChange={e => setCommPayRef(e.target.value)}
+                      autoComplete="off"
+                      spellCheck={false}
+                    />
+                    <p className="text-[10px] text-[#6b6175]">
+                      Amount to transfer: <span className="font-bold text-amber-400">₹{(commSummary.totalCommissionDue || 0).toLocaleString('en-IN')}</span> · 
+                      Payment method: <span className="text-[#c9a962]">{commPayMethod === 'upi' ? `UPI to ${commSummary.platformPayment?.upi?.[0]?.upiId}` : `NEFT/IMPS to A/C ${commSummary.platformPayment?.bank?.accountNumber}`}</span>
+                    </p>
+                    <button
+                      onClick={async () => {
+                        if (!commPayRef.trim()) { setCommMsg({ type: 'error', text: 'Please enter the payment reference / UTR number.' }); return; }
+                        setCommSubmitting(true); setCommMsg(null);
+                        try {
+                          const res = await fetch(`/api/salons/${salon?.id}/submit-commission-payment`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ paymentRef: commPayRef, paymentMethod: commPayMethod, amount: commSummary.totalCommissionDue })
+                          });
+                          const data = await res.json();
+                          if (data.success) {
+                            setCommMsg({ type: 'success', text: '✅ Payment submitted! Admin will verify within 24 hours and clear your dues.' });
+                            setCommPayRef('');
+                            fetchCommSummary();
+                          } else {
+                            setCommMsg({ type: 'error', text: data.message || 'Failed to submit.' });
+                          }
+                        } catch (e: any) {
+                          setCommMsg({ type: 'error', text: e.message || 'Network error. Try again.' });
+                        } finally { setCommSubmitting(false); }
+                      }}
+                      disabled={commSubmitting}
+                      className="luxe-btn w-full flex items-center justify-center gap-2 disabled:opacity-60"
+                      style={{ touchAction: 'manipulation', minHeight: 48 }}
+                    >
+                      {commSubmitting ? <><RefreshCw className="h-4 w-4 animate-spin" /> Submitting...</> : <><Save className="h-4 w-4" /> Submit Payment Reference</>}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Info box */}
+              <div className="rounded-xl border border-[#c9a962]/10 bg-[#c9a962]/5 p-4 text-xs text-[#9a8fa8] space-y-1.5">
+                <p className="font-semibold text-[#e8d5a3]">Commission Payment Schedule</p>
+                <p>① Commission (3%) accumulates for every cash appointment completed at your salon.</p>
+                <p>② Total is due by <span className="text-[#c9a962] font-semibold">end of {new Date().toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}</span> (last day of month).</p>
+                <p>③ <span className="text-[#c9a962] font-semibold">5-day grace period</span> follows — pay by {commSummary?.gracePeriodEnd || 'N/A'} to avoid suspension.</p>
+                <p>④ Transfer the amount to our UPI/bank and submit the UTR reference here. Admin verifies within 24 hours.</p>
+              </div>
+            </>
+          ) : (
+            <div className="luxe-card p-8 text-center space-y-3">
+              <IndianRupee className="mx-auto h-12 w-12 text-[#3d3347]" />
+              <p className="text-[#9a8fa8]">Click <strong className="text-[#c9a962]">Refresh</strong> to load your commission summary.</p>
+              <button onClick={fetchCommSummary} className="luxe-btn text-sm inline-flex items-center gap-2" style={{ touchAction: 'manipulation' }}>
+                <RefreshCw className="h-4 w-4" /> Load Commission Summary
+              </button>
+            </div>
+          )}
         </div>
       )}
 

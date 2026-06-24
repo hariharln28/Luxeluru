@@ -88,6 +88,11 @@ export interface Salon {
   exitRejectReason?: string;
   bankDetails?: BankDetail[];
   upiDetails?: UpiDetail[];
+  commissionPaymentStatus?: 'pending' | 'submitted' | 'verified';
+  commissionPaymentRef?: string;
+  commissionSubmittedAt?: string;
+  commissionLastClearedAt?: string;
+  commissionLastClearedAmount?: number;
 }
 
 export interface User {

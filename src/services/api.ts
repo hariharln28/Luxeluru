@@ -187,6 +187,23 @@ export const api = {
       method: 'POST',
     }),
 
+  getCommissionSummary: (salonId: string) =>
+    request<any>(`/api/salons/${salonId}/commission-summary`),
+
+  submitCommissionPayment: (salonId: string, data: { paymentRef: string; paymentMethod: string; amount: number }) =>
+    request<{ success: boolean; message: string }>(`/api/salons/${salonId}/submit-commission-payment`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  verifyCommissionPayment: (salonId: string) =>
+    request<{ success: boolean; message: string }>(`/api/salons/${salonId}/verify-commission-payment`, {
+      method: 'POST',
+    }),
+
+  getPlatformPaymentDetails: () =>
+    request<any>('/api/platform/payment-details'),
+
   // Admin Auth & management
   adminLogin: (username: string, password: string) =>
     request<{ success: boolean }>('/api/admin/login', {

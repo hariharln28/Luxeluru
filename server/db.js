@@ -73,7 +73,12 @@ function initMongoModels() {
     exitRequestStatus: { type: String },
     exitRejectReason: { type: String },
     bankDetails: { type: mongoose.Schema.Types.Mixed, default: [] },
-    upiDetails: { type: mongoose.Schema.Types.Mixed, default: [] }
+    upiDetails: { type: mongoose.Schema.Types.Mixed, default: [] },
+    commissionPaymentStatus: { type: String, default: 'pending' },
+    commissionPaymentRef: { type: String },
+    commissionSubmittedAt: { type: String },
+    commissionLastClearedAt: { type: String },
+    commissionLastClearedAmount: { type: Number, default: 0 }
   });
 
   const bookingSchema = new mongoose.Schema({
@@ -338,6 +343,12 @@ async function initSqlite() {
   try { await sqliteDb.run("ALTER TABLE bookings ADD COLUMN payoutReference TEXT"); } catch (e) { /* already exists */ }
   try { await sqliteDb.run("ALTER TABLE bookings ADD COLUMN payoutMethod TEXT"); } catch (e) { /* already exists */ }
   try { await sqliteDb.run("ALTER TABLE bookings ADD COLUMN payoutInitiatedAt TEXT"); } catch (e) { /* already exists */ }
+  // Commission payment tracking for pay-at-salon
+  try { await sqliteDb.run("ALTER TABLE salons ADD COLUMN commissionPaymentStatus TEXT DEFAULT 'pending'"); } catch (e) { /* already exists */ }
+  try { await sqliteDb.run("ALTER TABLE salons ADD COLUMN commissionPaymentRef TEXT"); } catch (e) { /* already exists */ }
+  try { await sqliteDb.run("ALTER TABLE salons ADD COLUMN commissionSubmittedAt TEXT"); } catch (e) { /* already exists */ }
+  try { await sqliteDb.run("ALTER TABLE salons ADD COLUMN commissionLastClearedAt TEXT"); } catch (e) { /* already exists */ }
+  try { await sqliteDb.run("ALTER TABLE salons ADD COLUMN commissionLastClearedAmount REAL DEFAULT 0"); } catch (e) { /* already exists */ }
 }
 
 // Helper to convert SQLite row objects back to standard JS objects (parsing JSON strings)
