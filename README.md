@@ -212,6 +212,7 @@ Commission accumulates throughout the month
 | Method | Endpoint | Description |
 |---|---|---|
 | `POST` | `/api/users/register` | Register a new user |
+| `POST` | `/api/users/login` | Backend user login — fallback for users without Supabase accounts (e.g. test user); checks SHA-256 hashed password against DB |
 | `POST` | `/api/salons/login` | Salon partner login (rate-limited, blocks if no password set) |
 | `POST` | `/api/salons/register` | New salon registration with KYC (no default password — salon must set one after approval) |
 | `GET` | `/api/salons` | List all salons (strips tradeLicenseUrl to prevent mobile storage overflow) |
