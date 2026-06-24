@@ -860,58 +860,40 @@ export function SalonDashboardPage() {
         <div className="space-y-6 animate-fade-in">
           <div className="luxe-card p-6 space-y-4">
             <h3 className="font-display text-xl text-[#e8d5a3] flex items-center gap-2">
-              <MapPin className="h-5 w-5 text-[#c9a962]" /> Salon Location
+              <MapPin className="h-5 w-5 text-[#c9a962]" /> Set Salon Location
             </h3>
-            <p className="text-xs text-[#9a8fa8]">Update your salon address. Changes are visible to customers on the platform.</p>
-            
-            <div className="space-y-3">
-              <div>
-                <label className="text-xs text-[#9a8fa8] font-semibold block mb-1">Full Address</label>
-                <textarea
-                  value={editAddress}
-                  onChange={(e) => setEditAddress(e.target.value)}
-                  rows={2}
-                  className="luxe-input text-sm"
-                  placeholder="Enter complete salon address"
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs text-[#9a8fa8] font-semibold block mb-1">Latitude</label>
-                  <input type="text" value={editLat} onChange={(e) => setEditLat(e.target.value)} className="luxe-input text-sm" placeholder="e.g. 12.9716" />
-                </div>
-                <div>
-                  <label className="text-xs text-[#9a8fa8] font-semibold block mb-1">Longitude</label>
-                  <input type="text" value={editLng} onChange={(e) => setEditLng(e.target.value)} className="luxe-input text-sm" placeholder="e.g. 77.5946" />
-                </div>
-              </div>
-              <div className="flex gap-3 pt-2">
-                <button
-                  onClick={() => {
-                    const lat = parseFloat(editLat) || 0;
-                    const lng = parseFloat(editLng) || 0;
-                    if (!editAddress.trim()) return;
-                    updateSalonLocation(salon.id, editAddress.trim(), lat, lng);
-                  }}
-                  className="luxe-btn text-sm py-2 px-6"
-                >
-                  Update Location
-                </button>
+            <p className="text-xs text-[#9a8fa8]">
+              Search for your salon's area or tap directly on the map to pin your exact location. The address and coordinates will be auto-filled and saved to your profile.
+            </p>
+
+            <SalonLocationPicker
+              initialLat={salon.lat}
+              initialLng={salon.lng}
+              initialAddress={salon.address}
+              onLocationSelect={({ address, lat, lng }) => {
+                setEditAddress(address);
+                setEditLat(String(lat));
+                setEditLng(String(lng));
+                updateSalonLocation(salon.id, address, lat, lng);
+              }}
+            />
+
+            {/* Current saved location */}
+            {salon.address && (
+              <div className="mt-2 p-3 rounded-lg bg-[#0f0d12]/50 text-xs text-[#9a8fa8] space-y-1">
+                <p className="text-[#c9a962] font-semibold">Currently Saved</p>
+                <p><strong>Address:</strong> {salon.address}</p>
+                <p><strong>Coordinates:</strong> {salon.lat}, {salon.lng}</p>
                 <a
-                  href={`https://www.google.com/maps?q=${editLat},${editLng}`}
+                  href={`https://www.google.com/maps?q=${salon.lat},${salon.lng}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="luxe-btn-outline text-sm py-2 px-6 flex items-center gap-2"
+                  className="inline-flex items-center gap-1 text-[#c9a962] hover:text-[#e8d5a3] underline mt-1"
                 >
-                  <MapPin className="h-4 w-4" /> View on Google Maps
+                  <ExternalLink className="h-3 w-3" /> Verify on Google Maps
                 </a>
               </div>
-            </div>
-            
-            <div className="mt-4 p-3 rounded-lg bg-[#0f0d12]/50 text-xs text-[#9a8fa8]">
-              <p><strong>Current Address:</strong> {salon.address}</p>
-              <p className="mt-1"><strong>Coordinates:</strong> {salon.lat}, {salon.lng}</p>
-            </div>
+            )}
           </div>
         </div>
       )}
