@@ -80,6 +80,7 @@ export function AdminDashboardPage() {
   const [blockDays, setBlockDays] = useState('3');
   const [deletingSalonId, setDeletingSalonId] = useState<string | null>(null);
   const [userSearch, setUserSearch] = useState('');
+  const [expandedSalonId, setExpandedSalonId] = useState<string | null>(null);
 
   // Exit rejection modal state
   const [rejectExitId, setRejectExitId] = useState<string | null>(null);
@@ -568,91 +569,133 @@ export function AdminDashboardPage() {
             </div>
           )}
 
-          <div className="overflow-x-auto rounded-xl border border-[#c9a962]/15 bg-[#1a1520]/60 backdrop-blur-xl">
-            <table className="w-full text-left border-collapse text-sm">
-              <thead>
-                <tr className="border-b border-[#c9a962]/20 bg-[#0f0d12] text-[#9a8fa8] font-semibold text-xs uppercase tracking-wider">
-                  <th className="px-6 py-4">Salon Code & Name</th>
-                  <th className="px-6 py-4">Owner details</th>
-                  <th className="px-6 py-4">Area</th>
-                  <th className="px-6 py-4">Commission Due</th>
-                  <th className="px-6 py-4">Status</th>
-                  <th className="px-6 py-4 text-center">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#c9a962]/10">
-                {otherSalons.map((s) => {
-                  const now = new Date();
-                  const paidUntil = s.commissionPaidUntil ? new Date(s.commissionPaidUntil) : null;
-                  const graceEnd = paidUntil ? new Date(paidUntil) : null;
-                  if (graceEnd) graceEnd.setDate(graceEnd.getDate() + 5);
-                  
-                  const isDeactivatedDueToCommission = s.commissionDue && s.commissionDue > 0 && graceEnd && now > graceEnd;
-                  const statusText = s.exitReason?.includes('exited') 
-                    ? 'Exited Platform' 
-                    : s.isActive === false 
-                    ? 'Forcefully Removed' 
-                    : isDeactivatedDueToCommission 
-                    ? 'Deactivated (Overdue)' 
-                    : 'Active';
+          <div className="space-y-3">
+            {otherSalons.map((s) => {
+              const now = new Date();
+              const paidUntil = s.commissionPaidUntil ? new Date(s.commissionPaidUntil) : null;
+              const graceEnd = paidUntil ? new Date(paidUntil) : null;
+              if (graceEnd) graceEnd.setDate(graceEnd.getDate() + 5);
+              const isDeactivatedDueToCommission = s.commissionDue && s.commissionDue > 0 && graceEnd && now > graceEnd;
+              const statusText = s.exitReason?.includes('exited')
+                ? 'Exited Platform'
+                : s.isActive === false
+                ? 'Forcefully Removed'
+                : isDeactivatedDueToCommission
+                ? 'Deactivated (Overdue)'
+                : 'Active';
+              const isExpanded = expandedSalonId === s.id;
 
-                  return (
-                    <tr key={s.id} className="hover:bg-[#c9a962]/5 transition-colors">
-                      <td className="px-6 py-4">
-                        <p className="font-semibold text-[#e8d5a3]">{s.name}</p>
-                        <p className="text-xs text-[#9a8fa8] font-mono mt-0.5">Code: {s.id}</p>
-                      </td>
-                      <td className="px-6 py-4 text-xs">
-                        <p className="text-[#e8d5a3] font-medium">{s.ownerName || 'N/A'}</p>
-                        <p className="text-[#9a8fa8] mt-0.5">{s.email}</p>
-                      </td>
-                      <td className="px-6 py-4 text-xs text-[#9a8fa8]">{s.area}</td>
-                      <td className="px-6 py-4">
-                        <p className="font-semibold text-amber-300">₹{(s.commissionDue ?? 0).toLocaleString('en-IN')}</p>
-                        <p className="text-[10px] text-[#9a8fa8] mt-0.5">Paid Until: {s.commissionPaidUntil || 'N/A'}</p>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                          statusText === 'Active' ? 'bg-green-500/20 text-green-400' :
-                          statusText === 'Deactivated (Overdue)' ? 'bg-orange-500/20 text-orange-400' :
-                          'bg-red-500/20 text-red-400'
-                        }`}>
-                          {statusText}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        {s.id === 'LLLUX456' ? (
-                          <span className="inline-flex items-center gap-1 text-[10px] text-[#c9a962] font-semibold bg-[#c9a962]/10 px-2 py-1 rounded-full">
-                            🛡️ Test Account
+              return (
+                <div key={s.id} className="luxe-card overflow-hidden border border-[#c9a962]/15">
+                  {/* Summary row */}
+                  <div
+                    className="flex flex-wrap items-center gap-x-6 gap-y-2 px-5 py-4 cursor-pointer hover:bg-[#c9a962]/5 transition-colors"
+                    onClick={() => setExpandedSalonId(isExpanded ? null : s.id)}
+                  >
+                    <div className="flex-1 min-w-[180px]">
+                      <p className="font-semibold text-[#e8d5a3] text-sm">{s.name}</p>
+                      <p className="text-[10px] text-[#9a8fa8] font-mono mt-0.5">Code: {s.id}</p>
+                    </div>
+                    <div className="text-xs min-w-[150px]">
+                      <p className="text-[#e8d5a3] font-medium">{s.ownerName || 'N/A'}</p>
+                      <p className="text-[#9a8fa8]">{s.email}</p>
+                    </div>
+                    <div className="text-xs text-[#9a8fa8] min-w-[80px]">{s.area}</div>
+                    <div className="text-xs min-w-[100px]">
+                      <p className="font-semibold text-amber-300">₹{(s.commissionDue ?? 0).toLocaleString('en-IN')}</p>
+                      <p className="text-[10px] text-[#9a8fa8] mt-0.5">Paid: {s.commissionPaidUntil || 'N/A'}</p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                        statusText === 'Active' ? 'bg-green-500/20 text-green-400' :
+                        statusText === 'Deactivated (Overdue)' ? 'bg-orange-500/20 text-orange-400' :
+                        'bg-red-500/20 text-red-400'
+                      }`}>
+                        {statusText}
+                      </span>
+                      <span className="text-[#9a8fa8] text-xs select-none">{isExpanded ? '▲' : '▼'}</span>
+                    </div>
+                  </div>
+
+                  {/* Expanded registration details */}
+                  {isExpanded && (
+                    <div className="border-t border-[#c9a962]/15 bg-[#0f0d12]/60 px-5 py-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 text-xs animate-fade-in">
+                      {/* Identity */}
+                      <div className="space-y-2">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-[#c9a962] mb-1">Owner Identity</p>
+                        <div><span className="text-[#9a8fa8]">Owner Name: </span><span className="text-[#e8d5a3] font-medium">{s.ownerName || 'N/A'}</span></div>
+                        <div><span className="text-[#9a8fa8]">Owner Phone: </span><span className="text-[#e8d5a3]">{s.phoneOwner || 'N/A'}</span></div>
+                        <div><span className="text-[#9a8fa8]">Owner PAN: </span>
+                          <span className="font-mono text-[#e8d5a3]">{s.panCardOwner || <span className="italic opacity-40">Not provided</span>}</span>
+                        </div>
+                        <div><span className="text-[#9a8fa8]">Business PAN: </span>
+                          <span className="font-mono text-[#e8d5a3]">{s.panCardBusiness || <span className="italic opacity-40">Not provided</span>}</span>
+                        </div>
+                      </div>
+
+                      {/* Salon contact */}
+                      <div className="space-y-2">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-[#c9a962] mb-1">Salon Contact</p>
+                        <div><span className="text-[#9a8fa8]">Salon Phone: </span><span className="text-[#e8d5a3]">{s.phone || 'N/A'}</span></div>
+                        <div><span className="text-[#9a8fa8]">Business Email: </span><span className="text-[#e8d5a3] break-all">{s.email || 'N/A'}</span></div>
+                        <div><span className="text-[#9a8fa8]">Full Address: </span><span className="text-[#e8d5a3]">{s.address || 'N/A'}</span></div>
+                        <div><span className="text-[#9a8fa8]">Registered: </span>
+                          <span className="text-[#e8d5a3]">
+                            {s.registeredAt ? new Date(s.registeredAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'}
                           </span>
+                        </div>
+                      </div>
+
+                      {/* Trade licence */}
+                      <div className="space-y-2">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-[#c9a962] mb-1">Trade Licence</p>
+                        {s.tradeLicenseUrl && (s.tradeLicenseUrl.startsWith('data:') || s.tradeLicenseUrl.startsWith('http') || s.tradeLicenseUrl.startsWith('blob')) ? (
+                          <a
+                            href={s.tradeLicenseUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            download={s.tradeLicenseUrl.startsWith('data:') ? `trade-license-${s.id}` : undefined}
+                            className="inline-flex items-center gap-1.5 text-[#c9a962] hover:underline font-medium"
+                          >
+                            📄 View / Download Document
+                          </a>
                         ) : (
-                          <>
-                            {s.isActive !== false && !s.exitReason?.includes('exited') && (
-                              <button
-                                onClick={() => removeSalonForcefully(s.id)}
-                                className="flex items-center gap-1.5 text-xs text-red-400 hover:text-red-300 transition-colors mx-auto font-semibold hover:underline"
-                                title="Forcefully remove this salon"
-                              >
-                                <Trash2 className="h-4 w-4" /> Remove Forcefully
-                              </button>
-                            )}
-                            {(s.isActive === false || s.exitReason?.includes('exited')) && (
-                              <button
-                                onClick={() => setDeletingSalonId(s.id)}
-                                className="flex items-center gap-1.5 text-xs text-red-500 hover:text-red-400 transition-colors mx-auto font-semibold hover:underline"
-                                title="Permanently delete this salon"
-                              >
-                                <XCircle className="h-4 w-4" /> Delete Permanently
-                              </button>
-                            )}
-                          </>
+                          <span className="italic text-[#9a8fa8] opacity-60">No document uploaded</span>
                         )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+
+                        <div className="mt-3 pt-3 border-t border-[#c9a962]/10">
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-[#c9a962] mb-1">Actions</p>
+                          {s.id === 'LLLUX456' ? (
+                            <span className="inline-flex items-center gap-1 text-[10px] text-[#c9a962] font-semibold bg-[#c9a962]/10 px-2 py-1 rounded-full">
+                              🛡️ Test Account
+                            </span>
+                          ) : (
+                            <div className="flex flex-col gap-2">
+                              {s.isActive !== false && !s.exitReason?.includes('exited') && (
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); removeSalonForcefully(s.id); }}
+                                  className="flex items-center gap-1.5 text-xs text-red-400 hover:text-red-300 transition-colors font-semibold hover:underline"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" /> Remove Forcefully
+                                </button>
+                              )}
+                              {(s.isActive === false || s.exitReason?.includes('exited')) && (
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); setDeletingSalonId(s.id); }}
+                                  className="flex items-center gap-1.5 text-xs text-red-500 hover:text-red-400 transition-colors font-semibold hover:underline"
+                                >
+                                  <XCircle className="h-3.5 w-3.5" /> Delete Permanently
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

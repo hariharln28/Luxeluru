@@ -490,8 +490,8 @@ class DatabaseManager {
         `INSERT INTO salons (id, name, tagline, area, address, lat, lng, rating, reviewCount, categories,
          image, openHours, phone, email, services, packages, staff, featured, password, isActive,
          registrationStatus, ownerName, phoneOwner, tradeLicenseUrl, registeredAt, commissionDue,
-         commissionPaidUntil, exitReason)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         commissionPaidUntil, exitReason, panCardOwner, panCardBusiness)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         salonData.id,
         salonData.name,
         salonData.tagline || null,
@@ -519,7 +519,9 @@ class DatabaseManager {
         salonData.registeredAt || null,
         salonData.commissionDue || 0,
         salonData.commissionPaidUntil || null,
-        salonData.exitReason || null
+        salonData.exitReason || null,
+        salonData.panCardOwner || null,
+        salonData.panCardBusiness || null
       );
       return salonData;
     }
