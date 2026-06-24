@@ -164,18 +164,73 @@ npm run preview
 
 ---
 
-## Test Credentials
+## 🏆 For Hackathon Judges
 
-> These accounts are protected — they cannot be deleted or blocked from the admin panel.
+> **Live Platform:** [https://luxeluru.onrender.com](https://luxeluru.onrender.com)
 
-**User Account**
-- Email: `adminuser1@test.com`
-- Password: `user@admin-test789`
+---
 
-**Salon Partner Account**
-- Salon ID: `LLLUX456`
-- Email: `luxurysalonadmin@test.com`
-- Password: `salon@admin-test789`
+### 🛡️ Admin Portal Access
+
+The Admin Control Centre is **not linked from any public page** (by design, for security). Use the direct URL below:
+
+**Admin Portal URL:** [https://luxeluru.onrender.com/admin](https://luxeluru.onrender.com/admin)
+
+| Field | Value |
+|---|---|
+| **Username** | `ADMINLLURU` |
+| **Password** | `ADMIN@LUXE26` |
+
+**Steps to access:**
+1. Visit [https://luxeluru.onrender.com/admin](https://luxeluru.onrender.com/admin)
+2. Complete the CAPTCHA challenge
+3. Enter the credentials above and click **Authenticate**
+4. You will be redirected to the **Admin Control Centre**
+
+**What you can do in the Admin Dashboard:**
+- View and approve/reject salon registrations (KYC, PAN, GST details)
+- View all active salons, their payout details, and commission dues
+- Verify commission payments submitted by salons
+- Block/unblock users with duration control
+- Send encrypted messages to salons
+- Post platform-wide announcements
+- View full booking activity across all salons
+- Force-deactivate or approve salon exit requests
+
+---
+
+### 👤 Test User Account
+
+> Pre-registered demo customer account — **cannot be deleted or blocked**.
+
+| Field | Value |
+|---|---|
+| **Email** | `adminuser1@test.com` |
+| **Password** | `user@admin-test789` |
+
+**Steps to access:**
+1. Visit [https://luxeluru.onrender.com/login](https://luxeluru.onrender.com/login)
+2. Select **User Login** tab (default)
+3. Enter credentials and click **Sign In**
+4. You'll land on the **User Dashboard** with upcoming bookings, AI Stylist, Navigator, and Bookings
+
+---
+
+### 💇 Test Salon Partner Account
+
+> Pre-registered demo salon — **cannot be deleted or blocked**.
+
+| Field | Value |
+|---|---|
+| **Salon ID** | `LLLUX456` |
+| **Email** | `luxurysalonadmin@test.com` |
+| **Password** | `salon@admin-test789` |
+
+**Steps to access:**
+1. Visit [https://luxeluru.onrender.com/login](https://luxeluru.onrender.com/login)
+2. Select **Salon Partner Login** tab
+3. Enter Salon ID, Email, and Password
+4. You'll land on the **Salon Dashboard** with tabs: Bookings, Staff, Services, Analytics, Messages, Commission Dues, and Settings
 
 ---
 
