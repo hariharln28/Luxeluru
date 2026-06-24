@@ -79,8 +79,8 @@ Existing general-purpose booking tools are not built for the luxury segment, off
 ┌───────▼───────────────────────────────┐
 │          External Services            │
 │  Supabase Auth · Gemini 2.0 Flash     │
-│  Stripe (payments) · WhatsApp (wa.me) │
-│  OpenStreetMap · Google Maps          │
+│  Stripe (payments) · OpenStreetMap    │
+│  Google Maps · Render                 │
 └───────────────────────────────────────┘
 ```
 
@@ -203,7 +203,6 @@ Commission accumulates throughout the month
 | **AI / ML** | MediaPipe FaceMesh (browser-side), Monk Skin Tone Scale (CIE-LAB), Gemini 2.0 Flash |
 | **Maps** | OpenStreetMap embed, Google Maps deep-link navigation |
 | **Encryption** | Web Crypto API — AES-GCM + PBKDF2 |
-| **Notifications** | WhatsApp (wa.me deep-link) |
 | **Deployment** | Render (monorepo — frontend + backend on same service) |
 
 ---
