@@ -132,8 +132,17 @@ Existing general-purpose booking tools are not built for the luxury segment, off
 - **Settings** — Update profile, location, payout bank/UPI details, and business information
 - **Exit Platform** — Submit, track, and dispute exit requests
 
+### 🤝 Partner With Us (Salon Registration Flow)
+- **Apply for Partnership** — Submit business name, owner details, address, PAN card, and Trade License document
+- **Check Onboarding Status** — Salons enter their registered email to check application status at any time (live DB lookup — works for all salons, not just demo data)
+- **Approved flow** — On approval, the salon must **set a password** via the Check Status page before they can sign in. No default password is assigned. The Set Password form is clearly marked "Required to sign in".
+- **Rejected flow** — Rejected salons see an encrypted **Appeal / Message Admin** panel directly on the status page. They can send messages, and admin replies are visible on the next status check.
+- **Cancellation & Refund Policy (Clause 5)** — Luxeluru enforces a tiered refund policy for online payments. Salons must honour customer cancellations per the following schedule — 100% refund (3+ days before appointment) · 70% refund (2 days before) · 50% refund (1 day before) · 30% refund (same day). No refunds are issued for Pay-at-Salon bookings. Refunds are processed by the platform and the balance amount after refund goes to the platform.
+
 ### 🛠️ Admin Control Centre
-- **Pending Approvals** — Review full KYC, PAN card, and GST details; approve or reject with written reason
+- **Pending Approvals** — Review full KYC, PAN card, and Trade License; approve or reject new salon applications
+- **Trade License Viewer** — Opens uploaded license documents in a full-screen in-page modal (works on mobile — avoids browser popup blocking)
+- **Rejection Appeals** — Rejected salons can message the admin directly from the Check Status page; admin receives appeal messages in a dedicated section of the Messages tab with unread badge counts
 - **Salons** — Monitor all active salons, commission dues, payment status, payout details; force-deactivate or permanently delete
 - **Users** — Search users, view booking activity, block with configurable duration
 - **Platform Analytics** — Revenue, bookings, overdue commissions, blocked users, removed salons
@@ -203,10 +212,16 @@ Commission accumulates throughout the month
 | Method | Endpoint | Description |
 |---|---|---|
 | `POST` | `/api/users/register` | Register a new user |
-| `POST` | `/api/salons/login` | Salon partner login (rate-limited) |
-| `POST` | `/api/salons/register` | New salon registration with KYC |
-| `GET` | `/api/salons` | List all salons |
+| `POST` | `/api/salons/login` | Salon partner login (rate-limited, blocks if no password set) |
+| `POST` | `/api/salons/register` | New salon registration with KYC (no default password — salon must set one after approval) |
+| `GET` | `/api/salons` | List all salons (strips tradeLicenseUrl to prevent mobile storage overflow) |
 | `GET` | `/api/salons/:id` | Fetch a single salon |
+| `GET` | `/api/salons/status?email=` | Public: check onboarding status by business email (live DB lookup) |
+| `GET` | `/api/salons/:id/status-messages` | Public: fetch rejection-appeal messages for a salon |
+| `POST` | `/api/salons/:id/rejection-appeal` | Public: rejected salon sends encrypted appeal message to admin |
+| `GET` | `/api/admin/salons` | Admin: list all salons including tradeLicenseUrl |
+| `GET` | `/api/admin/salons/:id/trade-license` | Admin: fetch a salon's trade license document on demand |
+| `POST` | `/api/salons/:id/set-password` | Approved salon sets their own password (required before first login) |
 | `POST` | `/api/bookings` | Create a booking |
 | `POST` | `/api/bookings/:id/cancel` | Cancel with refund calculation |
 | `POST` | `/api/bookings/:id/reschedule` | Reschedule with conflict check |
@@ -382,6 +397,7 @@ Luxeluru is deployed as a **monorepo on Render**:
 - **WhatsApp notifications** use `wa.me` deep-links — opens WhatsApp on the user's device rather than sending automated server-side messages
 - **Render free tier cold start** — first request after inactivity may take 30–60 seconds
 - **In-memory rate limiting** — resets on server restart; production would use Redis-backed rate limiting
+- **Trade license storage** — Uploaded as base64 `data:` URLs in SQLite; production would use cloud object storage (S3/GCS) for large files
 
 ---
 
