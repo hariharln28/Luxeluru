@@ -1699,7 +1699,35 @@ app.use((err, req, res, next) => {
 
 // Connect to Database first and then start server listening
 const MONGODB_URI = process.env.MONGODB_URI;
-db.connect(MONGODB_URI).then(() => {
+db.connect(MONGODB_URI).then(async () => {
+  // ─── Seed Demo Closed Days for 3 Salons ──────────────────────────────────
+  // Idempotent: skips if the date is already marked closed for that salon
+  const demoClosedDays = [
+    { salonId: 'LLBLU756', date: '2026-07-04', reason: 'Staff Training Day' },
+    { salonId: 'LLBLU756', date: '2026-08-15', reason: 'Independence Day — Salon Closed' },
+    { salonId: 'LLOPU467', date: '2026-07-10', reason: 'Renovation & Deep Cleaning' },
+    { salonId: 'LLOPU467', date: '2026-08-15', reason: 'Independence Day — Salon Closed' },
+    { salonId: 'LLNIR725', date: '2026-08-15', reason: 'Independence Day — Salon Closed' },
+    { salonId: 'LLNIR725', date: '2026-07-20', reason: 'Annual Wellness Retreat (Staff Day Off)' },
+  ];
+  for (const entry of demoClosedDays) {
+    try {
+      const existing = await db.getClosedDays(entry.salonId);
+      if (!existing.find(d => d.date === entry.date)) {
+        await db.addClosedDay({
+          id: `demo-close-${entry.salonId}-${entry.date}`,
+          salonId: entry.salonId,
+          date: entry.date,
+          reason: entry.reason,
+          createdAt: new Date().toISOString(),
+        });
+        console.log(`[Seed] Closed day added: ${entry.salonId} on ${entry.date}`);
+      }
+    } catch (e) {
+      // Non-fatal — demo seed
+    }
+  }
+
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`Luxeluru backend running on http://0.0.0.0:${PORT}`);
     console.log(`Health check: http://localhost:${PORT}/api/health`);

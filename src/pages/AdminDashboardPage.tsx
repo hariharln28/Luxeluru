@@ -97,6 +97,9 @@ export function AdminDashboardPage() {
   const [broadcastSending, setBroadcastSending] = useState(false);
   const [adminMsgSubTab, setAdminMsgSubTab] = useState<'conversations' | 'broadcast'>('conversations');
 
+  // Trade License viewer modal
+  const [tradeLicenseModal, setTradeLicenseModal] = useState<{ url: string; salonName: string } | null>(null);
+
   // Auto-refresh data on mount and every 30 seconds
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -668,16 +671,29 @@ export function AdminDashboardPage() {
                       {/* Trade licence */}
                       <div className="space-y-2">
                         <p className="text-[10px] font-bold uppercase tracking-wider text-[#c9a962] mb-1">Trade Licence</p>
-                        {s.tradeLicenseUrl && (s.tradeLicenseUrl.startsWith('data:') || s.tradeLicenseUrl.startsWith('http') || s.tradeLicenseUrl.startsWith('blob')) ? (
-                          <a
-                            href={s.tradeLicenseUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            download={s.tradeLicenseUrl.startsWith('data:') ? `trade-license-${s.id}` : undefined}
-                            className="inline-flex items-center gap-1.5 text-[#c9a962] hover:underline font-medium"
+                        {s.registeredAt && (
+                          <p className="text-xs text-[#9a8fa8] mb-1">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-[#c9a962]">Registered: </span>
+                            <span className="text-green-400 font-semibold">✓ Yes</span>
+                            <span className="text-[#9a8fa8]"> · {new Date(s.registeredAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
+                          </p>
+                        )}
+                        {s.tradeLicenseUrl ? (
+                          <button
+                            onClick={() => {
+                              if (s.tradeLicenseUrl!.startsWith('data:')) {
+                                // data: URLs — open in iframe modal to avoid blank#blocked
+                                setTradeLicenseModal({ url: s.tradeLicenseUrl!, salonName: s.name });
+                              } else {
+                                // http/https — safe to open in new tab
+                                window.open(s.tradeLicenseUrl, '_blank', 'noopener,noreferrer');
+                              }
+                            }}
+                            className="inline-flex items-center gap-1.5 text-[#c9a962] hover:underline font-medium text-xs"
+                            style={{ touchAction: 'manipulation' }}
                           >
                             📄 View / Download Document
-                          </a>
+                          </button>
                         ) : (
                           <span className="italic text-[#9a8fa8] opacity-60">No document uploaded</span>
                         )}
@@ -1883,6 +1899,38 @@ export function AdminDashboardPage() {
                 Confirm Rejection
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      {/* Trade License Viewer Modal */}
+      {tradeLicenseModal && (
+        <div
+          className="fixed inset-0 z-[300] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+          onClick={() => setTradeLicenseModal(null)}
+        >
+          <div
+            className="relative w-full max-w-4xl h-[85dvh] rounded-2xl overflow-hidden border border-[#c9a962]/30 bg-[#1a1520] shadow-2xl"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-5 py-3 border-b border-[#c9a962]/20 bg-[#130f18]">
+              <div>
+                <p className="text-xs text-[#9a8fa8]">Trade Licence Document</p>
+                <p className="font-display text-[#e8d5a3] font-semibold">{tradeLicenseModal.salonName}</p>
+              </div>
+              <button
+                onClick={() => setTradeLicenseModal(null)}
+                className="luxe-btn-outline px-3 py-1.5 text-sm"
+                style={{ touchAction: 'manipulation' }}
+              >
+                ✕ Close
+              </button>
+            </div>
+            <iframe
+              src={tradeLicenseModal.url}
+              title="Trade Licence Document"
+              className="w-full h-[calc(100%-56px)]"
+              style={{ border: 'none' }}
+            />
           </div>
         </div>
       )}
