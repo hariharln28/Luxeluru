@@ -678,25 +678,31 @@ export function AdminDashboardPage() {
                             <span className="text-[#9a8fa8]"> · {new Date(s.registeredAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</span>
                           </p>
                         )}
-                        {s.tradeLicenseUrl ? (
-                          <button
-                            onClick={() => {
-                              if (s.tradeLicenseUrl!.startsWith('data:')) {
-                                // data: URLs — open in iframe modal to avoid blank#blocked
-                                setTradeLicenseModal({ url: s.tradeLicenseUrl!, salonName: s.name });
-                              } else {
-                                // http/https — safe to open in new tab
-                                window.open(s.tradeLicenseUrl, '_blank', 'noopener,noreferrer');
+                        {/* Trade licence — fetched on demand from admin API */}
+                        <button
+                          onClick={async () => {
+                            try {
+                              const res = await fetch(`/api/admin/salons/${s.id}/trade-license`);
+                              const data = await res.json();
+                              if (!data.tradeLicenseUrl) {
+                                addToast('info', 'No trade license document uploaded for this salon.');
+                                return;
                               }
-                            }}
-                            className="inline-flex items-center gap-1.5 text-[#c9a962] hover:underline font-medium text-xs"
-                            style={{ touchAction: 'manipulation' }}
-                          >
-                            📄 View / Download Document
-                          </button>
-                        ) : (
-                          <span className="italic text-[#9a8fa8] opacity-60">No document uploaded</span>
-                        )}
+                              if (data.tradeLicenseUrl.startsWith('data:')) {
+                                setTradeLicenseModal({ url: data.tradeLicenseUrl, salonName: s.name });
+                              } else {
+                                window.open(data.tradeLicenseUrl, '_blank', 'noopener,noreferrer');
+                              }
+                            } catch {
+                              addToast('error', 'Failed to load trade license. Please try again.');
+                            }
+                          }}
+                          className="inline-flex items-center gap-1.5 text-[#c9a962] hover:underline font-medium text-xs"
+                          style={{ touchAction: 'manipulation' }}
+                        >
+                          📄 View / Download Document
+                        </button>
+
 
                         {/* Payout Details — Read-only */}
                         <div className="mt-3 pt-3 border-t border-[#c9a962]/10 space-y-2">

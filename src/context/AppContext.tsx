@@ -843,8 +843,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
         panCardBusiness: data.panCardBusiness || ''
       };
       
-      currentSalons.push(newSalon);
-      localStorage.setItem(STORAGE_KEYS.salons, JSON.stringify(currentSalons));
+      // Strip tradeLicenseUrl before writing to localStorage — it can be huge base64 data
+      const { tradeLicenseUrl: _tlUrl, ...salonForStorage } = newSalon as any;
+      currentSalons.push(salonForStorage as Salon);
+      try {
+        localStorage.setItem(STORAGE_KEYS.salons, JSON.stringify(currentSalons));
+      } catch (storageErr) {
+        console.warn('localStorage write failed (quota exceeded), skipping:', storageErr);
+      }
       setSalonsList(currentSalons);
       return tempId;
     }
@@ -891,12 +897,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
       return false;
     } catch {
-      // Local fallback
-      setSalonsList(prev => {
-        const updated = prev.map(s => s.id === salonId ? { ...s, isActive: false, registrationStatus: 'rejected' as const, exitRequestStatus: 'approved' as const } : s);
-        localStorage.setItem(STORAGE_KEYS.salons, JSON.stringify(updated));
-        return updated;
-      });
+      // Local fallback — state update only, no localStorage (avoids QuotaExceededError)
+      setSalonsList(prev => prev.map(s =>
+        s.id === salonId ? { ...s, isActive: false, registrationStatus: 'rejected' as const, exitRequestStatus: 'approved' as const } : s
+      ));
       addToast('success', `Salon exit approved.`);
       return true;
     }
@@ -915,16 +919,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
       return false;
     } catch {
-      // Local fallback
-      setSalonsList(prev => {
-        const updated = prev.map(s =>
-          s.id === salonId
-            ? { ...s, exitRequestStatus: 'rejected' as const, exitRejectReason: rejectReason }
-            : s
-        );
-        localStorage.setItem(STORAGE_KEYS.salons, JSON.stringify(updated));
-        return updated;
-      });
+      // Local fallback — state update only, no localStorage (avoids QuotaExceededError)
+      setSalonsList(prev => prev.map(s =>
+        s.id === salonId
+          ? { ...s, exitRequestStatus: 'rejected' as const, exitRejectReason: rejectReason }
+          : s
+      ));
       addToast('success', 'Salon exit request rejected.');
       return true;
     }
@@ -1641,28 +1641,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const newId = res.newSalonId || salonId;
       addToast('success', `Salon approved! New Salon ID: ${newId}`);
     } catch {
-      // Local fallback — generate ID locally
+      // Local fallback — update state only, DO NOT write to localStorage (avoids QuotaExceededError on mobile)
       const salon = salonsList.find(s => s.id === salonId);
       const cleanedName = (salon?.name || 'SAL').trim().replace(/[^a-zA-Z]/g, '');
       const prefix = (cleanedName.slice(0, 3) || 'SAL').toUpperCase();
       const randomDigits = Math.floor(100 + Math.random() * 900);
       const newId = `LL${prefix}${randomDigits}`;
-
-      setSalonsList((prev) => {
-        const updated = prev.map((s) => {
-          if (s.id === salonId) {
-            return {
-              ...s,
-              id: newId,
-              registrationStatus: 'approved' as const,
-              isActive: true,
-            };
-          }
-          return s;
-        });
-        localStorage.setItem(STORAGE_KEYS.salons, JSON.stringify(updated));
-        return updated;
-      });
+      setSalonsList((prev) => prev.map((s) =>
+        s.id === salonId
+          ? { ...s, id: newId, registrationStatus: 'approved' as const, isActive: true }
+          : s
+      ));
       addToast('success', `Salon approved! New Salon ID: ${newId}`);
     }
   }, [addToast, salonsList]);
@@ -1673,21 +1662,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setSalonsList(prev => prev.map(s => s.id === salonId ? { ...s, registrationStatus: 'rejected' as const, isActive: false } : s));
       addToast('info', 'Salon registration application rejected.');
     } catch {
-      // Local fallback
-      setSalonsList((prev) => {
-        const updated = prev.map((s) => {
-          if (s.id === salonId) {
-            return {
-              ...s,
-              registrationStatus: 'rejected' as const,
-              isActive: false,
-            };
-          }
-          return s;
-        });
-        localStorage.setItem(STORAGE_KEYS.salons, JSON.stringify(updated));
-        return updated;
-      });
+      // Local fallback — update state only, DO NOT write to localStorage (avoids QuotaExceededError on mobile)
+      setSalonsList((prev) => prev.map((s) =>
+        s.id === salonId
+          ? { ...s, registrationStatus: 'rejected' as const, isActive: false }
+          : s
+      ));
       addToast('info', 'Salon registration application rejected.');
     }
   }, [addToast]);

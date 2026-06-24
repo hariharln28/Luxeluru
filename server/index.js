@@ -190,9 +190,31 @@ app.get('/api/users', async (req, res) => {
 app.get('/api/salons', async (req, res) => {
   try {
     const salons = await db.getSalons();
-    // Strip passwords from response
+    // Strip password AND tradeLicenseUrl (can be huge base64 data — causes localStorage overflow on mobile)
+    const safeSalons = salons.map(({ password, tradeLicenseUrl, ...s }) => s);
+    res.json(safeSalons);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Admin-only: get all salons WITH tradeLicenseUrl (admin needs it for KYC review)
+app.get('/api/admin/salons', async (req, res) => {
+  try {
+    const salons = await db.getSalons();
     const safeSalons = salons.map(({ password, ...s }) => s);
     res.json(safeSalons);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Admin-only: fetch a single salon's trade license URL on demand
+app.get('/api/admin/salons/:id/trade-license', async (req, res) => {
+  try {
+    const salon = await db.getSalon(req.params.id);
+    if (!salon) return res.status(404).json({ error: 'Salon not found' });
+    res.json({ tradeLicenseUrl: salon.tradeLicenseUrl || null });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
