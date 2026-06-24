@@ -50,44 +50,37 @@ Existing general-purpose booking tools are not built for the luxury segment, off
 ## Platform Architecture
 
 ```
-┌──────────────────────────────────────────────────────────────────────────┐
-│                            CLIENT  (Browser)                             │
-│                     React 18  ·  TypeScript  ·  Vite                    │
-│                                                                          │
-│  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐          │
-│  │   User Portal   │  │ Salon Dashboard │  │ Admin Control   │          │
-│  │                 │  │                 │  │    Centre       │          │
-│  │ Discovery       │  │ Appointments    │  │ Approvals       │          │
-│  │ Booking         │  │ Staff/Services  │  │ Users/Salons    │          │
-│  │ AI Stylr        │  │ Commission Dues │  │ Commission      │          │
-│  │ Navigator       │  │ Messages        │  │ Analytics       │          │
-│  └────────┬────────┘  └────────┬────────┘  └────────┬────────┘          │
-│           │                   │                     │                   │
-│           └───────────────────┼─────────────────────┘                   │
-│                               │                                          │
-│          AppContext  (global state · JWT · polling · Supabase auth)      │
-└───────────────────────────────┼──────────────────────────────────────────┘
-                                │  HTTPS / REST
-┌───────────────────────────────▼──────────────────────────────────────────┐
-│                       BACKEND  (Node.js · Express)                        │
-│                                                                           │
-│  ┌───────────────────────────────────────────────────────────────────┐   │
-│  │  Auth  ·  Bookings  ·  Salons  ·  Reviews  ·  Commission          │   │
-│  │  Messages  ·  Notifications  ·  Announcements  ·  Analytics       │   │
-│  └───────────────────────────────────────────────────────────────────┘   │
-│                          │                    │                           │
-│              ┌───────────▼──────┐   ┌─────────▼────────┐                 │
-│              │     SQLite       │   │     MongoDB       │                 │
-│              │  (primary · prod)│   │  (optional/cloud) │                 │
-│              └──────────────────┘   └──────────────────┘                 │
-└───────────────────────────────┬──────────────────────────────────────────┘
-                                │
-┌───────────────────────────────▼──────────────────────────────────────────┐
-│                          External Services                                │
-│                                                                           │
-│    Supabase Auth    ·    Gemini 2.0 Flash    ·    Stripe Payments        │
-│    WhatsApp (wa.me)    ·    OpenStreetMap    ·    Google Maps            │
-└──────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                        CLIENT (Browser)                          │
+│  React 18 + TypeScript + Vite                                    │
+│  ┌──────────┐ ┌──────────────┐ ┌───────────────┐ ┌───────────┐ │
+│  │  User    │ │ Salon Partner│ │     Admin      │ │ AI Stylr  │ │
+│  │  Portal  │ │  Dashboard   │ │ Control Centre │ │ (MediaPipe│ │
+│  │          │ │              │ │                │ │  + Gemini)│ │
+│  └────┬─────┘ └──────┬───────┘ └───────┬────────┘ └─────┬─────┘ │
+│       │              │                 │                 │        │
+│  AppContext (global state, JWT, polling, Supabase auth)           │
+└───────┼──────────────┼─────────────────┼─────────────────┼───────┘
+        │   HTTPS/REST │                 │                 │
+┌───────▼──────────────▼─────────────────▼─────────────────▼───────┐
+│                    BACKEND (Node.js + Express)                     │
+│  ┌──────────────────────────────────────────────────────────────┐ │
+│  │  Auth · Bookings · Salons · Reviews · Messages · Commission  │ │
+│  │  Notifications · Announcements · Admin · Platform Analytics  │ │
+│  └──────────────────────────────────────────────────────────────┘ │
+│         │                              │                           │
+│  ┌──────▼──────┐              ┌────────▼────────┐                 │
+│  │   SQLite    │              │    MongoDB       │                 │
+│  │  (primary)  │              │ (optional/cloud) │                 │
+│  └─────────────┘              └─────────────────┘                 │
+└───────────────────────────────────────────────────────────────────┘
+        │
+┌───────▼───────────────────────────────┐
+│          External Services            │
+│  Supabase Auth · Gemini 2.0 Flash     │
+│  Stripe (payments) · WhatsApp (wa.me) │
+│  OpenStreetMap · Google Maps          │
+└───────────────────────────────────────┘
 ```
 
 ---
