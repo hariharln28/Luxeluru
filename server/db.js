@@ -882,11 +882,15 @@ class DatabaseManager {
   async seed(data) {
     const { salons, users, bookings, reviews } = data;
 
+    // Seed only items that don't already exist by ID
+    // This ensures LLLUX456 (test salon) or any approved salon never blocks demo seeding
     if (salons && salons.length > 0) {
       const existing = await this.getSalons();
-      if (existing.length === 0) {
-        console.log(`Seeding ${salons.length} salons...`);
-        for (const s of salons) {
+      const existingIds = new Set(existing.map(s => s.id));
+      const toSeed = salons.filter(s => !existingIds.has(s.id));
+      if (toSeed.length > 0) {
+        console.log(`Seeding ${toSeed.length} salons (${existing.length} already exist)...`);
+        for (const s of toSeed) {
           await this.createSalon(s);
         }
       }
@@ -894,9 +898,11 @@ class DatabaseManager {
 
     if (users && users.length > 0) {
       const existing = await this.getUsers();
-      if (existing.length === 0) {
-        console.log(`Seeding ${users.length} users...`);
-        for (const u of users) {
+      const existingIds = new Set(existing.map(u => u.id));
+      const toSeed = users.filter(u => !existingIds.has(u.id));
+      if (toSeed.length > 0) {
+        console.log(`Seeding ${toSeed.length} users (${existing.length} already exist)...`);
+        for (const u of toSeed) {
           await this.createUser(u);
         }
       }
@@ -904,9 +910,11 @@ class DatabaseManager {
 
     if (bookings && bookings.length > 0) {
       const existing = await this.getBookings();
-      if (existing.length === 0) {
-        console.log(`Seeding ${bookings.length} bookings...`);
-        for (const b of bookings) {
+      const existingIds = new Set(existing.map(b => b.id));
+      const toSeed = bookings.filter(b => !existingIds.has(b.id));
+      if (toSeed.length > 0) {
+        console.log(`Seeding ${toSeed.length} bookings (${existing.length} already exist)...`);
+        for (const b of toSeed) {
           await this.createBooking(b);
         }
       }
@@ -914,13 +922,16 @@ class DatabaseManager {
 
     if (reviews && reviews.length > 0) {
       const existing = await this.getReviews();
-      if (existing.length === 0) {
-        console.log(`Seeding ${reviews.length} reviews...`);
-        for (const r of reviews) {
+      const existingIds = new Set(existing.map(r => r.id));
+      const toSeed = reviews.filter(r => !existingIds.has(r.id));
+      if (toSeed.length > 0) {
+        console.log(`Seeding ${toSeed.length} reviews (${existing.length} already exist)...`);
+        for (const r of toSeed) {
           await this.createReview(r);
         }
       }
     }
+
     console.log('Seeding process completed.');
   }
 
