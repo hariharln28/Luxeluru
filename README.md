@@ -136,7 +136,7 @@ Existing general-purpose booking tools are not built for the luxury segment, off
 ### 🤝 Partner With Us (Salon Registration Flow)
 - **Apply for Partnership** — Submit business name, owner details, address, PAN card, and Trade License document
 - **Check Onboarding Status** — Salons enter their registered email to check application status at any time (live DB lookup — works for all salons, not just demo data)
-- **Approved flow** — On approval, the salon must **set a password** via the Check Status page before they can sign in. No default password is assigned. The Set Password form is clearly marked "Required to sign in".
+- **Approved flow** — On approval, the salon receives their unique Salon ID (format: `LL` + letters + digits). They sign in using **Salon ID + registered email + password** (set during registration — no separate step required).
 - **Rejected flow** — Rejected salons see an encrypted **Appeal / Message Admin** panel directly on the status page. They can send messages, and admin replies are visible on the next status check.
 - **Cancellation & Refund Policy (Clause 5)** — Luxeluru enforces a tiered refund policy for online payments. Salons must honour customer cancellations per the following schedule — 100% refund (3+ days before appointment) · 70% refund (2 days before) · 50% refund (1 day before) · 30% refund (same day). No refunds are issued for Pay-at-Salon bookings. Refunds are processed by the platform and the balance amount after refund goes to the platform.
 
@@ -351,10 +351,11 @@ The Admin Control Centre is **not linked from any public page** (by design). Use
 | Field | Value |
 |---|---|
 | **Login URL** | [/login](https://luxeluru.onrender.com/login) → **Salon Partner Login** tab |
-| **Salon Name** | `luxury salon admin` |
 | **Salon ID** | `LLLUX456` |
 | **Email** | `luxurysalonadmin@test.com` |
 | **Password** | `salon@admin-test789` |
+
+> **Salon login requires only: Salon ID + Email + Password** (Salon Name field has been removed from the login form).
 
 **What to explore:** Appointments · Staff management · Services & pricing · Walk-in slot blocking · **Closed Days** (Manage Slots tab → Close Entire Day) · Commission Dues tab · Encrypted messages · Payout settings
 
@@ -400,6 +401,7 @@ Luxeluru is deployed as a **monorepo on Render**:
 - **In-memory rate limiting** — resets on server restart; production would use Redis-backed rate limiting
 - **Trade license storage** — Uploaded as base64 `data:` URLs in SQLite; production would use cloud object storage (S3/GCS) for large files
 - **SQLite on Render** — Test salon (`LLLUX456`) and test user (`adminuser1@test.com`) are auto-created on every server startup, so credentials always work even after a fresh deploy with an empty database
+- **Approved partner salon persistence** — Add approved salons to the `SEED_SALONS` environment variable in the Render dashboard to make them survive redeploys. Format: `[{"id":"LLXXX123","name":"Salon","email":"e@mail.com","password":"pass","ownerName":"Owner"}]`
 
 ---
 
