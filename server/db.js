@@ -592,6 +592,20 @@ class DatabaseManager {
     }
   }
 
+  async getSalonByEmail(email) {
+    const normalized = (email || '').toLowerCase().trim();
+    if (this.mode === 'mongodb') {
+      const doc = await MongoSalon.findOne({ email: { $regex: new RegExp(`^${normalized}$`, 'i') } });
+      return doc ? doc.toObject() : null;
+    } else {
+      const row = await sqliteDb.get(
+        'SELECT * FROM salons WHERE LOWER(TRIM(email)) = ?',
+        normalized
+      );
+      return mapSqlSalon(row);
+    }
+  }
+
   // BOOKINGS
   async getBookings() {
     if (this.mode === 'mongodb') {

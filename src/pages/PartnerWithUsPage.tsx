@@ -168,7 +168,7 @@ export function PartnerWithUsPage() {
 
 
 
-  function handleStatusCheck(e: React.FormEvent) {
+  async function handleStatusCheck(e: React.FormEvent) {
     e.preventDefault();
     setError('');
     setStatusResult(null);
@@ -183,16 +183,22 @@ export function PartnerWithUsPage() {
       return;
     }
 
-    const found = salons.find(
-      (s) => s.email.toLowerCase().trim() === statusSearch.toLowerCase().trim()
-    );
-
-    if (!found) {
-      setError('No registered salon application found with that email address.');
-      return;
+    try {
+      const res = await fetch(`/api/salons/status?email=${encodeURIComponent(statusSearch.trim())}`);
+      if (res.status === 404) {
+        setError('No registered salon application found with that email address.');
+        return;
+      }
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setError(data.error || 'Failed to fetch status. Please try again.');
+        return;
+      }
+      const salon = await res.json();
+      setStatusResult(salon);
+    } catch {
+      setError('Network error — please check your connection and try again.');
     }
-
-    setStatusResult(found);
   }
 
   return (

@@ -198,6 +198,21 @@ app.get('/api/salons', async (req, res) => {
   }
 });
 
+// Public: Check onboarding status by business email — MUST be before /api/salons/:id
+app.get('/api/salons/status', async (req, res) => {
+  try {
+    const { email } = req.query;
+    if (!email) return res.status(400).json({ error: 'email query parameter is required' });
+    const salon = await db.getSalonByEmail(email);
+    if (!salon) return res.status(404).json({ error: 'No salon application found with that email address.' });
+    // Only expose safe fields — never expose password or sensitive payout data
+    const { password, tradeLicenseUrl, bankDetails, upiDetails, panCardOwner, panCardBusiness, ...safe } = salon;
+    res.json(safe);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get('/api/salons/:id', async (req, res) => {
   try {
     const salon = await db.getSalon(req.params.id);
