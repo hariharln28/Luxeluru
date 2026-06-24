@@ -7,7 +7,6 @@ import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { useT } from '../hooks/useT';
 import { knnRank, getGoogleMapsNavigateUrl } from '../utils/knn';
-import { sendWhatsAppConfirmation } from '../utils/notifications';
 import { CheckoutModal } from './CheckoutModal';
 import type { PaymentMethod, Salon } from '../types';
 
@@ -176,12 +175,9 @@ export function PanicModal({ onClose }: PanicModalProps) {
 
   async function finaliseBooking(bookingData: any, serviceNames: string[], bookTotal: number) {
     await createBooking(bookingData);
-    sendWhatsAppConfirmation(user!.phone, bookingSalon!.name, bookingData.date, bookingData.time, serviceNames);
     addToast('success', tr('bookingSuccess'));
-    addToast('info', tr('whatsappSent'));
-    addToast('info', tr('feedback24h'));
     onClose();
-    navigate('/dashboard');
+    navigate('/bookings');
   }
 
   // ── BOOKING FORM VIEW ─────────────────────────────────────────────────────

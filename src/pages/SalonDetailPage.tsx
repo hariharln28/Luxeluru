@@ -6,9 +6,6 @@ import {
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useT } from '../hooks/useT';
-import {
-  sendWhatsAppConfirmation,
-} from '../utils/notifications';
 import { CheckoutModal } from '../components/CheckoutModal';
 import type { PaymentMethod } from '../types';
 
@@ -131,18 +128,15 @@ export function SalonDetailPage() {
     total: number
   ) {
     await createBooking(bookingData);
-    sendWhatsAppConfirmation(user!.phone, currentSalon.name, bookingData.date, bookingData.time, serviceNames);
     addToast('success', tr('bookingSuccess'));
-    addToast('info', tr('whatsappSent'));
-    addToast('info', tr('feedback24h'));
     setShowBooking(false);
     setShowCheckout(false);
     setPendingBookingData(null);
     setSelectedServices([]);
     setSelectedPackage(null);
     setStyleRecommendation(null);
-    // Redirect to dashboard to show the newly booked upcoming appointment
-    navigate('/dashboard');
+    // Redirect to bookings page to show the newly booked upcoming appointment
+    navigate('/bookings');
   }
 
   function submitReview() {
