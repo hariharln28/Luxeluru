@@ -536,7 +536,7 @@ export function SalonDetailPage() {
             {/* Cancellation policy */}
             <div className="mt-3 rounded-xl bg-[#c9a962]/5 p-3 text-[10px] text-[#9a8fa8] border border-[#c9a962]/10">
               <p className="font-semibold text-[#e8d5a3] mb-1">Cancellation & Refund Policy</p>
-              <p>• Same day: <span className="text-amber-400">20% refund</span></p>
+              <p>• Same day: <span className="text-amber-400">30% refund</span></p>
               <p>• 1 day before: <span className="text-amber-400">50% refund</span></p>
               <p>• 2 days before: <span className="text-emerald-400">70% refund</span></p>
               <p>• 3+ days before: <span className="text-emerald-400">100% refund</span></p>

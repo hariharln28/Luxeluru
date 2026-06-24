@@ -867,7 +867,7 @@ app.post('/api/bookings/:id/cancel', authenticateJWT, async (req, res) => {
     || booking.paymentMethod === 'stripe';
 
   if (isOnlinePayment) {
-    if (diffDays <= 0) refundPercent = 20;
+    if (diffDays <= 0) refundPercent = 30;
     else if (diffDays === 1) refundPercent = 50;
     else if (diffDays === 2) refundPercent = 70;
     else refundPercent = 100;

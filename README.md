@@ -116,7 +116,7 @@ Existing general-purpose booking tools are not built for the luxury segment, off
 - **Online (Card / UPI)** — Stripe checkout; appointment confirmed on payment success
 - **Pay at Salon** — Instant confirmation with bill summary; commission tracked monthly
 - WhatsApp confirmation sent after every booking
-- Tiered cancellation refunds: 100% (3+ days) → 70% (2 days) → 50% (1 day) → 20% (same day)
+- Tiered cancellation refunds: 100% (3+ days) → 70% (2 days) → 50% (1 day) → 30% (same day)
 
 ### 🏪 Salon Partner Dashboard
 - Rate-limited login with account lockout (5 failed attempts = 30-minute lock)

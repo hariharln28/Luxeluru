@@ -292,7 +292,7 @@ function BookingCard({
                   <p className="text-xs text-[#9a8fa8] mb-1">Cancellation Policy:</p>
                   {preview.isOnline ? (
                     <div className="space-y-1">
-                      <p className="text-xs text-[#9a8fa8]">• Same day: <span className="text-amber-400 font-semibold">20% refund</span></p>
+                      <p className="text-xs text-[#9a8fa8]">• Same day: <span className="text-amber-400 font-semibold">30% refund</span></p>
                       <p className="text-xs text-[#9a8fa8]">• 1 day before: <span className="text-amber-400 font-semibold">50% refund</span></p>
                       <p className="text-xs text-[#9a8fa8]">• 2 days before: <span className="text-emerald-400 font-semibold">70% refund</span></p>
                       <p className="text-xs text-[#9a8fa8]">• 3+ days before: <span className="text-emerald-400 font-semibold">100% refund</span></p>
