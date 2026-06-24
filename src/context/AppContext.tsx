@@ -288,8 +288,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       let backendBookings = await api.getBookings();
       let backendReviews = await api.getReviews();
 
-      // Trigger seed if backend is empty
-      if (backendSalons.length === 0) {
+      // Trigger seed if demo salons are missing (LLLUX456 is always auto-created,
+      // so length===0 never fires — check for a known demo salon ID instead)
+      const hasDemoSalons = backendSalons.some(s => s.id === 'LLANU569');
+      if (!hasDemoSalons) {
         const localSalons = loadLocalSalons();
         const localUsers = loadLocalUsers();
         const localBookings = loadLocalBookings();
