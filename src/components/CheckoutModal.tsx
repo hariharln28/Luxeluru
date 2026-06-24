@@ -227,17 +227,18 @@ export function CheckoutModal({ amount, salonName, paymentMethod: initialPayment
             Scan QR code with any UPI app or approve notification on your phone
           </p>
 
-          {/* Simulate Success Button */}
+          {/* Payment Confirmation Button */}
           <button
             onClick={handleScanSuccess}
             className="w-full rounded-xl bg-emerald-600 hover:bg-emerald-500 py-3 text-sm font-semibold text-white transition flex items-center justify-center gap-2"
+            style={{ touchAction: 'manipulation', minHeight: 44 }}
           >
             <Check className="h-4 w-4" />
-            Simulate Scan Success
+            I've Completed the Payment
           </button>
 
           <p className="text-[10px] text-center text-[#9a8fa8]/50 mt-3">
-            Auto-completes in {countdown}s for demo purposes
+            Tap above after completing payment in your UPI app. Expires in {countdown}s.
           </p>
         </div>
       </div>

@@ -141,7 +141,7 @@ export function Navbar() {
                 {welcomeOpen && (
                   <div className="absolute right-0 top-full mt-2 w-56 rounded-xl border border-[#c9a962]/20 bg-[#1a1520] py-2 shadow-2xl animate-fade-in">
                     <div className="border-b border-[#c9a962]/10 px-4 py-3">
-                      <p className="font-display text-lg text-[#c9a962]">ADMINLLURU</p>
+                      <p className="font-display text-lg text-[#c9a962]">Administrator</p>
                       <p className="text-xs text-[#9a8fa8]">Platform Administrator</p>
                     </div>
                     <Link to="/admin-dashboard" onClick={() => setWelcomeOpen(false)} className="block px-4 py-2 text-sm hover:bg-[#c9a962]/10">Admin Dashboard</Link>

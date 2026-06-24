@@ -16,7 +16,7 @@ export function GuestRoute({ children }: { children: ReactNode }) {
 
 export function SalonRoute({ children }: { children: ReactNode }) {
   const { salon } = useApp();
-  if (!salon) return <Navigate to="/login" replace />;
+  if (!salon) return <Navigate to="/login?tab=salon" replace />;
   return <>{children}</>;
 }
 

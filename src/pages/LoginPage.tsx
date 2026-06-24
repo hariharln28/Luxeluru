@@ -212,6 +212,7 @@ export function LoginPage() {
                   onChange={(e) => setSalonName(e.target.value)}
                   className="luxe-input"
                   placeholder="e.g. Anura House of Beauty"
+                  style={{ fontSize: '16px' }}
                 />
               </div>
               <div>
@@ -222,6 +223,7 @@ export function LoginPage() {
                   onChange={(e) => setSalonId(e.target.value)}
                   className="luxe-input"
                   placeholder="e.g. LLANU569"
+                  style={{ fontSize: '16px' }}
                 />
               </div>
               <div>
@@ -232,6 +234,7 @@ export function LoginPage() {
                   onChange={(e) => setSalonEmail(e.target.value)}
                   className="luxe-input"
                   placeholder="hello@anurahouseofbeauty.in"
+                  style={{ fontSize: '16px' }}
                 />
               </div>
               <div>

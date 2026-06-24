@@ -34,7 +34,7 @@ export function AdminLoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-12">
+    <div className="min-h-screen min-h-dvh flex items-center justify-center px-4 py-12">
       <form onSubmit={handleSubmit} className="luxe-card w-full max-w-md p-8 space-y-6">
         <div className="text-center">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#c9a962]/15 mb-4">
@@ -61,6 +61,7 @@ export function AdminLoginPage() {
               className="luxe-input pl-10"
               placeholder="Enter admin username"
               autoComplete="off"
+              style={{ fontSize: '16px' }}
             />
           </div>
         </div>
@@ -76,6 +77,7 @@ export function AdminLoginPage() {
               className="luxe-input pl-10"
               placeholder="••••••••"
               autoComplete="off"
+              style={{ fontSize: '16px' }}
             />
           </div>
         </div>

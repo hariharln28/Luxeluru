@@ -296,8 +296,9 @@ export function SalonDetailPage() {
                 onChange={(e) => setReviewComment(e.target.value)}
                 placeholder={tr('writeReview')}
                 className="luxe-input mt-3 min-h-[80px] resize-none"
+                style={{ fontSize: '16px' }}
               />
-              <button onClick={submitReview} className="luxe-btn mt-3">{tr('submit')}</button>
+              <button onClick={submitReview} className="luxe-btn mt-3" style={{ minHeight: 44, touchAction: 'manipulation' }}>{tr('submit')}</button>
             </section>
           )}
         </div>

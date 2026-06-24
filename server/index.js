@@ -198,10 +198,31 @@ app.get('/api/salons', async (req, res) => {
   }
 });
 
+app.get('/api/salons/:id', async (req, res) => {
+  try {
+    const salon = await db.getSalon(req.params.id);
+    if (!salon) return res.status(404).json({ error: 'Salon not found' });
+    const { password, ...safeSalon } = salon;
+    res.json(safeSalon);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get('/api/bookings', async (req, res) => {
   try {
     const bookings = await db.getBookings();
     res.json(bookings);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/bookings/:id', async (req, res) => {
+  try {
+    const booking = await db.getBooking(req.params.id);
+    if (!booking) return res.status(404).json({ error: 'Booking not found' });
+    res.json(booking);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -218,19 +239,14 @@ app.get('/api/reviews', async (req, res) => {
 
 // Auth endpoints
 app.post('/api/users/register', async (req, res) => {
+  try {
   const userData = req.body;
   
-  if (!userData.id) {
-    return res.status(400).json({ success: false, message: 'User ID is required' });
-  }
-  if (!userData.email) {
-    return res.status(400).json({ success: false, message: 'Email is required' });
-  }
+  if (!userData.id) return res.status(400).json({ success: false, message: 'User ID is required' });
+  if (!userData.email) return res.status(400).json({ success: false, message: 'Email is required' });
 
   const existing = await db.getUser(userData.id);
-  if (existing) {
-    return res.json({ success: true, user: existing });
-  }
+  if (existing) return res.json({ success: true, user: existing });
 
   const newUser = {
     id: userData.id,
@@ -244,23 +260,26 @@ app.post('/api/users/register', async (req, res) => {
 
   await db.createUser(newUser);
   res.json({ success: true, user: newUser });
+  } catch (err) {
+    console.error('User register error:', err);
+    res.status(500).json({ success: false, message: err.message || 'Registration failed' });
+  }
 });
 
 app.post('/api/users/:id/update', authenticateJWT, async (req, res) => {
+  try {
   const { id } = req.params;
   const { updates } = req.body;
   
-  // Authorization check: user can only update their own profile
-  if (req.user.id !== id) {
-    return res.status(403).json({ success: false, message: 'Unauthorized profile update' });
-  }
+  if (req.user.id !== id) return res.status(403).json({ success: false, message: 'Unauthorized profile update' });
   
   const user = await db.getUser(id);
-  if (user) {
-    const updated = await db.updateUser(id, updates);
-    res.json({ success: true, user: updated });
-  } else {
-    res.status(404).json({ success: false, message: 'User not found' });
+  if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+  const updated = await db.updateUser(id, updates);
+  res.json({ success: true, user: updated });
+  } catch (err) {
+    console.error('User update error:', err);
+    res.status(500).json({ success: false, message: err.message || 'Profile update failed' });
   }
 });
 
@@ -721,6 +740,7 @@ app.post('/api/admin/unblock-user', async (req, res) => {
 
 // Bookings endpoints
 app.post('/api/bookings', authenticateJWT, async (req, res) => {
+  try {
   const bookingData = req.body;
   
   // Verify that booking userId matches the authenticated user
@@ -735,7 +755,6 @@ app.post('/api/bookings', authenticateJWT, async (req, res) => {
   }
 
   // ─── Double-booking prevention ───────────────────────
-  // Check for existing confirmed bookings at the same salon+date+time
   const allBookings = await db.getBookings();
   const conflictBooking = allBookings.find(
     b => b.salonId === bookingData.salonId &&
@@ -787,8 +806,11 @@ app.post('/api/bookings', authenticateJWT, async (req, res) => {
 
   // Notify salon of new online payment booking
   const isOnlinePay = newBooking.paymentStatus === 'paid-online'
+    || newBooking.paymentStatus === 'paid'
     || newBooking.paymentMethod === 'card'
-    || newBooking.paymentMethod === 'upi';
+    || newBooking.paymentMethod === 'upi'
+    || newBooking.paymentMethod === 'online'
+    || newBooking.paymentMethod === 'stripe';
   if (isOnlinePay) {
     await db.createNotification({
       id: `notif-payment-${newBooking.id}-${Date.now()}`,
@@ -801,81 +823,75 @@ app.post('/api/bookings', authenticateJWT, async (req, res) => {
   }
 
   res.json({ success: true, booking: newBooking });
+  } catch (err) {
+    console.error('Booking creation error:', err);
+    res.status(500).json({ success: false, message: err.message || 'Failed to create booking' });
+  }
 });
 
 app.post('/api/bookings/:id/cancel', authenticateJWT, async (req, res) => {
+  try {
   const { id } = req.params;
   const booking = await db.getBooking(id);
 
-  if (booking) {
-    if (booking.userId !== req.user.id) {
-      return res.status(403).json({ success: false, message: 'Unauthorized cancel action' });
+  if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
+
+  if (booking.userId !== req.user.id) {
+    return res.status(403).json({ success: false, message: 'Unauthorized cancel action' });
+  }
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const apptDate = new Date(booking.date);
+  apptDate.setHours(0, 0, 0, 0);
+  const msPerDay = 24 * 60 * 60 * 1000;
+  const diffDays = Math.round((apptDate.getTime() - today.getTime()) / msPerDay);
+
+  let refundPercent = 0;
+  let refundAmount = 0;
+  const isOnlinePayment = booking.paymentStatus === 'paid-online'
+    || booking.paymentStatus === 'paid'
+    || booking.paymentMethod === 'card'
+    || booking.paymentMethod === 'upi'
+    || booking.paymentMethod === 'online'
+    || booking.paymentMethod === 'stripe';
+
+  if (isOnlinePayment) {
+    if (diffDays <= 0) refundPercent = 20;
+    else if (diffDays === 1) refundPercent = 50;
+    else if (diffDays === 2) refundPercent = 70;
+    else refundPercent = 100;
+    refundAmount = Math.round(booking.totalPrice * refundPercent / 100);
+  }
+
+  await db.updateBooking(id, { status: 'cancelled', refundAmount, payoutStatus: 'pending' });
+
+  // Reverse commission from salon's due since appointment didn't happen
+  if (booking.commissionAmount) {
+    const salon = await db.getSalon(booking.salonId);
+    if (salon) {
+      await db.updateSalon(booking.salonId, {
+        commissionDue: Math.max(0, (salon.commissionDue || 0) - booking.commissionAmount)
+      });
     }
+  }
 
-    // Calculate calendar-day difference (ignoring time) to appointment date
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const apptDate = new Date(booking.date);
-    apptDate.setHours(0, 0, 0, 0);
-    const msPerDay = 24 * 60 * 60 * 1000;
-    const diffDays = Math.round((apptDate.getTime() - today.getTime()) / msPerDay);
-
-    let refundPercent = 0;
-    let refundAmount = 0;
-    const isOnlinePayment = booking.paymentStatus === 'paid-online'
-      || booking.paymentMethod === 'card'
-      || booking.paymentMethod === 'upi';
-
-    if (isOnlinePayment) {
-      if (diffDays <= 0) {
-        // Same day as appointment: 20% refund
-        refundPercent = 20;
-      } else if (diffDays === 1) {
-        // 1 day before: 50% refund
-        refundPercent = 50;
-      } else if (diffDays === 2) {
-        // 2 days before: 70% refund
-        refundPercent = 70;
-      } else {
-        // More than 2 days before: 100% refund
-        refundPercent = 100;
-      }
-      refundAmount = Math.round(booking.totalPrice * refundPercent / 100);
-    }
-
-    await db.updateBooking(id, {
-      status: 'cancelled',
-      refundAmount,
-      payoutStatus: 'pending'
-    });
-
-    // Reverse commission from salon's due since appointment didn't happen
-    if (booking.commissionAmount) {
-      const salon = await db.getSalon(booking.salonId);
-      if (salon) {
-        await db.updateSalon(booking.salonId, {
-          commissionDue: Math.max(0, (salon.commissionDue || 0) - booking.commissionAmount)
-        });
-      }
-    }
-
-    res.json({ success: true, refundAmount, refundPercent });
-  } else {
-    res.status(404).json({ success: false, message: 'Booking not found' });
+  res.json({ success: true, refundAmount, refundPercent });
+  } catch (err) {
+    console.error('Booking cancel error:', err);
+    res.status(500).json({ success: false, message: err.message || 'Failed to cancel booking' });
   }
 });
 
 app.post('/api/bookings/:id/reschedule', authenticateJWT, async (req, res) => {
-  const { id } = req.params;
-  const { date, time } = req.body;
-  const booking = await db.getBooking(id);
+  try {
+    const { id } = req.params;
+    const { date, time } = req.body;
+    const booking = await db.getBooking(id);
 
-  if (booking) {
-    if (booking.userId !== req.user.id) {
-      return res.status(403).json({ success: false, message: 'Unauthorized reschedule action' });
-    }
+    if (!booking) return res.status(404).json({ success: false, message: 'Booking not found' });
+    if (booking.userId !== req.user.id) return res.status(403).json({ success: false, message: 'Unauthorized reschedule action' });
 
-    // Conflict check: prevent rescheduling into an occupied slot
     const allBookings = await db.getBookings();
     const conflict = allBookings.find(
       b => b.id !== id &&
@@ -884,28 +900,17 @@ app.post('/api/bookings/:id/reschedule', authenticateJWT, async (req, res) => {
            b.time === time &&
            b.status === 'confirmed'
     );
-    if (conflict) {
-      return res.status(409).json({
-        success: false,
-        message: `Cannot reschedule: ${time} on ${date} is already booked.`
-      });
-    }
+    if (conflict) return res.status(409).json({ success: false, message: `Cannot reschedule: ${time} on ${date} is already booked.` });
 
     const blockedSlots = await db.getBlockedSlots(booking.salonId);
-    const blockedConflict = blockedSlots.find(
-      bs => bs.date === date && bs.time === time
-    );
-    if (blockedConflict) {
-      return res.status(409).json({
-        success: false,
-        message: `Cannot reschedule: ${time} on ${date} is blocked by the salon.`
-      });
-    }
+    const blockedConflict = blockedSlots.find(bs => bs.date === date && bs.time === time);
+    if (blockedConflict) return res.status(409).json({ success: false, message: `Cannot reschedule: ${time} on ${date} is blocked by the salon.` });
 
-    await db.updateBooking(id, { date, time });
+    await db.updateBooking(id, { date, time, rescheduledFrom: `${booking.date} ${booking.time}` });
     res.json({ success: true });
-  } else {
-    res.status(404).json({ success: false, message: 'Booking not found' });
+  } catch (err) {
+    console.error('Booking reschedule error:', err);
+    res.status(500).json({ success: false, message: err.message || 'Failed to reschedule booking' });
   }
 });
 
@@ -946,8 +951,11 @@ app.post('/api/bookings/:id/update', async (req, res) => {
   const payoutAmount = finalPrice - newCommission;
 
   const isOnlinePayment = booking.paymentStatus === 'paid-online'
+    || booking.paymentStatus === 'paid'
     || booking.paymentMethod === 'card'
-    || booking.paymentMethod === 'upi';
+    || booking.paymentMethod === 'upi'
+    || booking.paymentMethod === 'online'
+    || booking.paymentMethod === 'stripe';
 
   // ─── Simulate payout processing ─────────────────────────────
   const payoutReference = `PAY${Date.now().toString(36).toUpperCase()}${Math.random().toString(36).slice(2,6).toUpperCase()}`;
@@ -985,19 +993,12 @@ app.post('/api/bookings/:id/update', async (req, res) => {
   });
 
   if (isOnlinePayment) {
-    // Online payment: commission already collected — do NOT add to commissionDue.
-    // Only adjust if the commission amount changed (e.g. package switch).
-    if (commissionDiff !== 0) {
-      await db.updateSalon(booking.salonId, {
-        commissionDue: Math.max(0, (salon.commissionDue || 0) + commissionDiff)
-      });
-      // Refresh salon to get updated commissionDue before second update
-      salon = await db.getSalon(booking.salonId) || salon;
-    }
-    // Remove any commission that was added at booking time since it's auto-collected now
-    await db.updateSalon(booking.salonId, {
-      commissionDue: Math.max(0, (salon.commissionDue || 0) - newCommission)
-    });
+    // Online payment: commission is auto-collected by platform.
+    // At booking creation time, commissionAmount was added to commissionDue.
+    // Now that payment is confirmed, REMOVE it from commissionDue (it's settled).
+    // Only apply package-switch diff if price changed.
+    const adjustedDue = Math.max(0, (salon.commissionDue || 0) - oldCommission + commissionDiff);
+    await db.updateSalon(booking.salonId, { commissionDue: adjustedDue });
 
     // Notify salon of payout — rich detail
     const methodLabel = payoutMethod === 'upi' ? `UPI (${payoutDestination})` : payoutMethod === 'neft' ? `NEFT — ${payoutDestination}` : 'Platform Wallet';
@@ -1189,6 +1190,7 @@ app.delete('/api/salons/:id/blocked-slots/:slotId', async (req, res) => {
 
 // Reviews endpoints
 app.post('/api/reviews', authenticateJWT, async (req, res) => {
+  try {
   const reviewData = req.body;
   
   if (reviewData.userId !== req.user.id) {
@@ -1225,7 +1227,6 @@ app.post('/api/reviews', authenticateJWT, async (req, res) => {
       if (staffIdx >= 0) {
         const staffReviews = reviews.filter(r => r.staffId === reviewData.staffId);
         const avgRating = staffReviews.reduce((sum, r) => sum + r.rating, 0) / staffReviews.length;
-        
         salon.staff[staffIdx].rating = avgRating;
         salon.staff[staffIdx].reviewCount = staffReviews.length;
       }
@@ -1246,6 +1247,10 @@ app.post('/api/reviews', authenticateJWT, async (req, res) => {
   }
 
   res.json({ success: true, review: newReview });
+  } catch (err) {
+    console.error('Review submission error:', err);
+    res.status(500).json({ success: false, message: err.message || 'Failed to submit review' });
+  }
 });
 
 // ─── Messages (E2E Encrypted 1:1 Conversations) ────────────────────────────

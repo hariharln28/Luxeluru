@@ -4,16 +4,18 @@ import { useApp } from '../context/AppContext';
 import { useT } from '../hooks/useT';
 
 export function LeaderboardPage() {
-  const { salons, staffReviews } = useApp();
+  const { salons, staffReviews, loading } = useApp();
   const tr = useT();
 
-  const topSalons = [...salons]
+  const activeSalons = salons.filter(s => s.isActive !== false && s.isApproved !== false);
+
+  const topSalons = [...activeSalons]
     .sort((a, b) => b.rating - a.rating || b.reviewCount - a.reviewCount)
     .slice(0, 10);
 
   const staffMap = new Map<string, { name: string; salonName: string; salonId: string; avatar: string; rating: number; reviews: number }>();
 
-  salons.forEach((salon) => {
+  activeSalons.forEach((salon) => {
     salon.staff.forEach((member) => {
       const reviews = staffReviews.filter((r) => r.staffId === member.id);
       const avgRating = reviews.length
@@ -33,7 +35,6 @@ export function LeaderboardPage() {
   const allStylists = [...staffMap.values()]
     .sort((a, b) => b.rating - a.rating || b.reviews - a.reviews);
 
-  // Deduplicate by name — keep only the highest-rated entry per name
   const seen = new Set<string>();
   const topStylists = allStylists.filter((s) => {
     if (seen.has(s.name)) return false;
@@ -42,6 +43,23 @@ export function LeaderboardPage() {
   }).slice(0, 10);
 
   const medals = ['🥇', '🥈', '🥉'];
+
+  if (loading) {
+    return (
+      <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
+        <div className="skeleton h-9 w-48 rounded-xl mb-3" />
+        <div className="skeleton h-5 w-80 rounded-xl mb-8" />
+        <div className="grid gap-8 lg:grid-cols-2">
+          {[1, 2].map(col => (
+            <div key={col} className="space-y-3">
+              <div className="skeleton h-8 w-40 rounded-xl mb-4" />
+              {[1,2,3,4,5].map(i => <div key={i} className="skeleton h-20 w-full rounded-xl" />)}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
@@ -54,7 +72,12 @@ export function LeaderboardPage() {
             <Trophy className="h-6 w-6 text-[#c9a962]" /> {tr('topSalons')}
           </h2>
           <div className="space-y-3">
-            {topSalons.map((salon, idx) => (
+            {topSalons.length === 0 ? (
+              <div className="luxe-card p-8 text-center text-[#9a8fa8]">
+                <Trophy className="mx-auto h-10 w-10 text-[#3d3347] mb-3" />
+                <p>No salons yet. Be the first to join!</p>
+              </div>
+            ) : topSalons.map((salon, idx) => (
               <Link
                 key={salon.id}
                 to={`/salons/${salon.id}`}
@@ -83,7 +106,12 @@ export function LeaderboardPage() {
             <Medal className="h-6 w-6 text-[#c9a962]" /> {tr('topStylists')}
           </h2>
           <div className="space-y-3">
-            {topStylists.map((stylist, idx) => (
+            {topStylists.length === 0 ? (
+              <div className="luxe-card p-8 text-center text-[#9a8fa8]">
+                <Medal className="mx-auto h-10 w-10 text-[#3d3347] mb-3" />
+                <p>No stylists rated yet.</p>
+              </div>
+            ) : topStylists.map((stylist, idx) => (
               <Link
                 key={`${stylist.salonId}-${stylist.name}`}
                 to={`/salons/${stylist.salonId}`}
