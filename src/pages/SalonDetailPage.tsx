@@ -19,7 +19,7 @@ const TIME_SLOTS = [
 
 export function SalonDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const { user, salons, createBooking, addStaffReview, staffReviews, addToast, isUserBlocked, bookings, fetchBlockedSlots, blockedSlots, styleRecommendation, setStyleRecommendation } = useApp();
+  const { user, salons, createBooking, addStaffReview, staffReviews, addToast, isUserBlocked, bookings, fetchBlockedSlots, blockedSlots, closedDays, fetchClosedDays, styleRecommendation, setStyleRecommendation } = useApp();
   const salon = salons.find((s) => s.id === id);
   const tr = useT();
   const navigate = useNavigate();
@@ -37,12 +37,13 @@ export function SalonDetailPage() {
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState('');
 
-  // Fetch blocked slots when date changes
+  // Fetch blocked slots and closed days when date changes
   useEffect(() => {
     if (date && salon) {
       fetchBlockedSlots(salon.id);
+      fetchClosedDays(salon.id);
     }
-  }, [date, salon, fetchBlockedSlots]);
+  }, [date, salon, fetchBlockedSlots, fetchClosedDays]);
 
   if (!salon) {
     return (
@@ -378,6 +379,18 @@ export function SalonDetailPage() {
               {/* Time */}
               <div>
                 <label className="text-sm text-[#9a8fa8]">{tr('selectTime')}</label>
+
+                {/* Closed Day Banner */}
+                {date && closedDays.some(cd => cd.salonId === currentSalon.id && cd.date === date) ? (
+                  <div className="mt-3 rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-center">
+                    <p className="text-2xl mb-1">🚫</p>
+                    <p className="font-semibold text-red-400">Salon Closed on this Day</p>
+                    <p className="text-xs text-red-400/70 mt-1">
+                      {closedDays.find(cd => cd.salonId === currentSalon.id && cd.date === date)?.reason}
+                    </p>
+                    <p className="text-xs text-[#9a8fa8] mt-2">Please select a different date to book.</p>
+                  </div>
+                ) : (
                 <div className="mt-2 grid grid-cols-3 gap-2">
                   {TIME_SLOTS.map((slot) => {
                     const today = new Date().toISOString().split('T')[0];
@@ -418,6 +431,7 @@ export function SalonDetailPage() {
                     );
                   })}
                 </div>
+                )}
               </div>
 
               {/* Staff */}

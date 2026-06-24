@@ -289,6 +289,25 @@ export const api = {
       method: 'DELETE',
     }),
 
+  // Closed Days (Public Holidays / Day Closures)
+  getClosedDays: (salonId: string) =>
+    request<import('../types').ClosedDay[]>(`/api/salons/${salonId}/closed-days`),
+
+  addClosedDay: (salonId: string, data: { date: string; reason?: string }) =>
+    request<{ success: boolean; closedDay: import('../types').ClosedDay }>(`/api/salons/${salonId}/closed-days`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
+  removeClosedDay: (salonId: string, date: string) =>
+    request<{ success: boolean }>(`/api/salons/${salonId}/closed-days/${encodeURIComponent(date)}`, {
+      method: 'DELETE',
+    }),
+
+  // Admin: all closed days across salons
+  getAllClosedDays: () =>
+    request<import('../types').ClosedDay[]>('/api/admin/closed-days'),
+
   // Reviews
   addStaffReview: (reviewData: Omit<StaffReview, 'id' | 'createdAt'>) =>
     request<{ success: boolean; review: StaffReview }>('/api/reviews', {

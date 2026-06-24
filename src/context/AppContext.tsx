@@ -20,6 +20,7 @@ import type {
   Notification,
   Message,
   Announcement,
+  ClosedDay,
 } from '../types';
 import { encryptMessage, decryptMessage } from '../utils/encryption';
 import { salons as defaultSalons } from '../data/salons';
@@ -89,6 +90,11 @@ interface AppContextType {
   fetchBlockedSlots: (salonId: string) => Promise<BlockedSlot[]>;
   blockSlot: (salonId: string, date: string, time: string, customerName?: string, reason?: string) => Promise<boolean>;
   unblockSlot: (salonId: string, slotId: string) => Promise<boolean>;
+  // Closed Days
+  closedDays: ClosedDay[];
+  fetchClosedDays: (salonId: string) => Promise<ClosedDay[]>;
+  closeDay: (salonId: string, date: string, reason?: string) => Promise<boolean>;
+  openDay: (salonId: string, date: string) => Promise<boolean>;
   refreshData: () => Promise<void>;
   notifications: Notification[];
   fetchNotifications: (target: string) => Promise<void>;
@@ -256,6 +262,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [staffReviews, setStaffReviews] = useState<StaffReview[]>([]);
   const [blockedSlots, setBlockedSlots] = useState<BlockedSlot[]>([]);
+  const [closedDays, setClosedDays] = useState<ClosedDay[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
@@ -1103,6 +1110,48 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [addToast]);
 
+  // ─── Closed Days ─────────────────────────────────────────────────────────────
+  const fetchClosedDays = useCallback(async (salonId: string): Promise<ClosedDay[]> => {
+    try {
+      const days = await api.getClosedDays(salonId);
+      setClosedDays(days);
+      return days;
+    } catch {
+      return [];
+    }
+  }, []);
+
+  const closeDay = useCallback(async (salonId: string, date: string, reason?: string): Promise<boolean> => {
+    try {
+      const res = await api.addClosedDay(salonId, { date, reason });
+      if (res.success) {
+        setClosedDays(prev => [...prev.filter(d => !(d.salonId === salonId && d.date === date)), res.closedDay]);
+        addToast('success', `${date} marked as closed: ${res.closedDay.reason}`);
+        return true;
+      }
+      return false;
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to mark day as closed';
+      addToast('error', msg);
+      return false;
+    }
+  }, [addToast]);
+
+  const openDay = useCallback(async (salonId: string, date: string): Promise<boolean> => {
+    try {
+      const res = await api.removeClosedDay(salonId, date);
+      if (res.success) {
+        setClosedDays(prev => prev.filter(d => !(d.salonId === salonId && d.date === date)));
+        addToast('success', `${date} reopened — slots are now available`);
+        return true;
+      }
+      return false;
+    } catch {
+      addToast('error', 'Failed to reopen day');
+      return false;
+    }
+  }, [addToast]);
+
   const createBooking = useCallback(
     async (data: Omit<Booking, 'id' | 'createdAt' | 'status' | 'userId'>): Promise<Booking> => {
       const blockStatus = isUserBlocked(user!.id);
@@ -1856,6 +1905,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         fetchBlockedSlots,
         blockSlot,
         unblockSlot,
+        closedDays,
+        fetchClosedDays,
+        closeDay,
+        openDay,
         refreshData,
         notifications,
         fetchNotifications,

@@ -313,6 +313,15 @@ async function initSqlite() {
       createdAt TEXT NOT NULL,
       readBy TEXT DEFAULT '[]'
     );
+
+    CREATE TABLE IF NOT EXISTS closed_days (
+      id TEXT PRIMARY KEY,
+      salonId TEXT NOT NULL,
+      date TEXT NOT NULL,
+      reason TEXT DEFAULT 'Salon Closed',
+      createdAt TEXT NOT NULL,
+      UNIQUE(salonId, date)
+    );
   `);
 
   try {
@@ -751,6 +760,54 @@ class DatabaseManager {
       await MongoBlockedSlot.deleteOne({ id });
     } else {
       await sqliteDb.run('DELETE FROM blocked_slots WHERE id = ?', id);
+    }
+    return true;
+  }
+
+  // ─── Closed Days ───────────────────────────
+  async getClosedDays(salonId) {
+    if (this.mode === 'mongodb') {
+      const salon = await MongoSalon.findOne({ id: salonId });
+      return salon?.closedDays || [];
+    } else {
+      return sqliteDb.all('SELECT * FROM closed_days WHERE salonId = ? ORDER BY date ASC', salonId);
+    }
+  }
+
+  async getAllClosedDays() {
+    if (this.mode === 'mongodb') {
+      const salons = await MongoSalon.find({}, { id: 1, closedDays: 1 });
+      return salons.flatMap(s => (s.closedDays || []).map(d => ({ ...d, salonId: s.id })));
+    } else {
+      return sqliteDb.all('SELECT * FROM closed_days ORDER BY date ASC');
+    }
+  }
+
+  async addClosedDay(data) {
+    if (this.mode === 'mongodb') {
+      await MongoSalon.findOneAndUpdate(
+        { id: data.salonId },
+        { $addToSet: { closedDays: data } }
+      );
+      return data;
+    } else {
+      await sqliteDb.run(
+        `INSERT OR IGNORE INTO closed_days (id, salonId, date, reason, createdAt)
+         VALUES (?, ?, ?, ?, ?)`,
+        data.id, data.salonId, data.date, data.reason || 'Salon Closed', data.createdAt
+      );
+      return data;
+    }
+  }
+
+  async removeClosedDay(salonId, date) {
+    if (this.mode === 'mongodb') {
+      await MongoSalon.findOneAndUpdate(
+        { id: salonId },
+        { $pull: { closedDays: { date } } }
+      );
+    } else {
+      await sqliteDb.run('DELETE FROM closed_days WHERE salonId = ? AND date = ?', salonId, date);
     }
     return true;
   }

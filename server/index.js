@@ -781,6 +781,16 @@ app.post('/api/bookings', authenticateJWT, async (req, res) => {
     });
   }
 
+  // Check for closed day (public holiday / salon closure)
+  const closedDays = await db.getClosedDays(bookingData.salonId);
+  const isClosed = closedDays.find(cd => cd.date === bookingData.date);
+  if (isClosed) {
+    return res.status(409).json({
+      success: false,
+      message: `The salon is closed on ${bookingData.date}: "${isClosed.reason}". Please choose a different date.`
+    });
+  }
+
   // Calculate 3% commission at booking time and accumulate on salon
   const commissionAmount = Math.round((bookingData.totalPrice || 0) * 0.03);
 
@@ -905,6 +915,10 @@ app.post('/api/bookings/:id/reschedule', authenticateJWT, async (req, res) => {
     const blockedSlots = await db.getBlockedSlots(booking.salonId);
     const blockedConflict = blockedSlots.find(bs => bs.date === date && bs.time === time);
     if (blockedConflict) return res.status(409).json({ success: false, message: `Cannot reschedule: ${time} on ${date} is blocked by the salon.` });
+
+    const closedDays = await db.getClosedDays(booking.salonId);
+    const isClosedDay = closedDays.find(cd => cd.date === date);
+    if (isClosedDay) return res.status(409).json({ success: false, message: `Cannot reschedule: salon is closed on ${date} — "${isClosedDay.reason}".` });
 
     await db.updateBooking(id, { date, time, rescheduledFrom: `${booking.date} ${booking.time}` });
     res.json({ success: true });
@@ -1182,6 +1196,86 @@ app.post('/api/salons/:id/block-slot', async (req, res) => {
 app.delete('/api/salons/:id/blocked-slots/:slotId', async (req, res) => {
   try {
     await db.removeBlockedSlot(req.params.slotId);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─── Closed Days (Public Holidays / Salon Closure) ────────────────────────
+
+app.get('/api/salons/:id/closed-days', async (req, res) => {
+  try {
+    const days = await db.getClosedDays(req.params.id);
+    res.json(days);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Admin: get closed days across all salons
+app.get('/api/admin/closed-days', async (req, res) => {
+  try {
+    const days = await db.getAllClosedDays();
+    res.json(days);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/salons/:id/closed-days', async (req, res) => {
+  try {
+    const { date, reason } = req.body;
+    if (!date) return res.status(400).json({ error: 'date is required' });
+
+    // Validate date format
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return res.status(400).json({ error: 'date must be in YYYY-MM-DD format' });
+    }
+
+    // Prevent past dates
+    const today = new Date().toISOString().split('T')[0];
+    if (date < today) {
+      return res.status(400).json({ error: 'Cannot close a past date' });
+    }
+
+    // Check for duplicate
+    const existing = await db.getClosedDays(req.params.id);
+    if (existing.find(d => d.date === date)) {
+      return res.status(409).json({ error: `${date} is already marked as closed` });
+    }
+
+    const closedDay = {
+      id: `cd-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+      salonId: req.params.id,
+      date,
+      reason: reason?.trim() || 'Salon Closed',
+      createdAt: new Date().toISOString(),
+    };
+
+    await db.addClosedDay(closedDay);
+
+    // Notify salon of the closure
+    await db.createNotification({
+      id: `notif-close-${closedDay.id}`,
+      target: req.params.id,
+      type: 'closure',
+      message: `📅 ${date} has been marked as a closed day: "${closedDay.reason}". All time slots for this day are now blocked.`,
+      createdAt: new Date().toISOString(),
+      read: false
+    });
+
+    res.json({ success: true, closedDay });
+  } catch (err) {
+    console.error('Add closed day error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/salons/:id/closed-days/:date', async (req, res) => {
+  try {
+    const { id, date } = req.params;
+    await db.removeClosedDay(id, decodeURIComponent(date));
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });

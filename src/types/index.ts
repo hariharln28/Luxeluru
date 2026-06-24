@@ -169,6 +169,14 @@ export interface BlockedSlot {
   createdAt: string;
 }
 
+export interface ClosedDay {
+  id: string;
+  salonId: string;
+  date: string;         // YYYY-MM-DD
+  reason: string;       // e.g. "Public Holiday", "Staff Training", "Salon Closed"
+  createdAt: string;
+}
+
 export interface StaffReview {
   id: string;
   staffId: string;

@@ -64,7 +64,11 @@ export function SalonDashboardPage() {
     messages,
     announcements,
     sendDirectMessage,
-    markAnnouncementRead
+    markAnnouncementRead,
+    closedDays,
+    fetchClosedDays,
+    closeDay,
+    openDay,
   } = useApp();
 
   const [refreshing, setRefreshing] = useState(false);
@@ -92,6 +96,14 @@ export function SalonDashboardPage() {
   const [blockCustomerName, setBlockCustomerName] = useState('');
   const [blockReason, setBlockReason] = useState('');
   const [blockingTime, setBlockingTime] = useState<string | null>(null);
+
+  // Close Entire Day state
+  const [closeDate, setCloseDate] = useState('');
+  const [closeReason, setCloseReason] = useState('');
+  const [closeSaving, setCloseSaving] = useState(false);
+
+  const salonClosedDays = closedDays.filter(cd => cd.salonId === salon?.id);
+  const today = new Date().toISOString().split('T')[0];
   const [showCheckout, setShowCheckout] = useState(false);
 
   // Payment/payout settings state
@@ -318,7 +330,7 @@ export function SalonDashboardPage() {
           Appointments ({activeBookings.length})
         </button>
         <button
-          onClick={() => { setActiveTab('slots'); if (salon) fetchBlockedSlots(salon.id); }}
+          onClick={() => { setActiveTab('slots'); if (salon) { fetchBlockedSlots(salon.id); fetchClosedDays(salon.id); } }}
           className={`flex flex-1 items-center justify-center gap-2 rounded-lg py-2.5 text-xs font-semibold transition whitespace-nowrap px-3 ${
             activeTab === 'slots' ? 'bg-[#c9a962] text-[#0f0d12]' : 'text-[#9a8fa8] hover:text-[#e8d5a3]'
           }`}

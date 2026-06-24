@@ -63,7 +63,9 @@ export function AdminDashboardPage() {
     sendDirectMessage,
     fetchMessages,
     createAnnouncement,
-    activeSalons
+    activeSalons,
+    closedDays,
+    fetchClosedDays,
   } = useApp();
   
   const navigate = useNavigate();
@@ -584,13 +586,15 @@ export function AdminDashboardPage() {
                 ? 'Deactivated (Overdue)'
                 : 'Active';
               const isExpanded = expandedSalonId === s.id;
+              const today = new Date().toISOString().split('T')[0];
+              const salonClosedDays = closedDays.filter(cd => cd.salonId === s.id && cd.date >= today);
 
               return (
                 <div key={s.id} className="luxe-card overflow-hidden border border-[#c9a962]/15">
                   {/* Summary row */}
                   <div
                     className="flex flex-wrap items-center gap-x-6 gap-y-2 px-5 py-4 cursor-pointer hover:bg-[#c9a962]/5 transition-colors"
-                    onClick={() => setExpandedSalonId(isExpanded ? null : s.id)}
+                    onClick={() => { const next = isExpanded ? null : s.id; setExpandedSalonId(next); if (next) fetchClosedDays(next); }}
                   >
                     <div className="flex-1 min-w-[180px]">
                       <p className="font-semibold text-[#e8d5a3] text-sm">{s.name}</p>
@@ -779,6 +783,35 @@ export function AdminDashboardPage() {
                               )}
                             </div>
                           </div>
+                        </div>
+
+                        {/* Closed Days — Visibility for Admin */}
+                        <div className="mt-3 pt-3 border-t border-[#c9a962]/10 space-y-2">
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-[#c9a962] mb-1 flex items-center gap-2">
+                            🚫 Upcoming Closed Days
+                            {salonClosedDays.length > 0 && (
+                              <span className="bg-red-500/20 text-red-400 px-1.5 py-0.5 rounded-full text-[9px] font-bold">
+                                {salonClosedDays.length} day{salonClosedDays.length !== 1 ? 's' : ''}
+                              </span>
+                            )}
+                          </p>
+                          {salonClosedDays.length === 0 ? (
+                            <p className="text-xs text-[#9a8fa8] italic">No upcoming closures scheduled</p>
+                          ) : (
+                            <div className="space-y-1.5">
+                              {salonClosedDays
+                                .sort((a, b) => a.date.localeCompare(b.date))
+                                .map(cd => (
+                                  <div key={cd.id} className="flex items-center justify-between rounded-lg bg-red-500/5 border border-red-500/20 px-3 py-2">
+                                    <div>
+                                      <p className="text-xs font-semibold text-[#e8d5a3]">{cd.date}</p>
+                                      <p className="text-[10px] text-red-400/70">{cd.reason}</p>
+                                    </div>
+                                    <span className="text-[10px] bg-red-500/15 text-red-400 px-2 py-0.5 rounded-full">Closed</span>
+                                  </div>
+                                ))}
+                            </div>
+                          )}
                         </div>
 
                         <div className="mt-3 pt-3 border-t border-[#c9a962]/10">
