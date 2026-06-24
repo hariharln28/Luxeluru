@@ -334,6 +334,7 @@ The Admin Control Centre is **not linked from any public page** (by design). Use
 | Field | Value |
 |---|---|
 | **Login URL** | [/login](https://luxeluru.onrender.com/login) → **Salon Partner Login** tab |
+| **Salon Name** | `Luxury Salon Admin` |
 | **Salon ID** | `LLLUX456` |
 | **Email** | `luxurysalonadmin@test.com` |
 | **Password** | `salon@admin-test789` |
