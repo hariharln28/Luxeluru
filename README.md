@@ -116,7 +116,7 @@ Existing general-purpose booking tools are not built for the luxury segment, off
 - Stylist selection (optional)
 - **Online (Card / UPI)** — Stripe checkout; appointment confirmed on payment success
 - **Pay at Salon** — Instant confirmation with bill summary; commission tracked monthly
-- WhatsApp confirmation sent after every booking
+- After booking confirmation (all payment methods) — user is redirected directly to **Upcoming Appointments**
 - Tiered cancellation refunds: 100% (3+ days) → 70% (2 days) → 50% (1 day) → 30% (same day)
 
 ### 🏪 Salon Partner Dashboard
@@ -130,6 +130,7 @@ Existing general-purpose booking tools are not built for the luxury segment, off
 - **Messages** — End-to-end encrypted 1:1 messaging with admin + announcement feed
 - **Commission Dues** — View full pay-at-salon billing breakdown, submit UTR payment references
 - **Settings** — Update profile, location, payout bank/UPI details, and business information
+- **Location Picker** — Interactive map (OpenStreetMap + Leaflet) in the Location tab; search by address or tap/drag a pin to set the exact salon location — no API key required
 - **Exit Platform** — Submit, track, and dispute exit requests
 
 ### 🤝 Partner With Us (Salon Registration Flow)
@@ -395,7 +396,6 @@ Luxeluru is deployed as a **monorepo on Render**:
 ## Known Limitations
 
 - **Payments are simulated** — Stripe integration is UI-complete but does not process real transactions (demo/hackathon scope)
-- **WhatsApp notifications** use `wa.me` deep-links — opens WhatsApp on the user's device rather than sending automated server-side messages
 - **Render free tier cold start** — first request after inactivity may take 30–60 seconds
 - **In-memory rate limiting** — resets on server restart; production would use Redis-backed rate limiting
 - **Trade license storage** — Uploaded as base64 `data:` URLs in SQLite; production would use cloud object storage (S3/GCS) for large files
