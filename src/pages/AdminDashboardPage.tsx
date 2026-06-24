@@ -1578,7 +1578,7 @@ export function AdminDashboardPage() {
               <div className="luxe-card p-4">
                 <h3 className="font-display text-lg text-[#e8d5a3] mb-3">Active Salons</h3>
                 <div className="space-y-2 max-h-[60dvh] overflow-y-auto">
-                  {activeSalons.filter(s => s.isActive).map(s => {
+                  {salons.filter(s => s.registrationStatus === 'approved').map(s => {
                     const unread = messages.filter(m => m.salonId === s.id && m.sender === 'salon' && !m.isRead).length;
                     return (
                       <button
@@ -1594,6 +1594,9 @@ export function AdminDashboardPage() {
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-[#e8d5a3] truncate">{s.name}</p>
                           <p className="text-[11px] text-[#9a8fa8] truncate">{s.id}</p>
+                          {s.isActive === false && (
+                            <p className="text-[10px] text-orange-400/70">Deactivated</p>
+                          )}
                         </div>
                         {unread > 0 && (
                           <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white">
@@ -1619,7 +1622,7 @@ export function AdminDashboardPage() {
                     <div className="flex items-center gap-2 mb-4 border-b border-[#c9a962]/10 pb-3">
                       <Lock className="h-4 w-4 text-[#c9a962]" />
                       <h3 className="font-display text-lg text-[#e8d5a3] truncate">
-                        {activeSalons.find(s => s.id === selectedSalonId)?.name || selectedSalonId}
+                        {salons.find(s => s.id === selectedSalonId)?.name || selectedSalonId}
                       </h3>
                       <span className="ml-auto shrink-0 text-[10px] text-[#9a8fa8] bg-[#c9a962]/10 px-2 py-0.5 rounded-full">🔒 Encrypted</span>
                     </div>
