@@ -123,7 +123,8 @@ Existing general-purpose booking tools are not built for the luxury segment, off
 - **Appointments** — View, verify, complete, reschedule, and add notes to all bookings
 - **Services** — Manage service catalogue and packages with pricing
 - **Staff** — Add and edit staff profiles, specialties, and avatars
-- **Walk-ins** — Block specific time slots to prevent online bookings
+- **Walk-ins** — Block specific time slots to prevent online bookings during walk-in appointments
+- **Closed Days** — Mark entire days as closed (public holidays, staff training, renovation, etc.); all slots become unavailable to customers and the reason is displayed to users and visible to admin
 - **Notifications** — Real-time booking alerts and payment notifications
 - **Messages** — End-to-end encrypted 1:1 messaging with admin + announcement feed
 - **Commission Dues** — View full pay-at-salon billing breakdown, submit UTR payment references
@@ -138,6 +139,7 @@ Existing general-purpose booking tools are not built for the luxury segment, off
 - **Messages** — Encrypted 1:1 conversations per salon; broadcast announcements with read-receipt tracking
 - **Exit Requests** — Approve or reject with mandatory rejection reason
 - **Commission Verification** — Review UTR references submitted by salons; one-click verify and clear dues
+- **Closed Days Visibility** — See each salon's upcoming closed days (date, reason, count) in the salon detail panel
 
 ### 🔒 Security & Encryption
 - **AES-GCM 256-bit** end-to-end encryption for all admin ↔ salon messages
@@ -216,6 +218,13 @@ Commission accumulates throughout the month
 | `GET` | `/api/notifications` | Fetch notifications for a target |
 | `GET` | `/api/messages/:salonId` | Fetch encrypted messages |
 | `POST` | `/api/messages/:salonId` | Send encrypted message |
+| `GET` | `/api/salons/:id/blocked-slots` | Fetch walk-in blocked slots for a salon |
+| `POST` | `/api/salons/:id/block-slot` | Block a specific time slot for a walk-in |
+| `DELETE` | `/api/salons/:id/blocked-slots/:slotId` | Unblock a time slot |
+| `GET` | `/api/salons/:id/closed-days` | Fetch all closed days for a salon |
+| `POST` | `/api/salons/:id/closed-days` | Mark an entire day as closed |
+| `DELETE` | `/api/salons/:id/closed-days/:date` | Reopen a closed day |
+| `GET` | `/api/admin/closed-days` | Admin: view closed days across all salons |
 | `GET` | `/api/announcements` | Fetch platform announcements |
 | `GET` | `/api/health` | Server health check |
 
@@ -296,7 +305,7 @@ The Admin Control Centre is **not linked from any public page** (by design). Use
 
 **What to explore:**
 - Pending salon approvals with full KYC / PAN / GST documents
-- Active salons with commission status and payout details
+- Active salons with commission status, payout details, and **upcoming closed days per salon**
 - User management with block/unblock controls
 - Encrypted messaging and platform announcements
 - Commission verification panel
@@ -328,7 +337,7 @@ The Admin Control Centre is **not linked from any public page** (by design). Use
 | **Email** | `luxurysalonadmin@test.com` |
 | **Password** | `salon@admin-test789` |
 
-**What to explore:** Appointments · Staff management · Services & pricing · Walk-in blocking · Commission Dues tab · Encrypted messages · Payout settings
+**What to explore:** Appointments · Staff management · Services & pricing · Walk-in slot blocking · **Closed Days** (Manage Slots tab → Close Entire Day) · Commission Dues tab · Encrypted messages · Payout settings
 
 ---
 
