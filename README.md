@@ -396,6 +396,5 @@ This repository is publicly available on [GitHub](https://github.com/hariharln28
 
 © 2026 Luxeluru · Built in Bengaluru 🇮🇳
 
-*Made with precision for the Indian luxury market*
 
 </div>
