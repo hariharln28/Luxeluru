@@ -1967,37 +1967,86 @@ export function AdminDashboardPage() {
         </div>
       )}
       {/* Trade License Viewer Modal */}
-      {tradeLicenseModal && (
-        <div
-          className="fixed inset-0 z-[300] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
-          onClick={() => setTradeLicenseModal(null)}
-        >
+      {tradeLicenseModal && (() => {
+        const url = tradeLicenseModal.url;
+        // Detect MIME type from data: URL or extension
+        const mime = url.startsWith('data:')
+          ? url.split(';')[0].split(':')[1]  // e.g. "image/jpeg" or "application/pdf"
+          : url.match(/\.pdf$/i) ? 'application/pdf' : 'image/jpeg';
+        const isImage = mime.startsWith('image/');
+        const isPdf = mime === 'application/pdf';
+
+        // Convert base64 data: URL to a Blob URL for PDFs (mobile iframes block data: URLs)
+        let displayUrl = url;
+        if (isPdf && url.startsWith('data:')) {
+          try {
+            const base64 = url.split(',')[1];
+            const binary = atob(base64);
+            const bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+            displayUrl = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
+          } catch { displayUrl = url; }
+        }
+
+        return (
           <div
-            className="relative w-full max-w-4xl h-[85dvh] rounded-2xl overflow-hidden border border-[#c9a962]/30 bg-[#1a1520] shadow-2xl"
-            onClick={e => e.stopPropagation()}
+            className="fixed inset-0 z-[300] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4"
+            onClick={() => setTradeLicenseModal(null)}
           >
-            <div className="flex items-center justify-between px-5 py-3 border-b border-[#c9a962]/20 bg-[#130f18]">
-              <div>
-                <p className="text-xs text-[#9a8fa8]">Trade Licence Document</p>
-                <p className="font-display text-[#e8d5a3] font-semibold">{tradeLicenseModal.salonName}</p>
+            <div
+              className="relative w-full max-w-4xl h-[85dvh] rounded-2xl overflow-hidden border border-[#c9a962]/30 bg-[#1a1520] shadow-2xl flex flex-col"
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between px-4 py-3 border-b border-[#c9a962]/20 bg-[#130f18] shrink-0">
+                <div>
+                  <p className="text-xs text-[#9a8fa8]">Trade Licence Document</p>
+                  <p className="font-display text-[#e8d5a3] font-semibold text-sm">{tradeLicenseModal.salonName}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  {/* Download button — always works */}
+                  <a
+                    href={url}
+                    download={`trade-license-${tradeLicenseModal.salonName.replace(/\s+/g, '-')}.${isImage ? (mime.split('/')[1] || 'jpg') : 'pdf'}`}
+                    className="luxe-btn-outline px-3 py-1.5 text-xs"
+                    style={{ touchAction: 'manipulation' }}
+                  >
+                    ⬇ Download
+                  </a>
+                  <button
+                    onClick={() => setTradeLicenseModal(null)}
+                    className="luxe-btn-outline px-3 py-1.5 text-sm"
+                    style={{ touchAction: 'manipulation' }}
+                  >
+                    ✕ Close
+                  </button>
+                </div>
               </div>
-              <button
-                onClick={() => setTradeLicenseModal(null)}
-                className="luxe-btn-outline px-3 py-1.5 text-sm"
-                style={{ touchAction: 'manipulation' }}
-              >
-                ✕ Close
-              </button>
+
+              {/* Content */}
+              <div className="flex-1 overflow-auto flex items-center justify-center bg-[#0f0d12]">
+                {isImage ? (
+                  // Images: render as <img> — works on all mobile browsers
+                  <img
+                    src={url}
+                    alt={`Trade licence — ${tradeLicenseModal.salonName}`}
+                    className="max-w-full max-h-full object-contain p-2"
+                  />
+                ) : (
+                  // PDFs: use blob URL in iframe (avoids data: URL CSP block on mobile)
+                  <iframe
+                    src={displayUrl}
+                    title="Trade Licence Document"
+                    className="w-full h-full"
+                    style={{ border: 'none', minHeight: '400px' }}
+                  />
+                )}
+              </div>
             </div>
-            <iframe
-              src={tradeLicenseModal.url}
-              title="Trade Licence Document"
-              className="w-full h-[calc(100%-56px)]"
-              style={{ border: 'none' }}
-            />
           </div>
-        </div>
-      )}
+        );
+      })()}
+
     </div>
   );
 }
