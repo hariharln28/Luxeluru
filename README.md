@@ -278,7 +278,7 @@ npm run preview
 
 ---
 
-## 🏆 For Hackathon Judges
+## 📋 Demo Credentials & Navigation
 
 > **Live Platform:** [https://luxeluru.onrender.com](https://luxeluru.onrender.com)
 >
