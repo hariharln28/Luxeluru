@@ -1862,6 +1862,27 @@ db.connect(MONGODB_URI).then(async () => {
     }
   }
 
+  // ─── Ensure Test Salon LLLUX456 Has Correct Password & Status ──────────────
+  // Idempotent: sets the hashed password, correct name, approved status, and active flag.
+  try {
+    const testSalon = await db.getSalon('LLLUX456');
+    const correctPassword = hashPassword('salon@admin-test789');
+    if (testSalon) {
+      await db.updateSalon('LLLUX456', {
+        name: 'luxury salon admin',
+        password: correctPassword,
+        registrationStatus: 'approved',
+        isActive: true,
+        email: 'luxurysalonadmin@test.com',
+        ownerName: 'Admin Owner',
+      });
+      console.log('[Patch] Test salon LLLUX456 password and status ensured.');
+    }
+  } catch (e) {
+    console.warn('[Patch] Test salon password patch failed:', e.message);
+  }
+
+
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`Luxeluru backend running on http://0.0.0.0:${PORT}`);
     console.log(`Health check: http://localhost:${PORT}/api/health`);
