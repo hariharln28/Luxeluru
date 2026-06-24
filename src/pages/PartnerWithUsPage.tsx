@@ -366,6 +366,9 @@ export function PartnerWithUsPage() {
               <p>
                 <strong>4. Post-Service Logs:</strong> Salons must update payment mode (cash/upi) and customer package changes immediately after each service is completed.
               </p>
+              <p>
+                <strong>5. Cancellation &amp; Refund Policy:</strong> Luxeluru enforces a tiered refund policy for online payments. Salons must honour customer cancellations per the following schedule — <strong className="text-[#e8d5a3]">100% refund</strong> (3+ days before appointment) · <strong className="text-[#e8d5a3]">70% refund</strong> (2 days before) · <strong className="text-[#e8d5a3]">50% refund</strong> (1 day before) · <strong className="text-[#e8d5a3]">30% refund</strong> (same day). No refunds are issued for Pay-at-Salon bookings. Refunds are processed by the platform on behalf of the salon.
+              </p>
             </div>
             <label className="flex items-start gap-3 mt-4 cursor-pointer">
               <input
