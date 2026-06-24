@@ -317,20 +317,20 @@ async function initSqlite() {
   try {
     await sqliteDb.run("ALTER TABLE bookings ADD COLUMN aiStyleRecommendation TEXT");
   } catch (e) { /* already exists */ }
-  try {
-    await sqliteDb.run("ALTER TABLE bookings ADD COLUMN payoutAmount REAL");
-  } catch (e) { /* already exists */ }
-  try {
-    await sqliteDb.run("ALTER TABLE bookings ADD COLUMN payoutStatus TEXT");
-  } catch (e) { /* already exists */ }
+  try { await sqliteDb.run("ALTER TABLE bookings ADD COLUMN payoutAmount REAL"); } catch (e) { /* already exists */ }
+  try { await sqliteDb.run("ALTER TABLE bookings ADD COLUMN payoutStatus TEXT"); } catch (e) { /* already exists */ }
+  try { await sqliteDb.run("ALTER TABLE bookings ADD COLUMN appointmentTaken INTEGER DEFAULT 0"); } catch (e) { /* already exists */ }
+  try { await sqliteDb.run("ALTER TABLE bookings ADD COLUMN paymentVerifiedBySalon INTEGER DEFAULT 0"); } catch (e) { /* already exists */ }
+  try { await sqliteDb.run("ALTER TABLE bookings ADD COLUMN salonNotes TEXT"); } catch (e) { /* already exists */ }
+  try { await sqliteDb.run("ALTER TABLE bookings ADD COLUMN paymentStatus TEXT"); } catch (e) { /* already exists */ }
+  try { await sqliteDb.run("ALTER TABLE bookings ADD COLUMN modifiedServices TEXT"); } catch (e) { /* already exists */ }
+  try { await sqliteDb.run("ALTER TABLE bookings ADD COLUMN modifiedServiceNames TEXT"); } catch (e) { /* already exists */ }
+  try { await sqliteDb.run("ALTER TABLE bookings ADD COLUMN modifiedPrice REAL"); } catch (e) { /* already exists */ }
 
-  // Add missing salon columns for exit status tracking
-  try {
-    await sqliteDb.run("ALTER TABLE salons ADD COLUMN exitRequestStatus TEXT");
-  } catch (e) { /* already exists */ }
-  try {
-    await sqliteDb.run("ALTER TABLE salons ADD COLUMN exitRejectReason TEXT");
-  } catch (e) { /* already exists */ }
+  try { await sqliteDb.run("ALTER TABLE salons ADD COLUMN exitRequestStatus TEXT"); } catch (e) { /* already exists */ }
+  try { await sqliteDb.run("ALTER TABLE salons ADD COLUMN exitRejectReason TEXT"); } catch (e) { /* already exists */ }
+  try { await sqliteDb.run("ALTER TABLE salons ADD COLUMN panCardOwner TEXT"); } catch (e) { /* already exists */ }
+  try { await sqliteDb.run("ALTER TABLE salons ADD COLUMN panCardBusiness TEXT"); } catch (e) { /* already exists */ }
 }
 
 // Helper to convert SQLite row objects back to standard JS objects (parsing JSON strings)
@@ -692,7 +692,7 @@ class DatabaseManager {
 
   // ─── Blocked Slots ───────────────────────
   async getBlockedSlots(salonId) {
-    if (this.mode === 'mongo') {
+    if (this.mode === 'mongodb') {
       const docs = await MongoBlockedSlot.find({ salonId });
       return docs.map(d => d.toObject());
     } else {
@@ -702,7 +702,7 @@ class DatabaseManager {
   }
 
   async addBlockedSlot(slotData) {
-    if (this.mode === 'mongo') {
+    if (this.mode === 'mongodb') {
       const doc = new MongoBlockedSlot(slotData);
       await doc.save();
       return slotData;
@@ -723,7 +723,7 @@ class DatabaseManager {
   }
 
   async removeBlockedSlot(id) {
-    if (this.mode === 'mongo') {
+    if (this.mode === 'mongodb') {
       await MongoBlockedSlot.deleteOne({ id });
     } else {
       await sqliteDb.run('DELETE FROM blocked_slots WHERE id = ?', id);

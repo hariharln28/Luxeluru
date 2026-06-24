@@ -223,6 +223,9 @@ app.post('/api/users/register', async (req, res) => {
   if (!userData.id) {
     return res.status(400).json({ success: false, message: 'User ID is required' });
   }
+  if (!userData.email) {
+    return res.status(400).json({ success: false, message: 'Email is required' });
+  }
 
   const existing = await db.getUser(userData.id);
   if (existing) {
@@ -636,36 +639,38 @@ app.post('/api/admin/login', async (req, res) => {
 
 // User blocking endpoints
 app.post('/api/admin/block-user', async (req, res) => {
-  const { userId, blockedUntil } = req.body;
+  try {
+    const { userId, blockedUntil } = req.body;
+    if (!userId) return res.status(400).json({ success: false, message: 'userId required' });
+    const user = await db.getUser(userId);
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
 
-  // Protect test user from being blocked
-  if (userId === 'usr-admin-test') {
-    return res.status(403).json({ success: false, message: 'This is a protected test account and cannot be blocked.' });
-  }
+    // Protect test user from being blocked
+    if (userId === 'usr-admin-test') {
+      return res.status(403).json({ success: false, message: 'This is a protected test account and cannot be blocked.' });
+    }
 
-  const user = await db.getUser(userId);
-
-  if (user) {
     // Also protect by email (belt-and-suspenders)
-    if (user.email === 'adminuser1@test.com') {
+    if (user.email && user.email === 'adminuser1@test.com') {
       return res.status(403).json({ success: false, message: 'This is a protected test account and cannot be blocked.' });
     }
     await db.updateUser(userId, { blockedUntil });
     res.json({ success: true });
-  } else {
-    res.status(404).json({ success: false, message: 'User not found' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
 });
 
 app.post('/api/admin/unblock-user', async (req, res) => {
-  const { userId } = req.body;
-  const user = await db.getUser(userId);
-
-  if (user) {
+  try {
+    const { userId } = req.body;
+    if (!userId) return res.status(400).json({ success: false, message: 'userId required' });
+    const user = await db.getUser(userId);
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
     await db.updateUser(userId, { blockedUntil: null });
     res.json({ success: true });
-  } else {
-    res.status(404).json({ success: false, message: 'User not found' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
   }
 });
 
@@ -860,6 +865,7 @@ app.post('/api/bookings/:id/reschedule', authenticateJWT, async (req, res) => {
 });
 
 app.post('/api/bookings/:id/update', async (req, res) => {
+  try {
   const { id } = req.params;
   const { paymentMethod, packageId } = req.body;
   
@@ -868,7 +874,7 @@ app.post('/api/bookings/:id/update', async (req, res) => {
     return res.status(404).json({ success: false, message: 'Booking not found' });
   }
 
-  const salon = await db.getSalon(booking.salonId);
+  let salon = await db.getSalon(booking.salonId);
   if (!salon) {
     return res.status(404).json({ success: false, message: 'Salon not found for this booking' });
   }
@@ -921,9 +927,10 @@ app.post('/api/bookings/:id/update', async (req, res) => {
       await db.updateSalon(booking.salonId, {
         commissionDue: Math.max(0, (salon.commissionDue || 0) + commissionDiff)
       });
+      // Refresh salon to get updated commissionDue before second update
+      salon = await db.getSalon(booking.salonId) || salon;
     }
     // Remove any commission that was added at booking time since it's auto-collected now
-    // (booking creation adds to commissionDue; completion reverses it for online payments)
     await db.updateSalon(booking.salonId, {
       commissionDue: Math.max(0, (salon.commissionDue || 0) - newCommission)
     });
@@ -977,6 +984,10 @@ app.post('/api/bookings/:id/update', async (req, res) => {
   }
 
   res.json({ success: true });
+  } catch (err) {
+    console.error('Booking update error:', err);
+    res.status(500).json({ success: false, message: err.message || 'Failed to update booking' });
+  }
 });
 
 app.post('/api/bookings/:id/report-fake', async (req, res) => {
