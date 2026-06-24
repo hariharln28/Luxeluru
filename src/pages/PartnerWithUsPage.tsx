@@ -64,8 +64,13 @@ export function PartnerWithUsPage() {
     setError('');
     setSuccessMsg('');
 
-    if (!ownerName || !salonName || !address || !email || !phone || !phoneOwner || !panCardOwner || !panCardBusiness) {
+    if (!ownerName || !salonName || !address || !email || !phone || !phoneOwner) {
       setError('Please fill in all contact and business details.');
+      return;
+    }
+
+    if (!panCardOwner && !panCardBusiness) {
+      setError('Please provide at least one PAN card — either Owner PAN or Business PAN.');
       return;
     }
 
@@ -317,12 +322,13 @@ export function PartnerWithUsPage() {
               />
             </div>
             <div>
-              <label className="luxe-label">Owner PAN Card Number *</label>
-              <input type="text" value={panCardOwner} onChange={(e) => setPanCardOwner(e.target.value.toUpperCase())} className="luxe-input" placeholder="e.g. ABCDE1234F" maxLength={10} required />
+              <label className="luxe-label">Owner PAN Card Number <span className="text-[#9a8fa8] font-normal text-[11px]">(optional if Business PAN provided)</span></label>
+              <input type="text" value={panCardOwner} onChange={(e) => setPanCardOwner(e.target.value.toUpperCase())} className="luxe-input" placeholder="e.g. ABCDE1234F" maxLength={10} />
             </div>
             <div>
-              <label className="luxe-label">Business PAN Card Number *</label>
-              <input type="text" value={panCardBusiness} onChange={(e) => setPanCardBusiness(e.target.value.toUpperCase())} className="luxe-input" placeholder="e.g. AABCU9603R" maxLength={10} required />
+              <label className="luxe-label">Business PAN Card Number <span className="text-[#9a8fa8] font-normal text-[11px]">(optional if Owner PAN provided)</span></label>
+              <input type="text" value={panCardBusiness} onChange={(e) => setPanCardBusiness(e.target.value.toUpperCase())} className="luxe-input" placeholder="e.g. AABCU9603R" maxLength={10} />
+              <p className="text-[11px] text-[#9a8fa8] mt-1.5">At least one PAN card is required — Owner PAN or Business PAN.</p>
             </div>
           </div>
 

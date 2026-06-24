@@ -393,6 +393,10 @@ app.post('/api/salons/register', async (req, res) => {
     return res.status(400).json({ success: false, message: 'All required fields must be provided: name, address, email, phone, ownerName.' });
   }
 
+  if (!data.panCardOwner && !data.panCardBusiness) {
+    return res.status(400).json({ success: false, message: 'At least one PAN card is required — Owner PAN or Business PAN.' });
+  }
+
   // Use a temporary pending ID — real ID is generated after admin approval
   const tempId = `PENDING-${Date.now()}`;
   
