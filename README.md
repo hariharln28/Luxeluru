@@ -281,11 +281,15 @@ Create `server/.env`:
 
 ```env
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
-MONGODB_URI=your_mongodb_uri               # Optional
+MONGODB_URI=your_mongodb_uri               # Optional — use MongoDB Atlas for persistent storage instead of SQLite
+GITHUB_TOKEN=your_github_pat               # Optional — enables auto-persist of approved salons across Render redeploys
+GITHUB_REPO=hariharln28/Luxeluru          # Required when GITHUB_TOKEN is set (default: hariharln28/Luxeluru)
 PORT=5001
 NODE_ENV=production
 FRONTEND_URL=https://luxeluru.onrender.com
 ```
+
+> **`GITHUB_TOKEN`** — A GitHub Personal Access Token with `repo` write scope. When set, every salon approved by the admin is automatically committed to `server/approvedSalonsData.json` in the repo. On every subsequent Render redeploy, that file is read at startup and all approved salons are restored — no manual steps needed. Generate one at [github.com/settings/tokens](https://github.com/settings/tokens).
 
 ### Build for Production
 
@@ -400,8 +404,9 @@ Luxeluru is deployed as a **monorepo on Render**:
 - **Render free tier cold start** — first request after inactivity may take 30–60 seconds
 - **In-memory rate limiting** — resets on server restart; production would use Redis-backed rate limiting
 - **Trade license storage** — Uploaded as base64 `data:` URLs in SQLite; production would use cloud object storage (S3/GCS) for large files
-- **SQLite on Render** — Test salon (`LLLUX456`) and test user (`adminuser1@test.com`) are auto-created on every server startup, so credentials always work even after a fresh deploy with an empty database
-- **Approved partner salon persistence** — Add approved salons to the `SEED_SALONS` environment variable in the Render dashboard to make them survive redeploys. Format: `[{"id":"LLXXX123","name":"Salon","email":"e@mail.com","password":"pass","ownerName":"Owner"}]`
+- **SQLite on Render** — Test salon (`LLLUX456`) and test user (`adminuser1@test.com`) are auto-created on every server startup. They are completely isolated and never interfere with real salon registrations, logins, or demo seeding
+- **Approved partner salon persistence** — When admin approves a salon, the server automatically commits its data to `server/approvedSalonsData.json` via the GitHub API (requires `GITHUB_TOKEN` env var). On every future Render redeploy, this file is read at startup and all approved salons are restored — zero manual steps needed
+- **Demo salon seeding** — 15 demo salons are auto-seeded on first page load. Each salon is checked individually by ID, so test or approved salons already in the DB are never overwritten or duplicated
 
 ---
 
