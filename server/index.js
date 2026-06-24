@@ -352,6 +352,30 @@ app.post('/api/users/register', async (req, res) => {
   }
 });
 
+// Backend user login — fallback for users without Supabase accounts (e.g. test user)
+app.post('/api/users/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) return res.status(400).json({ success: false, message: 'Email and password are required.' });
+
+    const users = await db.getUsers();
+    const found = users.find(u =>
+      u.email.toLowerCase().trim() === email.toLowerCase().trim() &&
+      u.password &&
+      (u.password === password || u.password === hashPassword(password))
+    );
+
+    if (!found) {
+      return res.status(401).json({ success: false, message: 'Invalid email or password.' });
+    }
+
+    const { password: _pw, ...safeUser } = found;
+    res.json({ success: true, user: safeUser });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 app.post('/api/users/:id/update', authenticateJWT, async (req, res) => {
   try {
   const { id } = req.params;
@@ -1882,6 +1906,31 @@ db.connect(MONGODB_URI).then(async () => {
     console.warn('[Patch] Test salon password patch failed:', e.message);
   }
 
+
+  // ─── Ensure Test User Exists in DB ─────────────────────────────────────────
+  // Seeds adminuser1@test.com with hashed password so backend login works without Supabase.
+  try {
+    const testUserId = 'usr-admin-test';
+    const existingUser = await db.getUser(testUserId);
+    const correctUserPassword = hashPassword('user@admin-test789');
+    if (!existingUser) {
+      await db.createUser({
+        id: testUserId,
+        name: 'Admin Test User',
+        email: 'adminuser1@test.com',
+        phone: '+919999999999',
+        password: correctUserPassword,
+        createdAt: new Date().toISOString(),
+        preferredLanguage: 'en',
+      });
+      console.log('[Patch] Test user adminuser1@test.com created in DB.');
+    } else if (existingUser.password !== correctUserPassword) {
+      await db.updateUser(testUserId, { password: correctUserPassword });
+      console.log('[Patch] Test user password updated.');
+    }
+  } catch (e) {
+    console.warn('[Patch] Test user seed failed:', e.message);
+  }
 
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`Luxeluru backend running on http://0.0.0.0:${PORT}`);

@@ -564,6 +564,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
         if (error.message.includes('Email not confirmed') || error.message.includes('email_not_confirmed')) {
           addToast('error', 'Please verify your email before signing in. Check your inbox (and spam folder) for the confirmation link.');
         } else if (error.message.includes('Invalid login credentials') || error.message.includes('invalid_credentials')) {
+          // ── Backend fallback: try our own DB login (for test user / non-Supabase users) ──
+          try {
+            const backendRes = await fetch('/api/users/login', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email, password }),
+            });
+            const backendData = await backendRes.json();
+            if (backendRes.ok && backendData.success && backendData.user) {
+              setUser(backendData.user);
+              addToast('success', 'Logged in successfully!');
+              return true;
+            }
+          } catch {
+            // backend also unreachable — fall through to error
+          }
           addToast('error', 'Invalid email or password. Please check your credentials and try again.');
         } else if (error.message.includes('rate limit') || error.status === 429) {
           addToast('error', 'Too many login attempts. Please wait a minute and try again.');
