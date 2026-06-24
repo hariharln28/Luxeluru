@@ -479,27 +479,29 @@ export function AdminDashboardPage() {
                           <p className="flex items-center gap-1.5 text-[#e8d5a3]">
                             <FileText className="h-4 w-4 text-[#c9a962]" />
                             <span>Trade License: </span>
-                            {s.tradeLicenseUrl && s.tradeLicenseUrl.startsWith('data:') ? (
-                              <a
-                                href={s.tradeLicenseUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-[#c9a962] underline hover:text-[#e8d5a3] font-semibold"
-                              >
-                                📄 View Document
-                              </a>
-                            ) : s.tradeLicenseUrl && (s.tradeLicenseUrl.startsWith('http') || s.tradeLicenseUrl.startsWith('blob')) ? (
-                              <a
-                                href={s.tradeLicenseUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-[#c9a962] underline hover:text-[#e8d5a3] font-semibold"
-                              >
-                                📄 View Document
-                              </a>
-                            ) : (
-                              <strong>{s.tradeLicenseUrl || 'N/A'}</strong>
-                            )}
+                            <button
+                              onClick={async () => {
+                                try {
+                                  const res = await fetch(`/api/admin/salons/${s.id}/trade-license`);
+                                  const data = await res.json();
+                                  if (!data.tradeLicenseUrl) {
+                                    addToast('info', 'No trade license uploaded for this salon.');
+                                    return;
+                                  }
+                                  if (data.tradeLicenseUrl.startsWith('data:')) {
+                                    setTradeLicenseModal({ url: data.tradeLicenseUrl, salonName: s.name });
+                                  } else {
+                                    window.open(data.tradeLicenseUrl, '_blank', 'noopener,noreferrer');
+                                  }
+                                } catch {
+                                  addToast('error', 'Failed to load trade license. Try again.');
+                                }
+                              }}
+                              className="text-[#c9a962] underline hover:text-[#e8d5a3] font-semibold text-xs"
+                              style={{ touchAction: 'manipulation' }}
+                            >
+                              📄 View Document
+                            </button>
                           </p>
                         </div>
                       </div>
@@ -507,14 +509,28 @@ export function AdminDashboardPage() {
 
                     <div className="mt-4 flex gap-3">
                       <button
-                        onClick={() => approveSalon(s.id)}
-                        className="flex-1 flex items-center justify-center gap-1.5 luxe-btn py-2 text-xs"
+                        onClick={async () => {
+                          const btn = document.getElementById(`approve-${s.id}`);
+                          if (btn) btn.setAttribute('disabled', 'true');
+                          await approveSalon(s.id);
+                          if (btn) btn.removeAttribute('disabled');
+                        }}
+                        id={`approve-${s.id}`}
+                        className="flex-1 flex items-center justify-center gap-1.5 luxe-btn py-2 text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                        style={{ touchAction: 'manipulation' }}
                       >
                         <CheckCircle className="h-4 w-4" /> Approve & Activate
                       </button>
                       <button
-                        onClick={() => rejectSalon(s.id)}
-                        className="flex-1 flex items-center justify-center gap-1.5 luxe-btn-outline border-red-500/30 text-red-400 hover:bg-red-500/10 py-2 text-xs"
+                        onClick={async () => {
+                          const btn = document.getElementById(`reject-${s.id}`);
+                          if (btn) btn.setAttribute('disabled', 'true');
+                          await rejectSalon(s.id);
+                          if (btn) btn.removeAttribute('disabled');
+                        }}
+                        id={`reject-${s.id}`}
+                        className="flex-1 flex items-center justify-center gap-1.5 luxe-btn-outline border-red-500/30 text-red-400 hover:bg-red-500/10 py-2 text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                        style={{ touchAction: 'manipulation' }}
                       >
                         <XCircle className="h-4 w-4" /> Reject Request
                       </button>
