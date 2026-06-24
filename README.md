@@ -394,7 +394,7 @@ This repository is publicly available on [GitHub](https://github.com/hariharln28
 
 <div align="center">
 
-© 2026 Luxeluru · Built in Bengaluru 🇮🇳
+© 2026 Luxeluru
 
 
 </div>
