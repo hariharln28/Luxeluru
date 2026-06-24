@@ -5,7 +5,7 @@ import { useApp } from '../context/AppContext';
 import { api } from '../services/api';
 
 export function PartnerWithUsPage() {
-  const { salonRegister, salonExit, salons, addToast, sendDirectMessage, messages } = useApp();
+  const { salonRegister, salonExit, salons, addToast, sendDirectMessage, fetchStatusMessages } = useApp();
 
   const [searchParams, setSearchParams] = useSearchParams();
   const tabParam = searchParams.get('tab');
@@ -58,6 +58,11 @@ export function PartnerWithUsPage() {
   const [exitReplyMsg, setExitReplyMsg] = useState('');
   const [exitReplySending, setExitReplySending] = useState(false);
 
+  // Rejection appeal messaging state
+  const [appealMessages, setAppealMessages] = useState<any[]>([]);
+  const [appealMsg, setAppealMsg] = useState('');
+  const [appealSending, setAppealSending] = useState(false);
+  const [appealLoading, setAppealLoading] = useState(false);
 
   async function handleRegisterSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -196,6 +201,13 @@ export function PartnerWithUsPage() {
       }
       const salon = await res.json();
       setStatusResult(salon);
+      // If rejected, also load appeal messages
+      if (salon.registrationStatus === 'rejected' && salon.id) {
+        setAppealLoading(true);
+        const msgs = await fetchStatusMessages(salon.id);
+        setAppealMessages(msgs);
+        setAppealLoading(false);
+      }
     } catch {
       setError('Network error — please check your connection and try again.');
     }
@@ -552,11 +564,99 @@ export function PartnerWithUsPage() {
                 )}
 
                 {statusResult.registrationStatus === 'rejected' && !statusResult.exitRequestStatus && (
-                  <div className="mt-4 p-4 bg-red-500/10 rounded-lg text-red-200 text-xs leading-relaxed border border-red-500/20">
-                    <strong>❌ Application Inactive:</strong> This application has been rejected or the salon has opted to exit the platform.
-                    {statusResult.exitReason && (
-                      <p className="mt-2"><strong>Deregistration Reason:</strong> {statusResult.exitReason}</p>
-                    )}
+                  <div className="mt-4 space-y-4">
+                    {/* Rejection notice */}
+                    <div className="p-4 bg-red-500/10 rounded-lg text-red-200 text-xs leading-relaxed border border-red-500/20">
+                      <strong>❌ Application Rejected:</strong> Your salon registration was not approved by the admin.
+                      {statusResult.exitReason && (
+                        <p className="mt-2"><strong>Reason:</strong> {statusResult.exitReason}</p>
+                      )}
+                      <p className="mt-2 text-red-300/70">You may appeal by sending a message below. The platform team will review and respond.</p>
+                    </div>
+
+                    {/* Appeal messaging panel */}
+                    <div className="rounded-xl border border-[#c9a962]/20 bg-[#130f18]/60 p-4 space-y-3">
+                      <p className="text-xs font-semibold text-[#e8d5a3] flex items-center gap-1.5">
+                        <MessageSquare className="h-3.5 w-3.5 text-[#c9a962]" /> Appeal / Message Admin
+                        <span className="ml-auto text-[9px] bg-[#c9a962]/10 text-[#9a8fa8] px-2 py-0.5 rounded-full">🔒 Encrypted</span>
+                      </p>
+
+                      {/* Message thread */}
+                      <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
+                        {appealLoading ? (
+                          <div className="flex items-center justify-center py-6">
+                            <Loader2 className="h-4 w-4 animate-spin text-[#c9a962]" />
+                          </div>
+                        ) : appealMessages.length === 0 ? (
+                          <p className="text-center text-[11px] text-[#9a8fa8] py-4">No messages yet. Send your first appeal below.</p>
+                        ) : (
+                          appealMessages.map(m => (
+                            <div key={m.id} className={`flex ${m.sender === 'admin' ? 'justify-start' : 'justify-end'}`}>
+                              <div className={`max-w-[85%] rounded-xl px-3 py-2 text-xs leading-relaxed ${
+                                m.sender === 'admin'
+                                  ? 'bg-[#221c28] border border-[#c9a962]/15 text-[#e8d5a3]'
+                                  : 'bg-[#c9a962] text-[#0f0d12]'
+                              }`}>
+                                <p className="font-semibold text-[9px] mb-0.5 opacity-60">
+                                  {m.sender === 'admin' ? 'Admin' : 'You'} · {new Date(m.createdAt).toLocaleString('en-IN', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' })}
+                                </p>
+                                {m.decryptedContent || m.encryptedContent}
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+
+                      {/* Send message form */}
+                      <form
+                        onSubmit={async (e) => {
+                          e.preventDefault();
+                          if (!appealMsg.trim() || appealSending) return;
+                          setAppealSending(true);
+                          try {
+                            const ok = await sendDirectMessage(statusResult.id, appealMsg.trim(), 'salon', 'rejection-appeal');
+                            if (ok) {
+                              // Also POST directly via unauthenticated appeal endpoint
+                              setAppealMessages(prev => [...prev, {
+                                id: `local-${Date.now()}`,
+                                salonId: statusResult.id,
+                                sender: 'salon',
+                                encryptedContent: '',
+                                decryptedContent: appealMsg.trim(),
+                                context: 'rejection-appeal',
+                                createdAt: new Date().toISOString(),
+                                isRead: false,
+                              }]);
+                              setAppealMsg('');
+                              addToast('success', 'Appeal sent to admin.');
+                            } else {
+                              addToast('error', 'Failed to send appeal. Try again.');
+                            }
+                          } finally {
+                            setAppealSending(false);
+                          }
+                        }}
+                        className="flex gap-2"
+                      >
+                        <input
+                          value={appealMsg}
+                          onChange={e => setAppealMsg(e.target.value)}
+                          placeholder="Type your appeal message to admin..."
+                          className="luxe-input flex-1 text-sm"
+                          style={{ fontSize: 16 }}
+                          disabled={appealSending}
+                        />
+                        <button
+                          type="submit"
+                          disabled={!appealMsg.trim() || appealSending}
+                          className="luxe-btn px-4 disabled:opacity-50 flex items-center gap-1.5"
+                          style={{ touchAction: 'manipulation', minHeight: 44 }}
+                        >
+                          {appealSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                        </button>
+                      </form>
+                      <p className="text-[10px] text-[#9a8fa8]">💡 Use your registered email to check this page again to see admin replies.</p>
+                    </div>
                   </div>
                 )}
 

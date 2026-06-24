@@ -1624,6 +1624,48 @@ export function AdminDashboardPage() {
                     );
                   })}
                 </div>
+
+                {/* Rejection Appeals — rejected salons who sent appeal messages */}
+                {(() => {
+                  const rejectedWithAppeals = salons.filter(s =>
+                    s.registrationStatus === 'rejected' &&
+                    messages.some(m => m.salonId === s.id && m.context === 'rejection-appeal')
+                  );
+                  if (rejectedWithAppeals.length === 0) return null;
+                  return (
+                    <div className="mt-4">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-red-400/70 mb-2 px-1">⚠ Rejection Appeals</p>
+                      <div className="space-y-2">
+                        {rejectedWithAppeals.map(s => {
+                          const unread = messages.filter(m => m.salonId === s.id && m.context === 'rejection-appeal' && m.sender === 'salon' && !m.isRead).length;
+                          return (
+                            <button
+                              key={`appeal-${s.id}`}
+                              onClick={() => { setSelectedSalonId(s.id); fetchMessages(s.id); }}
+                              className={`w-full flex items-center gap-3 rounded-xl p-3 text-left transition ${
+                                selectedSalonId === s.id
+                                  ? 'bg-red-500/10 border border-red-500/30'
+                                  : 'hover:bg-[#221c28] border border-red-500/10'
+                              }`}
+                              style={{ touchAction: 'manipulation' }}
+                            >
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-[#e8d5a3] truncate">{s.name}</p>
+                                <p className="text-[11px] text-red-400/70">Rejected — Appealing</p>
+                              </div>
+                              {unread > 0 && (
+                                <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white">
+                                  {unread}
+                                </span>
+                              )}
+                              <ChevronRight className="h-4 w-4 text-[#9a8fa8] shrink-0" />
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
 
               {/* Chat panel */}

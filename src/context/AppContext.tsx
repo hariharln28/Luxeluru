@@ -103,8 +103,9 @@ interface AppContextType {
   // Messaging
   messages: Message[];
   announcements: Announcement[];
-  sendDirectMessage: (salonId: string, plaintext: string, sender: 'admin' | 'salon', context?: 'direct' | 'exit-dispute') => Promise<boolean>;
+  sendDirectMessage: (salonId: string, plaintext: string, sender: 'admin' | 'salon', context?: 'direct' | 'exit-dispute' | 'rejection-appeal') => Promise<boolean>;
   fetchMessages: (salonId: string) => Promise<void>;
+  fetchStatusMessages: (salonId: string) => Promise<Message[]>;
   createAnnouncement: (title: string, content: string) => Promise<boolean>;
   markAnnouncementRead: (id: string) => Promise<void>;
 }
@@ -950,11 +951,33 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const fetchStatusMessages = useCallback(async (salonId: string): Promise<Message[]> => {
+    try {
+      const res = await fetch(`/api/salons/${salonId}/status-messages`);
+      if (!res.ok) return [];
+      const data: Message[] = await res.json();
+      // Decrypt messages
+      const decrypted = await Promise.all(
+        data.map(async (m) => {
+          try {
+            const plain = await decryptMessage(m.encryptedContent, salonId);
+            return { ...m, decryptedContent: plain };
+          } catch {
+            return { ...m, decryptedContent: m.encryptedContent };
+          }
+        })
+      );
+      return decrypted;
+    } catch {
+      return [];
+    }
+  }, []);
+
   const sendDirectMessage = useCallback(async (
     salonId: string,
     plaintext: string,
     sender: 'admin' | 'salon',
-    context: 'direct' | 'exit-dispute' = 'direct'
+    context: 'direct' | 'exit-dispute' | 'rejection-appeal' = 'direct'
   ): Promise<boolean> => {
     try {
       const encrypted = await encryptMessage(plaintext, salonId);
@@ -1918,6 +1941,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         announcements,
         sendDirectMessage,
         fetchMessages,
+        fetchStatusMessages,
         createAnnouncement,
         markAnnouncementRead,
       }}

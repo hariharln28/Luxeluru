@@ -224,6 +224,55 @@ app.get('/api/salons/:id', async (req, res) => {
   }
 });
 
+// Public: fetch rejection-appeal messages for a salon (no auth needed — used on status check page)
+app.get('/api/salons/:id/status-messages', async (req, res) => {
+  try {
+    const msgs = await db.getMessages(req.params.id);
+    const appealMsgs = msgs.filter(m => m.context === 'rejection-appeal');
+    res.json(appealMsgs);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Public: rejected salon sends appeal message to admin (no auth — identified by salonId + email)
+app.post('/api/salons/:id/rejection-appeal', async (req, res) => {
+  try {
+    const { email, encryptedContent } = req.body;
+    if (!email || !encryptedContent) {
+      return res.status(400).json({ error: 'email and encryptedContent are required' });
+    }
+    // Verify the email matches this salon
+    const salon = await db.getSalon(req.params.id);
+    if (!salon) return res.status(404).json({ error: 'Salon not found' });
+    if (salon.email.toLowerCase().trim() !== email.toLowerCase().trim()) {
+      return res.status(403).json({ error: 'Email does not match salon record' });
+    }
+    const message = {
+      id: `appeal-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      salonId: req.params.id,
+      sender: 'salon',
+      encryptedContent,
+      context: 'rejection-appeal',
+      createdAt: new Date().toISOString(),
+      isRead: false,
+    };
+    await db.createMessage(message);
+    // Notify admin
+    await db.createNotification({
+      id: `notif-appeal-${message.id}`,
+      target: 'admin',
+      type: 'appeal',
+      message: `📩 ${salon.name} has sent an appeal message regarding their rejected application.`,
+      createdAt: new Date().toISOString(),
+      read: false,
+    });
+    res.json({ success: true, message });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.get('/api/bookings', async (req, res) => {
   try {
     const bookings = await db.getBookings();
