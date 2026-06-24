@@ -38,6 +38,21 @@ export interface Package {
   savings: number;
 }
 
+export interface BankDetail {
+  id: string;
+  accountHolderName: string;
+  accountNumber: string;
+  ifscCode: string;
+  bankName: string;
+  accountType: 'savings' | 'current';
+}
+
+export interface UpiDetail {
+  id: string;
+  upiId: string;
+  holderName: string;
+}
+
 export interface Salon {
   id: string;
   name: string;
@@ -71,6 +86,8 @@ export interface Salon {
   panCardBusiness?: string;
   exitRequestStatus?: 'pending' | 'approved' | 'rejected';
   exitRejectReason?: string;
+  bankDetails?: BankDetail[];
+  upiDetails?: UpiDetail[];
 }
 
 export interface User {
@@ -131,7 +148,10 @@ export interface Booking {
   customMessage?: string;
   aiStyleRecommendation?: StyleRecommendation;
   payoutAmount?: number;
-  payoutStatus?: 'pending' | 'paid' | 'pay-at-salon';
+  payoutStatus?: 'pending' | 'paid' | 'pay-at-salon' | 'queued' | 'failed';
+  payoutReference?: string;
+  payoutMethod?: 'upi' | 'neft' | 'imps' | 'simulated';
+  payoutInitiatedAt?: string;
 }
 
 export interface BlockedSlot {

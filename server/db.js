@@ -71,7 +71,9 @@ function initMongoModels() {
     commissionPaidUntil: { type: String },
     exitReason: { type: String },
     exitRequestStatus: { type: String },
-    exitRejectReason: { type: String }
+    exitRejectReason: { type: String },
+    bankDetails: { type: mongoose.Schema.Types.Mixed, default: [] },
+    upiDetails: { type: mongoose.Schema.Types.Mixed, default: [] }
   });
 
   const bookingSchema = new mongoose.Schema({
@@ -331,6 +333,11 @@ async function initSqlite() {
   try { await sqliteDb.run("ALTER TABLE salons ADD COLUMN exitRejectReason TEXT"); } catch (e) { /* already exists */ }
   try { await sqliteDb.run("ALTER TABLE salons ADD COLUMN panCardOwner TEXT"); } catch (e) { /* already exists */ }
   try { await sqliteDb.run("ALTER TABLE salons ADD COLUMN panCardBusiness TEXT"); } catch (e) { /* already exists */ }
+  try { await sqliteDb.run("ALTER TABLE salons ADD COLUMN bankDetails TEXT"); } catch (e) { /* already exists */ }
+  try { await sqliteDb.run("ALTER TABLE salons ADD COLUMN upiDetails TEXT"); } catch (e) { /* already exists */ }
+  try { await sqliteDb.run("ALTER TABLE bookings ADD COLUMN payoutReference TEXT"); } catch (e) { /* already exists */ }
+  try { await sqliteDb.run("ALTER TABLE bookings ADD COLUMN payoutMethod TEXT"); } catch (e) { /* already exists */ }
+  try { await sqliteDb.run("ALTER TABLE bookings ADD COLUMN payoutInitiatedAt TEXT"); } catch (e) { /* already exists */ }
 }
 
 // Helper to convert SQLite row objects back to standard JS objects (parsing JSON strings)
@@ -348,7 +355,9 @@ function mapSqlSalon(s) {
     categories: s.categories ? JSON.parse(s.categories) : [],
     services: s.services ? JSON.parse(s.services) : [],
     packages: s.packages ? JSON.parse(s.packages) : [],
-    staff: s.staff ? JSON.parse(s.staff) : []
+    staff: s.staff ? JSON.parse(s.staff) : [],
+    bankDetails: s.bankDetails ? JSON.parse(s.bankDetails) : [],
+    upiDetails: s.upiDetails ? JSON.parse(s.upiDetails) : []
   };
 }
 
@@ -490,8 +499,8 @@ class DatabaseManager {
         `INSERT INTO salons (id, name, tagline, area, address, lat, lng, rating, reviewCount, categories,
          image, openHours, phone, email, services, packages, staff, featured, password, isActive,
          registrationStatus, ownerName, phoneOwner, tradeLicenseUrl, registeredAt, commissionDue,
-         commissionPaidUntil, exitReason, panCardOwner, panCardBusiness)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         commissionPaidUntil, exitReason, panCardOwner, panCardBusiness, bankDetails, upiDetails)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         salonData.id,
         salonData.name,
         salonData.tagline || null,
@@ -521,7 +530,9 @@ class DatabaseManager {
         salonData.commissionPaidUntil || null,
         salonData.exitReason || null,
         salonData.panCardOwner || null,
-        salonData.panCardBusiness || null
+        salonData.panCardBusiness || null,
+        JSON.stringify(salonData.bankDetails || []),
+        JSON.stringify(salonData.upiDetails || [])
       );
       return salonData;
     }

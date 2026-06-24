@@ -611,6 +611,47 @@ app.post('/api/salons/:id/update-staff', async (req, res) => {
   }
 });
 
+app.post('/api/salons/:id/update-payout-details', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { bankDetails, upiDetails } = req.body;
+    const salon = await db.getSalon(id);
+    if (!salon) return res.status(404).json({ success: false, message: 'Salon not found' });
+
+    if (bankDetails !== undefined) {
+      if (!Array.isArray(bankDetails) || bankDetails.length > 2)
+        return res.status(400).json({ success: false, message: 'Maximum 2 bank accounts allowed.' });
+      for (const b of bankDetails) {
+        if (!b.accountHolderName || !b.accountNumber || !b.ifscCode || !b.bankName)
+          return res.status(400).json({ success: false, message: 'All bank detail fields are required.' });
+        if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test((b.ifscCode || '').toUpperCase()))
+          return res.status(400).json({ success: false, message: `Invalid IFSC code: ${b.ifscCode}` });
+        if (!/^\d{9,18}$/.test((b.accountNumber || '').replace(/\s/g, '')))
+          return res.status(400).json({ success: false, message: 'Account number must be 9–18 digits.' });
+      }
+    }
+
+    if (upiDetails !== undefined) {
+      if (!Array.isArray(upiDetails) || upiDetails.length > 2)
+        return res.status(400).json({ success: false, message: 'Maximum 2 UPI IDs allowed.' });
+      for (const u of upiDetails) {
+        if (!u.upiId || !u.holderName)
+          return res.status(400).json({ success: false, message: 'UPI ID and holder name are required.' });
+        if (!/^[\w.\-]+@[\w.\-]+$/.test(u.upiId))
+          return res.status(400).json({ success: false, message: `Invalid UPI ID format: ${u.upiId}` });
+      }
+    }
+
+    const updates = {};
+    if (bankDetails !== undefined) updates.bankDetails = bankDetails;
+    if (upiDetails !== undefined) updates.upiDetails = upiDetails;
+    await db.updateSalon(id, updates);
+    res.json({ success: true, message: 'Payment details updated successfully.' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 app.post('/api/salons/:id/pay-commission', async (req, res) => {
   const { id } = req.params;
   const salon = await db.getSalon(id);
@@ -908,6 +949,22 @@ app.post('/api/bookings/:id/update', async (req, res) => {
     || booking.paymentMethod === 'card'
     || booking.paymentMethod === 'upi';
 
+  // ─── Simulate payout processing ─────────────────────────────
+  const payoutReference = `PAY${Date.now().toString(36).toUpperCase()}${Math.random().toString(36).slice(2,6).toUpperCase()}`;
+  const payoutInitiatedAt = new Date().toISOString();
+
+  // Determine payout method: UPI first, then bank (NEFT), then simulated
+  let payoutMethod = 'simulated';
+  let payoutDestination = 'Platform Wallet';
+  if (salon.upiDetails && salon.upiDetails.length > 0) {
+    payoutMethod = 'upi';
+    payoutDestination = salon.upiDetails[0].upiId;
+  } else if (salon.bankDetails && salon.bankDetails.length > 0) {
+    payoutMethod = 'neft';
+    const bank = salon.bankDetails[0];
+    payoutDestination = `${bank.bankName} ••••${bank.accountNumber.slice(-4)}`;
+  }
+
   // Update booking with completion details and payout info
   await db.updateBooking(id, {
     status: 'completed',
@@ -921,7 +978,10 @@ app.post('/api/bookings/:id/update', async (req, res) => {
     commissionAmount: newCommission,
     commissionPaid: isOnlinePayment,
     payoutAmount,
-    payoutStatus: isOnlinePayment ? 'paid' : 'pay-at-salon'
+    payoutStatus: isOnlinePayment ? 'paid' : 'pay-at-salon',
+    payoutReference,
+    payoutMethod,
+    payoutInitiatedAt
   });
 
   if (isOnlinePayment) {
@@ -939,12 +999,13 @@ app.post('/api/bookings/:id/update', async (req, res) => {
       commissionDue: Math.max(0, (salon.commissionDue || 0) - newCommission)
     });
 
-    // Notify salon of payout
+    // Notify salon of payout — rich detail
+    const methodLabel = payoutMethod === 'upi' ? `UPI (${payoutDestination})` : payoutMethod === 'neft' ? `NEFT — ${payoutDestination}` : 'Platform Wallet';
     await db.createNotification({
       id: `notif-payout-salon-${id}-${Date.now()}`,
       target: booking.salonId,
       type: 'payout',
-      message: `✅ Payout of ₹${payoutAmount.toLocaleString('en-IN')} has been sent to your account for Appointment #${id}. (Bill: ₹${finalPrice.toLocaleString('en-IN')} − 3% commission ₹${newCommission.toLocaleString('en-IN')} = Net ₹${payoutAmount.toLocaleString('en-IN')})`,
+      message: `✅ Payout of ₹${payoutAmount.toLocaleString('en-IN')} initiated via ${methodLabel} for Appointment #${id}. Bill: ₹${finalPrice.toLocaleString('en-IN')} − Commission (3%) ₹${newCommission.toLocaleString('en-IN')} = Net ₹${payoutAmount.toLocaleString('en-IN')} | Ref: ${payoutReference}`,
       createdAt: new Date().toISOString(),
       read: false
     });
@@ -954,7 +1015,7 @@ app.post('/api/bookings/:id/update', async (req, res) => {
       id: `notif-payout-admin-${id}-${Date.now()}`,
       target: 'admin',
       type: 'payout',
-      message: `💰 Payout of ₹${payoutAmount.toLocaleString('en-IN')} sent to salon "${salon.name}" for Appointment #${id}. (Bill: ₹${finalPrice.toLocaleString('en-IN')} − 3% commission ₹${newCommission.toLocaleString('en-IN')} = Net ₹${payoutAmount.toLocaleString('en-IN')} retained by platform)`,
+      message: `💰 Payout ₹${payoutAmount.toLocaleString('en-IN')} → "${salon.name}" via ${methodLabel}. Appointment #${id} | Commission retained: ₹${newCommission.toLocaleString('en-IN')} | Ref: ${payoutReference}`,
       createdAt: new Date().toISOString(),
       read: false
     });

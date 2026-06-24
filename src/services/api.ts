@@ -176,6 +176,12 @@ export const api = {
       body: JSON.stringify({ staff }),
     }),
 
+  updateSalonPayoutDetails: (id: string, data: { bankDetails?: any[]; upiDetails?: any[] }) =>
+    request<{ success: boolean; message: string }>(`/api/salons/${id}/update-payout-details`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+
   paySalonCommission: (id: string) =>
     request<{ success: boolean }>(`/api/salons/${id}/pay-commission`, {
       method: 'POST',

@@ -663,6 +663,43 @@ export function AdminDashboardPage() {
                           <span className="italic text-[#9a8fa8] opacity-60">No document uploaded</span>
                         )}
 
+                        {/* Payout Details — Read-only */}
+                        <div className="mt-3 pt-3 border-t border-[#c9a962]/10 space-y-2">
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-[#c9a962] mb-1">Payout Details (Read-only)</p>
+                          {/* UPI IDs */}
+                          {s.upiDetails && s.upiDetails.length > 0 ? (
+                            <div className="space-y-1.5">
+                              <p className="text-[10px] text-[#9a8fa8] uppercase tracking-wide">UPI IDs</p>
+                              {s.upiDetails.map((u: any, i: number) => (
+                                <div key={u.id || i} className="flex items-center gap-2 rounded-lg bg-[#0f0d12]/60 px-3 py-2 border border-[#c9a962]/10">
+                                  <span className="text-[10px]">📱</span>
+                                  <div>
+                                    <p className="text-xs font-mono text-[#e8d5a3]">{u.upiId}</p>
+                                    <p className="text-[10px] text-[#9a8fa8]">{u.holderName}</p>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-xs text-[#9a8fa8] italic">No UPI IDs configured</p>
+                          )}
+                          {/* Bank Accounts */}
+                          {s.bankDetails && s.bankDetails.length > 0 ? (
+                            <div className="space-y-1.5 mt-2">
+                              <p className="text-[10px] text-[#9a8fa8] uppercase tracking-wide">Bank Accounts</p>
+                              {s.bankDetails.map((b: any, i: number) => (
+                                <div key={b.id || i} className="rounded-lg bg-[#0f0d12]/60 px-3 py-2 border border-[#c9a962]/10">
+                                  <p className="text-xs font-medium text-[#e8d5a3]">{b.bankName} — {b.accountType}</p>
+                                  <p className="text-[10px] text-[#9a8fa8]">{b.accountHolderName}</p>
+                                  <p className="text-[10px] font-mono text-[#c9a962]">••••{b.accountNumber?.slice(-4)} · IFSC: {b.ifscCode}</p>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-xs text-[#9a8fa8] italic">No bank accounts configured</p>
+                          )}
+                        </div>
+
                         <div className="mt-3 pt-3 border-t border-[#c9a962]/10">
                           <p className="text-[10px] font-bold uppercase tracking-wider text-[#c9a962] mb-1">Actions</p>
                           {s.id === 'LLLUX456' ? (

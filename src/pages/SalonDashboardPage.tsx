@@ -27,7 +27,15 @@ import {
   Bell,
   MessageSquare,
   Send,
-  Megaphone
+  Megaphone,
+  Settings,
+  Banknote,
+  Smartphone,
+  Plus,
+  Save,
+  Trash2 as TrashIcon,
+  ShieldCheck,
+  BadgeCheck
 } from 'lucide-react';
 import type { PaymentMethod } from '../types';
 import { CheckoutModal } from '../components/CheckoutModal';
@@ -71,7 +79,7 @@ export function SalonDashboardPage() {
   const navigate = useNavigate();
   
   // Dashboard Tabs
-  const [activeTab, setActiveTab] = useState<'appointments' | 'slots' | 'insights' | 'location' | 'team' | 'notifications' | 'messages'>('appointments');
+  const [activeTab, setActiveTab] = useState<'appointments' | 'slots' | 'insights' | 'location' | 'team' | 'notifications' | 'messages' | 'settings'>('appointments');
   const [activeSubTab, setActiveSubTab] = useState<'chat' | 'announcements'>('chat');
   const [msgInput, setMsgInput] = useState('');
   const [msgSending, setMsgSending] = useState(false);
@@ -85,6 +93,16 @@ export function SalonDashboardPage() {
   const [blockReason, setBlockReason] = useState('');
   const [blockingTime, setBlockingTime] = useState<string | null>(null);
   const [showCheckout, setShowCheckout] = useState(false);
+
+  // Payment/payout settings state
+  const [bankDetails, setBankDetails] = useState<any[]>(salon?.bankDetails || []);
+  const [upiDetails, setUpiDetails] = useState<any[]>(salon?.upiDetails || []);
+  const [payoutSaving, setPayoutSaving] = useState(false);
+  const [payoutMsg, setPayoutMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [addingBank, setAddingBank] = useState(false);
+  const [addingUpi, setAddingUpi] = useState(false);
+  const [newBank, setNewBank] = useState({ accountHolderName: '', accountNumber: '', ifscCode: '', bankName: '', accountType: 'savings' as 'savings' | 'current' });
+  const [newUpi, setNewUpi] = useState({ upiId: '', holderName: '' });
 
   // Location state
   const [editAddress, setEditAddress] = useState(salon?.address || '');
@@ -335,6 +353,16 @@ export function SalonDashboardPage() {
               </span>
             ) : null;
           })()}
+        </button>
+        <button
+          onClick={() => setActiveTab('settings')}
+          className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-xs font-semibold transition ${
+            activeTab === 'settings' ? 'bg-[#c9a962] text-[#0f0d12]' : 'text-[#9a8fa8] hover:text-[#e8d5a3]'
+          }`}
+          style={{ touchAction: 'manipulation' }}
+        >
+          <Settings className="h-4 w-4" />
+          Settings
         </button>
       </div>
 
@@ -1509,6 +1537,213 @@ export function SalonDashboardPage() {
               className="max-h-[85dvh] w-auto max-w-full rounded-2xl object-contain border border-[#c9a962]/20 shadow-2xl"
             />
             <p className="mt-2 text-center text-xs text-[#9a8fa8]">Tap anywhere outside or × to close</p>
+          </div>
+        </div>
+      )}
+
+      {/* SETTINGS TAB — Payout / Payment Details */}
+      {activeTab === 'settings' && (
+        <div className="animate-fade-in space-y-8 max-w-2xl">
+          <div className="flex items-center gap-3 border-b border-[#c9a962]/10 pb-4">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#c9a962]/10">
+              <Settings className="h-5 w-5 text-[#c9a962]" />
+            </div>
+            <div>
+              <h2 className="font-display text-2xl text-[#e8d5a3]">Payment Settings</h2>
+              <p className="text-sm text-[#9a8fa8]">Configure where you receive payouts. UPI is tried first, then bank transfer.</p>
+            </div>
+          </div>
+
+          {payoutMsg && (
+            <div className={`flex items-center gap-3 rounded-xl border px-4 py-3 text-sm ${
+              payoutMsg.type === 'success'
+                ? 'border-green-500/30 bg-green-500/10 text-green-300'
+                : 'border-red-500/30 bg-red-500/10 text-red-300'
+            }`}>
+              {payoutMsg.type === 'success' ? <BadgeCheck className="h-5 w-5 shrink-0" /> : <AlertCircle className="h-5 w-5 shrink-0" />}
+              {payoutMsg.text}
+            </div>
+          )}
+
+          {/* Status Banner */}
+          <div className={`rounded-xl border p-4 flex items-center gap-4 ${
+            (upiDetails.length > 0 || bankDetails.length > 0)
+              ? 'border-green-500/20 bg-green-500/5'
+              : 'border-amber-500/20 bg-amber-500/5'
+          }`}>
+            <ShieldCheck className={`h-8 w-8 shrink-0 ${(upiDetails.length > 0 || bankDetails.length > 0) ? 'text-green-400' : 'text-amber-400'}`} />
+            <div>
+              <p className={`font-semibold text-sm ${(upiDetails.length > 0 || bankDetails.length > 0) ? 'text-green-300' : 'text-amber-300'}`}>
+                {(upiDetails.length > 0 || bankDetails.length > 0) ? '✅ Payout Configured' : '⚠️ No Payout Details Set'}
+              </p>
+              <p className="text-xs text-[#9a8fa8] mt-0.5">
+                {upiDetails.length > 0
+                  ? `Primary: UPI — ${upiDetails[0].upiId}`
+                  : bankDetails.length > 0
+                  ? `Primary: NEFT — ${bankDetails[0].bankName} ••••${bankDetails[0].accountNumber.slice(-4)}`
+                  : 'Add a UPI ID or bank account to receive automatic payouts.'}
+              </p>
+            </div>
+          </div>
+
+          {/* UPI IDs */}
+          <div className="luxe-card p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Smartphone className="h-5 w-5 text-[#c9a962]" />
+                <h3 className="font-semibold text-[#e8d5a3]">UPI IDs <span className="text-xs text-[#9a8fa8] font-normal">(max 2 · tried first)</span></h3>
+              </div>
+              {upiDetails.length < 2 && !addingUpi && (
+                <button onClick={() => setAddingUpi(true)}
+                  className="flex items-center gap-1.5 rounded-lg border border-[#c9a962]/30 px-3 py-1.5 text-xs text-[#c9a962] hover:bg-[#c9a962]/10 transition"
+                  style={{ touchAction: 'manipulation' }}>
+                  <Plus className="h-3.5 w-3.5" /> Add UPI
+                </button>
+              )}
+            </div>
+
+            {upiDetails.map((u: any, i: number) => (
+              <div key={u.id || i} className="flex items-center justify-between rounded-xl bg-[#0f0d12]/60 px-4 py-3 border border-[#c9a962]/10">
+                <div>
+                  <p className="text-sm font-medium text-[#e8d5a3]">{u.upiId}</p>
+                  <p className="text-xs text-[#9a8fa8]">{u.holderName}</p>
+                </div>
+                <button onClick={() => setUpiDetails((prev: any[]) => prev.filter((_: any, idx: number) => idx !== i))}
+                  className="text-red-400 hover:text-red-300 p-2 transition" style={{ touchAction: 'manipulation' }}>
+                  <TrashIcon className="h-4 w-4" />
+                </button>
+              </div>
+            ))}
+
+            {addingUpi && (
+              <div className="rounded-xl border border-[#c9a962]/20 bg-[#0f0d12]/40 p-4 space-y-3">
+                <p className="text-xs font-semibold text-[#c9a962] uppercase tracking-wide">New UPI ID</p>
+                <input className="luxe-input" placeholder="e.g. salonname@ybl or phone@paytm"
+                  value={newUpi.upiId} onChange={e => setNewUpi((p: any) => ({ ...p, upiId: e.target.value.toLowerCase() }))}
+                  autoComplete="off" spellCheck={false} />
+                <input className="luxe-input" placeholder="Account holder / business name"
+                  value={newUpi.holderName} onChange={e => setNewUpi((p: any) => ({ ...p, holderName: e.target.value }))} />
+                <div className="flex gap-2">
+                  <button onClick={() => {
+                    if (!newUpi.upiId || !newUpi.holderName) { setPayoutMsg({ type: 'error', text: 'Fill in both fields.' }); return; }
+                    if (!/^[\w.\-]+@[\w.\-]+$/.test(newUpi.upiId)) { setPayoutMsg({ type: 'error', text: 'Invalid UPI format. Example: name@ybl' }); return; }
+                    setUpiDetails((prev: any[]) => [...prev, { id: `upi-${Date.now()}`, ...newUpi }]);
+                    setNewUpi({ upiId: '', holderName: '' }); setAddingUpi(false); setPayoutMsg(null);
+                  }} className="luxe-btn text-sm flex-1" style={{ touchAction: 'manipulation' }}>Add</button>
+                  <button onClick={() => { setAddingUpi(false); setNewUpi({ upiId: '', holderName: '' }); }}
+                    className="luxe-btn-outline text-sm flex-1" style={{ touchAction: 'manipulation' }}>Cancel</button>
+                </div>
+              </div>
+            )}
+            {upiDetails.length === 0 && !addingUpi && (
+              <p className="text-xs text-[#6b6175] text-center py-1">No UPI IDs added. UPI payouts are instant and 24/7.</p>
+            )}
+          </div>
+
+          {/* Bank Accounts */}
+          <div className="luxe-card p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Banknote className="h-5 w-5 text-[#c9a962]" />
+                <h3 className="font-semibold text-[#e8d5a3]">Bank Accounts <span className="text-xs text-[#9a8fa8] font-normal">(max 2 · NEFT/IMPS fallback)</span></h3>
+              </div>
+              {bankDetails.length < 2 && !addingBank && (
+                <button onClick={() => setAddingBank(true)}
+                  className="flex items-center gap-1.5 rounded-lg border border-[#c9a962]/30 px-3 py-1.5 text-xs text-[#c9a962] hover:bg-[#c9a962]/10 transition"
+                  style={{ touchAction: 'manipulation' }}>
+                  <Plus className="h-3.5 w-3.5" /> Add Bank
+                </button>
+              )}
+            </div>
+
+            {bankDetails.map((b: any, i: number) => (
+              <div key={b.id || i} className="flex items-start justify-between rounded-xl bg-[#0f0d12]/60 px-4 py-3 border border-[#c9a962]/10">
+                <div>
+                  <p className="text-sm font-medium text-[#e8d5a3]">{b.bankName} · {b.accountType}</p>
+                  <p className="text-xs text-[#9a8fa8]">{b.accountHolderName}</p>
+                  <p className="text-xs font-mono text-[#c9a962] mt-0.5">••••{b.accountNumber.slice(-4)} · IFSC: {b.ifscCode}</p>
+                </div>
+                <button onClick={() => setBankDetails((prev: any[]) => prev.filter((_: any, idx: number) => idx !== i))}
+                  className="text-red-400 hover:text-red-300 p-2 transition shrink-0" style={{ touchAction: 'manipulation' }}>
+                  <TrashIcon className="h-4 w-4" />
+                </button>
+              </div>
+            ))}
+
+            {addingBank && (
+              <div className="rounded-xl border border-[#c9a962]/20 bg-[#0f0d12]/40 p-4 space-y-3">
+                <p className="text-xs font-semibold text-[#c9a962] uppercase tracking-wide">New Bank Account</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <input className="luxe-input" placeholder="Account holder name" value={newBank.accountHolderName}
+                    onChange={e => setNewBank((p: any) => ({ ...p, accountHolderName: e.target.value }))} />
+                  <input className="luxe-input" placeholder="Bank name (e.g. HDFC, SBI)" value={newBank.bankName}
+                    onChange={e => setNewBank((p: any) => ({ ...p, bankName: e.target.value }))} />
+                  <input className="luxe-input" placeholder="Account number (9–18 digits)" value={newBank.accountNumber}
+                    onChange={e => setNewBank((p: any) => ({ ...p, accountNumber: e.target.value.replace(/\D/g, '') }))}
+                    inputMode="numeric" maxLength={18} />
+                  <input className="luxe-input uppercase" placeholder="IFSC (e.g. HDFC0001234)" value={newBank.ifscCode}
+                    onChange={e => setNewBank((p: any) => ({ ...p, ifscCode: e.target.value.toUpperCase() }))} maxLength={11} />
+                </div>
+                <select className="luxe-input" value={newBank.accountType}
+                  onChange={e => setNewBank((p: any) => ({ ...p, accountType: e.target.value }))}>
+                  <option value="savings">Savings Account</option>
+                  <option value="current">Current Account</option>
+                </select>
+                <div className="flex gap-2">
+                  <button onClick={() => {
+                    if (!newBank.accountHolderName || !newBank.accountNumber || !newBank.ifscCode || !newBank.bankName) {
+                      setPayoutMsg({ type: 'error', text: 'Please fill in all bank account fields.' }); return;
+                    }
+                    if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(newBank.ifscCode.toUpperCase())) {
+                      setPayoutMsg({ type: 'error', text: 'Invalid IFSC code. Example: HDFC0001234' }); return;
+                    }
+                    if (!/^\d{9,18}$/.test(newBank.accountNumber)) {
+                      setPayoutMsg({ type: 'error', text: 'Account number must be 9–18 digits.' }); return;
+                    }
+                    setBankDetails((prev: any[]) => [...prev, { id: `bank-${Date.now()}`, ...newBank, ifscCode: newBank.ifscCode.toUpperCase() }]);
+                    setNewBank({ accountHolderName: '', accountNumber: '', ifscCode: '', bankName: '', accountType: 'savings' });
+                    setAddingBank(false); setPayoutMsg(null);
+                  }} className="luxe-btn text-sm flex-1" style={{ touchAction: 'manipulation' }}>Add Account</button>
+                  <button onClick={() => { setAddingBank(false); setNewBank({ accountHolderName: '', accountNumber: '', ifscCode: '', bankName: '', accountType: 'savings' }); }}
+                    className="luxe-btn-outline text-sm flex-1" style={{ touchAction: 'manipulation' }}>Cancel</button>
+                </div>
+              </div>
+            )}
+            {bankDetails.length === 0 && !addingBank && (
+              <p className="text-xs text-[#6b6175] text-center py-1">No bank accounts. Used as fallback when UPI is unavailable.</p>
+            )}
+          </div>
+
+          {/* Save */}
+          <button
+            onClick={async () => {
+              if (!salon) return;
+              setPayoutSaving(true); setPayoutMsg(null);
+              try {
+                const { api } = await import('../services/api');
+                const result = await api.updateSalonPayoutDetails(salon.id, { bankDetails, upiDetails });
+                if (result.success) {
+                  setPayoutMsg({ type: 'success', text: '✅ Payment details saved! Payouts process automatically on appointment completion.' });
+                } else {
+                  setPayoutMsg({ type: 'error', text: (result as any).message || 'Failed to save.' });
+                }
+              } catch (e: any) {
+                setPayoutMsg({ type: 'error', text: e.message || 'Failed to save payment details.' });
+              } finally { setPayoutSaving(false); }
+            }}
+            disabled={payoutSaving}
+            className="luxe-btn w-full flex items-center justify-center gap-2 disabled:opacity-60"
+            style={{ touchAction: 'manipulation', minHeight: 48 }}
+          >
+            {payoutSaving ? <><RefreshCw className="h-4 w-4 animate-spin" /> Saving...</> : <><Save className="h-4 w-4" /> Save Payment Details</>}
+          </button>
+
+          <div className="rounded-xl border border-[#c9a962]/10 bg-[#c9a962]/5 p-4 text-xs text-[#9a8fa8] space-y-1.5">
+            <p className="font-semibold text-[#e8d5a3]">How automatic payouts work</p>
+            <p>① Salon marks appointment as completed in the dashboard.</p>
+            <p>② Platform deducts <span className="text-[#c9a962] font-semibold">3% commission</span> from the total bill.</p>
+            <p>③ Net amount sent via <span className="text-[#c9a962] font-semibold">UPI first</span> → <span className="text-[#c9a962] font-semibold">NEFT/IMPS bank</span> as fallback.</p>
+            <p>④ Payout notification with <span className="text-[#c9a962] font-semibold">reference ID</span> sent instantly to your dashboard.</p>
           </div>
         </div>
       )}
