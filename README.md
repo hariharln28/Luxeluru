@@ -1,103 +1,179 @@
 <div align="center">
 
+<br/>
+
 # Luxeluru
 
 **Bengaluru's Premier Luxury Salon Platform**
 
-*Discover · Book · Style — powered by AI and Smart Navigation*
+*Discover · Book · Style — powered by AI, smart navigation, and a complete salon management ecosystem*
 
-[![Live](https://img.shields.io/badge/Live%20on-Render-46E3B7?style=flat-square&logo=render)](https://luxeluru.onrender.com)
-[![Tech](https://img.shields.io/badge/Stack-React%20%2B%20Node.js-61DAFB?style=flat-square&logo=react)](https://vitejs.dev)
-[![Language](https://img.shields.io/badge/Languages-EN%20%7C%20HI%20%7C%20KN-orange?style=flat-square)](#)
-[![Private](https://img.shields.io/badge/Repo-Private-red?style=flat-square&logo=github)](#)
+<br/>
+
+[![Live](https://img.shields.io/badge/Live%20Platform-luxeluru.onrender.com-46E3B7?style=for-the-badge&logo=render&logoColor=white)](https://luxeluru.onrender.com)
+[![Stack](https://img.shields.io/badge/Stack-React%20%2B%20Node.js%20%2B%20Express-61DAFB?style=for-the-badge&logo=react)](https://vitejs.dev)
+[![AI](https://img.shields.io/badge/AI-MediaPipe%20%2B%20Gemini%202.0-orange?style=for-the-badge&logo=google)](https://ai.google.dev)
+[![Languages](https://img.shields.io/badge/i18n-EN%20%7C%20HI%20%7C%20KN-blueviolet?style=for-the-badge)](#)
+
+<br/>
 
 </div>
 
 ---
 
-## Overview
+## Problem Statement
 
-Luxeluru is a full-stack luxury salon discovery and booking platform built for Bengaluru. It connects users with curated premium salons through an AI-powered styling experience, smart location-based navigation, seamless appointment booking, and a complete salon management ecosystem — all on a mobile-first web app.
+The luxury salon industry in Bengaluru is fragmented. Customers have no reliable, premium-grade digital platform to discover verified salons, get AI-personalised style advice, and book appointments seamlessly — all in one place. At the same time, salon owners lack the tools to manage bookings, staff, walk-ins, payments, and compliance with the platform from a single dashboard.
+
+Existing general-purpose booking tools are not built for the luxury segment, offer no AI styling layer, and provide no intelligent navigation or localisation for Indian markets.
+
+**Luxeluru solves this end-to-end** — for customers, salon partners, and platform administrators — in a single full-stack, mobile-first web application.
+
+---
+
+## What Makes Luxeluru Different
+
+| Capability | Luxeluru |
+|---|---|
+| **AI Face Analysis** | MediaPipe FaceMesh (468 landmarks) + Monk Skin Tone Scale (CIE-LAB, 10 levels) |
+| **Virtual Try-On** | Live Bézier-curve hair colour overlay on camera feed, real-time |
+| **Smart Navigation** | KNN (Haversine distance) ranks nearest salons in real-time from user's GPS |
+| **Style Emergency** | Finds the 5 nearest salons with the soonest available slot across the next 7 days |
+| **End-to-End Encryption** | AES-GCM 256-bit messaging between admin and salon partners — server never sees plaintext |
+| **Full Commission Engine** | Automatic 3% commission tracking, monthly billing cycle, 5-day grace, admin verification |
+| **Multi-language** | English, Hindi, Kannada — switchable across the full platform UI |
+| **Mobile-first** | Designed and tested for all screen sizes with PWA-ready meta tags |
+| **Complete Ecosystem** | Three fully separate portals: User, Salon Partner, Admin — all interconnected |
+
+---
+
+## Platform Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        CLIENT (Browser)                          │
+│  React 18 + TypeScript + Vite                                    │
+│  ┌──────────┐ ┌──────────────┐ ┌───────────────┐ ┌───────────┐ │
+│  │  User    │ │ Salon Partner│ │     Admin      │ │ AI Stylr  │ │
+│  │  Portal  │ │  Dashboard   │ │ Control Centre │ │ (MediaPipe│ │
+│  │          │ │              │ │                │ │  + Gemini)│ │
+│  └────┬─────┘ └──────┬───────┘ └───────┬────────┘ └─────┬─────┘ │
+│       │              │                 │                 │        │
+│  AppContext (global state, JWT, polling, Supabase auth)           │
+└───────┼──────────────┼─────────────────┼─────────────────┼───────┘
+        │   HTTPS/REST │                 │                 │
+┌───────▼──────────────▼─────────────────▼─────────────────▼───────┐
+│                    BACKEND (Node.js + Express)                     │
+│  ┌──────────────────────────────────────────────────────────────┐ │
+│  │  Auth · Bookings · Salons · Reviews · Messages · Commission  │ │
+│  │  Notifications · Announcements · Admin · Platform Analytics  │ │
+│  └──────────────────────────────────────────────────────────────┘ │
+│         │                              │                           │
+│  ┌──────▼──────┐              ┌────────▼────────┐                 │
+│  │   SQLite    │              │    MongoDB       │                 │
+│  │  (primary)  │              │ (optional/cloud) │                 │
+│  └─────────────┘              └─────────────────┘                 │
+└───────────────────────────────────────────────────────────────────┘
+        │
+┌───────▼───────────────────────────────┐
+│          External Services            │
+│  Supabase Auth · Gemini 2.0 Flash     │
+│  Stripe (payments) · WhatsApp (wa.me) │
+│  OpenStreetMap · Google Maps          │
+└───────────────────────────────────────┘
+```
 
 ---
 
 ## Platform Sections
 
 ### 👤 User Experience
-- **Authentication** — Secure register & login with persistent JWT sessions; new users redirected to sign-in after registration
-- **Dashboard** — Personalised home with upcoming appointments, nearest salons, quick actions, and the Style Emergency button
-- **Salon Discovery** — Browse 15+ curated luxury salons across Bengaluru with filters by category, rating, and distance
-- **Smart Navigation** — Location-based salon ranking using KNN (Haversine distance); OpenStreetMap integration with Google Maps deep-link navigation
-- **Leaderboard** — Top-rated salons and stylists ranked by real customer reviews
-- **Appointment History** — Full booking history with status, payment method, stylist, and refund tracking
-- **Multi-language** — English (default), Hindi, and Kannada throughout the entire UI
+- **Authentication** — Secure register & login via Supabase Auth with persistent JWT sessions
+- **Dashboard** — Personalised home with upcoming appointments, nearest salons, quick actions, and Style Emergency button
+- **Salon Discovery** — Browse 15+ curated luxury salons across Bengaluru; filter by category, rating, and distance
+- **Smart Navigation** — KNN (Haversine) ranks salons by GPS proximity; OpenStreetMap embed + Google Maps deep-link turn-by-turn
+- **Leaderboard** — Top 10 salons and top 10 stylists ranked by verified customer ratings
+- **Booking History** — Full history with status, payment method, stylist, refund tracking, and re-booking
+- **Multi-language** — Full UI available in English, Hindi, and Kannada — switchable at any time
 
 ### 🤖 AI Stylr
-- Camera-based face analysis using **MediaPipe FaceMesh** (468 facial landmarks)
-- **Monk Skin Tone Scale (MST-1 to MST-10)** — Google's open 10-point skin tone standard; classification via **CIE-LAB color distance** (perceptually accurate across all skin tones, especially South Asian complexions)
-- Samples skin pixels from **4 cheek landmarks** for improved accuracy over single-point sampling
-- Visual **MST scale bar** in results — 10 coloured dots, your level highlighted with a gold ring
-- **Virtual Try-On** — live hair colour preview on the camera feed using a **Bézier-curve hair mask** drawn from FaceMesh temple + forehead + brow landmarks
-  - Toggle between face mesh mode and full try-on mode
-  - Adjustable intensity slider (15%–65%)
-  - Any selected colour updates the live preview instantly
-- **Gemini AI Style Advice** — after analysis, calls **Gemini 2.0 Flash** to generate a personalised natural-language consultation: headline, description, colour reason, style reason, and a care tip (requires `VITE_GEMINI_API_KEY`; gracefully hidden if not set)
-- Hair colour recommendations keyed to all 10 MST levels separately (not just 6 generic tiers)
-- Custom image upload (up to 20 MB) for tailored style advice
-- Style recommendations carry forward directly into the booking flow
-- Uploaded images visible to salon in appointment details on their dashboard
+- **Face Shape Detection** — MediaPipe FaceMesh (468 landmarks) classifies face shape from live camera feed
+- **Monk Skin Tone Scale** — Google's open 10-point MST standard; classified via **CIE-LAB colour distance** for perceptual accuracy across South Asian complexions; samples from 4 cheek landmarks
+- **Virtual Try-On** — Live Bézier-curve hair colour mask drawn over camera feed using FaceMesh temple/forehead/brow landmarks; adjustable opacity slider (15–65%); updates in real-time with any selected colour
+- **Gemini AI Consultation** — Calls **Gemini 2.0 Flash** to generate a personalised natural-language style report: headline, description, colour rationale, style rationale, and a care tip
+- **Booking Integration** — Style recommendations carry forward directly into the booking flow; uploaded images visible to salon staff in the appointment dashboard
 
-### 🚨 Style Emergency
-- One-tap emergency salon finder accessible from the dashboard
-- Ranks the 5 nearest salons by **soonest available time slot** (not just distance) across the next 7 days
-- Skips past, booked, and walk-in-blocked slots automatically
-- Full in-modal booking flow — service selection, date/time picker, stylist, payment method, bill summary
-- Supports Card, UPI (with Stripe checkout), and Pay-at-Salon payment methods
-- After booking, sends WhatsApp confirmation and redirects to dashboard
+### 🚨 Style Emergency (Panic Button)
+- One-tap emergency finder accessible from the user dashboard
+- Ranks the 5 nearest salons by **soonest available slot** (not just proximity) across the next 7 days
+- Auto-skips past slots, already-booked slots, and walk-in-blocked slots
+- Full in-modal booking flow — services, date/time, stylist, payment, bill summary — without leaving the page
 
 ### 📅 Booking System
 - Multi-service and package selection with live bill calculation
-- Date picker with past-date prevention; time slot grid with past/booked/blocked slot indicators
+- Past-date prevention; time slot grid with past/booked/blocked indicators
 - Stylist selection (optional)
-- **Card / UPI** — Stripe checkout modal; appointment auto-confirmed on successful payment
-- **Pay at Salon** — Instant booking confirmation with bill summary shown first
+- **Online (Card / UPI)** — Stripe checkout; appointment confirmed on payment success
+- **Pay at Salon** — Instant confirmation with bill summary; commission tracked monthly
 - WhatsApp confirmation sent after every booking
-- Post-booking redirect to user dashboard showing upcoming appointments
-- Cancellation policy with tiered refunds (20% → 50% → 70% → 100% based on notice period)
+- Tiered cancellation refunds: 100% (3+ days) → 70% (2 days) → 50% (1 day) → 20% (same day)
 
 ### 🏪 Salon Partner Dashboard
-- Secure login with rate-limiting and account lockout (5 failed attempts = 10-minute lock)
-- **Appointments tab** — View all bookings, verify attendance, mark payment status, add notes, reschedule
-- **Services tab** — Manage services, packages, and pricing
-- **Staff tab** — Add/edit staff profiles and specialties
-- **Walk-ins tab** — Block specific time slots to prevent online bookings during walk-in hours
-- **Notifications tab** — Platform alerts and booking updates
-- **Messages tab** — End-to-end encrypted 1:1 direct messaging with admin; platform-wide announcement feed
-- **Settings tab** — Update salon profile, location, and business details
-- **Exit Platform** — Submit exit request; check approval status using registered business email; reply to admin rejections
+- Rate-limited login with account lockout (5 failed attempts = 30-minute lock)
+- **Appointments** — View, verify, complete, reschedule, and add notes to all bookings
+- **Services** — Manage service catalogue and packages with pricing
+- **Staff** — Add and edit staff profiles, specialties, and avatars
+- **Walk-ins** — Block specific time slots to prevent online bookings
+- **Notifications** — Real-time booking alerts and payment notifications
+- **Messages** — End-to-end encrypted 1:1 messaging with admin + announcement feed
+- **Commission Dues** — View full pay-at-salon billing breakdown, submit UTR payment references
+- **Settings** — Update profile, location, payout bank/UPI details, and business information
+- **Exit Platform** — Submit, track, and dispute exit requests
 
 ### 🛠️ Admin Control Centre
-- **Pending Approvals** — Review and approve/reject new salon registration applications
-- **Salons tab** — Monitor all active salons, commission status, overdue payments; forceful removal and permanent deletion (test accounts protected)
-- **Users tab** — View all registered users with search, registration date, and booking count; block/unblock accounts (test accounts protected)
-- **Platform Analytics** — Revenue metrics, booking counts, blocked users, forcefully removed salons
-- **Messages tab** — Encrypted 1:1 conversations with each salon; broadcast announcements to all active salons with read-receipt tracking
-- **Exit Requests tab** — Approve or reject partner exit requests with mandatory rejection reason
-- **Test Sign In tab** — Pre-configured test credentials for both user and salon perspectives
+- **Pending Approvals** — Review full KYC, PAN card, and GST details; approve or reject with written reason
+- **Salons** — Monitor all active salons, commission dues, payment status, payout details; force-deactivate or permanently delete
+- **Users** — Search users, view booking activity, block with configurable duration
+- **Platform Analytics** — Revenue, bookings, overdue commissions, blocked users, removed salons
+- **Messages** — Encrypted 1:1 conversations per salon; broadcast announcements with read-receipt tracking
+- **Exit Requests** — Approve or reject with mandatory rejection reason
+- **Commission Verification** — Review UTR references submitted by salons; one-click verify and clear dues
 
-### 🔒 Messaging & Encryption
-- AES-GCM 256-bit end-to-end encryption for all direct messages
-- Per-salon encryption keys derived via PBKDF2 (10,000 iterations, SHA-256)
+### 🔒 Security & Encryption
+- **AES-GCM 256-bit** end-to-end encryption for all admin ↔ salon messages
+- Per-salon encryption keys derived via **PBKDF2** (10,000 iterations, SHA-256)
 - Server stores only ciphertext — messages are never decrypted server-side
-- Separate message context for exit disputes vs. general communication
-- 15-second polling for new messages; 30-second polling for announcements
+- JWT authentication on all protected API routes
+- Bcrypt password hashing for all user and salon credentials
+- IP-based rate limiting + account lockout on salon login
 
-### 📤 Partner Exit System
-- Salon submits exit request with reason from the dashboard
-- Admin reviews in Control Centre; rejection requires a written reason
-- Salon checks status in **PartnerWithUs → Check Status** using registered business email
-- Rejected exit displays admin's reason; salon can reply directly in the status panel
-- Exit dispute messages are encrypted and tracked separately from general chat
+---
+
+## Commission & Payment Flow
+
+```
+ONLINE PAYMENT (Card / UPI)
+──────────────────────────────────────────────────────────────────
+User books → Stripe checkout → Payment confirmed
+  → Commission (3%) tracked in platform → Salon receives net amount automatically
+  → On appointment completion → Commission removed from salon's due balance
+
+PAY AT SALON (Cash)
+──────────────────────────────────────────────────────────────────
+User books → Booking confirmed → Customer pays cash at salon
+  → Commission (3%) added to salon's monthly due ledger
+  → At month-end → Salon views full breakdown in "Commission Dues" tab
+  → Salon transfers commission via UPI or NEFT to platform
+  → Salon submits UTR reference number in dashboard
+  → Admin verifies reference → Dues cleared → Salon notified
+
+BILLING CYCLE
+──────────────────────────────────────────────────────────────────
+Commission accumulates throughout the month
+  → Due by last day of month
+  → 5-day grace period (1st–5th of next month)
+  → Overdue → Admin can force-deactivate salon
+```
 
 ---
 
@@ -106,16 +182,42 @@ Luxeluru is a full-stack luxury salon discovery and booking platform built for B
 | Layer | Technology |
 |---|---|
 | **Frontend** | React 18, TypeScript, Vite, TailwindCSS v4 |
-| **UI / Styling** | Vanilla CSS custom design system, Cormorant Garamond + Outfit fonts |
-| **Backend** | Node.js, Express |
-| **Database** | SQLite (production via Render) / MongoDB (optional) |
+| **UI / Design** | Custom design system — Cormorant Garamond + Outfit fonts, dark luxury theme |
+| **Backend** | Node.js 18, Express 4 |
+| **Database** | SQLite (production, Render disk) / MongoDB (optional) |
 | **Auth** | Supabase Auth (JWT), bcrypt password hashing |
-| **Payments** | Stripe (Card & UPI checkout simulation) |
-| **AI / ML** | MediaPipe FaceMesh (browser-side), Monk Skin Tone Scale (CIE-LAB), Gemini 2.0 Flash (style advice) |
+| **Payments** | Stripe (Card & UPI checkout) |
+| **AI / ML** | MediaPipe FaceMesh (browser-side), Monk Skin Tone Scale (CIE-LAB), Gemini 2.0 Flash |
 | **Maps** | OpenStreetMap embed, Google Maps deep-link navigation |
 | **Encryption** | Web Crypto API — AES-GCM + PBKDF2 |
 | **Notifications** | WhatsApp (wa.me deep-link) |
-| **Deployment** | Render (frontend + backend, monorepo) |
+| **Deployment** | Render (monorepo — frontend + backend on same service) |
+
+---
+
+## API Overview
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/users/register` | Register a new user |
+| `POST` | `/api/salons/login` | Salon partner login (rate-limited) |
+| `POST` | `/api/salons/register` | New salon registration with KYC |
+| `GET` | `/api/salons` | List all salons |
+| `GET` | `/api/salons/:id` | Fetch a single salon |
+| `POST` | `/api/bookings` | Create a booking |
+| `POST` | `/api/bookings/:id/cancel` | Cancel with refund calculation |
+| `POST` | `/api/bookings/:id/reschedule` | Reschedule with conflict check |
+| `POST` | `/api/bookings/:id/update` | Mark appointment complete + trigger payout |
+| `POST` | `/api/reviews` | Submit a verified review |
+| `GET` | `/api/salons/:id/commission-summary` | Full commission breakdown for a salon |
+| `POST` | `/api/salons/:id/submit-commission-payment` | Salon submits UTR reference |
+| `POST` | `/api/salons/:id/verify-commission-payment` | Admin clears commission dues |
+| `GET` | `/api/platform/payment-details` | Platform UPI/bank details for commission transfer |
+| `GET` | `/api/notifications` | Fetch notifications for a target |
+| `GET` | `/api/messages/:salonId` | Fetch encrypted messages |
+| `POST` | `/api/messages/:salonId` | Send encrypted message |
+| `GET` | `/api/announcements` | Fetch platform announcements |
+| `GET` | `/api/health` | Server health check |
 
 ---
 
@@ -138,21 +240,24 @@ Open [http://localhost:5173](http://localhost:5173)
 
 ### Environment Variables
 
-Create a `.env` file in the root:
+Create `.env` in the root:
 
 ```env
 VITE_SUPABASE_URL=your_supabase_url
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
 VITE_STRIPE_PUBLISHABLE_KEY=your_stripe_key
 VITE_MSG_KEY=your_messaging_encryption_secret
-VITE_GEMINI_API_KEY=your_gemini_api_key   # Optional — enables AI Stylr natural-language advice
+VITE_GEMINI_API_KEY=your_gemini_api_key   # Optional — enables AI natural-language style advice
 ```
 
 Create `server/.env`:
 
 ```env
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
-DATABASE_URL=your_db_url
+MONGODB_URI=your_mongodb_uri               # Optional
+PORT=5001
+NODE_ENV=production
+FRONTEND_URL=https://luxeluru.onrender.com
 ```
 
 ### Build for Production
@@ -167,70 +272,63 @@ npm run preview
 ## 🏆 For Hackathon Judges
 
 > **Live Platform:** [https://luxeluru.onrender.com](https://luxeluru.onrender.com)
+>
+> ⚠️ Render free tier may take 30–60 seconds to wake up on first visit. Please wait for the page to fully load before interacting.
 
 ---
 
 ### 🛡️ Admin Portal Access
 
-The Admin Control Centre is **not linked from any public page** (by design, for security). Use the direct URL below:
+The Admin Control Centre is **not linked from any public page** (by design). Use the direct URL:
 
-**Admin Portal URL:** [https://luxeluru.onrender.com/admin](https://luxeluru.onrender.com/admin)
+**→ [https://luxeluru.onrender.com/admin](https://luxeluru.onrender.com/admin)**
 
 | Field | Value |
 |---|---|
 | **Username** | `ADMINLLURU` |
 | **Password** | `ADMIN@LUXE26` |
 
-**Steps to access:**
-1. Visit [https://luxeluru.onrender.com/admin](https://luxeluru.onrender.com/admin)
+**Steps:**
+1. Go to [https://luxeluru.onrender.com/admin](https://luxeluru.onrender.com/admin)
 2. Complete the CAPTCHA challenge
-3. Enter the credentials above and click **Authenticate**
-4. You will be redirected to the **Admin Control Centre**
+3. Enter the credentials above → click **Authenticate**
+4. You will land on the **Admin Control Centre**
 
-**What you can do in the Admin Dashboard:**
-- View and approve/reject salon registrations (KYC, PAN, GST details)
-- View all active salons, their payout details, and commission dues
-- Verify commission payments submitted by salons
-- Block/unblock users with duration control
-- Send encrypted messages to salons
-- Post platform-wide announcements
-- View full booking activity across all salons
-- Force-deactivate or approve salon exit requests
+**What to explore:**
+- Pending salon approvals with full KYC / PAN / GST documents
+- Active salons with commission status and payout details
+- User management with block/unblock controls
+- Encrypted messaging and platform announcements
+- Commission verification panel
 
 ---
 
 ### 👤 Test User Account
 
-> Pre-registered demo customer account — **cannot be deleted or blocked**.
+> Protected — cannot be deleted or blocked.
 
 | Field | Value |
 |---|---|
+| **Login URL** | [/login](https://luxeluru.onrender.com/login) → **User Login** tab |
 | **Email** | `adminuser1@test.com` |
 | **Password** | `user@admin-test789` |
 
-**Steps to access:**
-1. Visit [https://luxeluru.onrender.com/login](https://luxeluru.onrender.com/login)
-2. Select **User Login** tab (default)
-3. Enter credentials and click **Sign In**
-4. You'll land on the **User Dashboard** with upcoming bookings, AI Stylist, Navigator, and Bookings
+**What to explore:** Dashboard · AI Stylr · Smart Navigator · Style Emergency · Salon booking flow · Booking history · Profile settings
 
 ---
 
 ### 💇 Test Salon Partner Account
 
-> Pre-registered demo salon — **cannot be deleted or blocked**.
+> Protected — cannot be deleted or blocked.
 
 | Field | Value |
 |---|---|
+| **Login URL** | [/login](https://luxeluru.onrender.com/login) → **Salon Partner Login** tab |
 | **Salon ID** | `LLLUX456` |
 | **Email** | `luxurysalonadmin@test.com` |
 | **Password** | `salon@admin-test789` |
 
-**Steps to access:**
-1. Visit [https://luxeluru.onrender.com/login](https://luxeluru.onrender.com/login)
-2. Select **Salon Partner Login** tab
-3. Enter Salon ID, Email, and Password
-4. You'll land on the **Salon Dashboard** with tabs: Bookings, Staff, Services, Analytics, Messages, Commission Dues, and Settings
+**What to explore:** Appointments · Staff management · Services & pricing · Walk-in blocking · Commission Dues tab · Encrypted messages · Payout settings
 
 ---
 
@@ -239,18 +337,19 @@ The Admin Control Centre is **not linked from any public page** (by design, for 
 ```
 Luxeluru/
 ├── src/
-│   ├── components/       # Reusable UI components (Navbar, PanicModal, SalonCard, etc.)
-│   ├── context/          # AppContext — global state, API calls, polling, auth
+│   ├── components/       # Reusable UI (Navbar, CheckoutModal, SalonCard, PanicModal, etc.)
+│   ├── context/          # AppContext — global state, API, polling, auth
 │   ├── data/             # Salon seed data
-│   ├── hooks/            # Custom React hooks
-│   ├── i18n/             # EN / HI / KN translations
-│   ├── pages/            # All page components
-│   ├── services/         # API client, Supabase client
+│   ├── hooks/            # Custom React hooks (useT for i18n, etc.)
+│   ├── i18n/             # EN / HI / KN translation maps
+│   ├── pages/            # All 17 page components
+│   ├── services/         # API client (fetch + retry), Supabase client
 │   ├── types/            # TypeScript interfaces
-│   └── utils/            # KNN, face analysis, encryption, notifications, Gemini
+│   └── utils/            # KNN algo, face analysis, AES encryption, WhatsApp, Gemini
 ├── server/
-│   ├── index.js          # Express server, all API routes
-│   └── db.js             # SQLite + MongoDB abstraction layer
+│   ├── index.js          # Express server — all 30+ API routes
+│   └── db.js             # SQLite + MongoDB dual-DB abstraction layer
+├── render.yaml           # Render deployment configuration
 └── public/
 ```
 
@@ -259,17 +358,32 @@ Luxeluru/
 ## Deployment
 
 Luxeluru is deployed as a **monorepo on Render**:
-- Frontend built with `npm run build` and served as static files
+- Frontend built with `npm run build` and served as static files by the Express server
 - Backend runs as a Node.js web service on the same dyno
-- SQLite database persisted on Render's disk
-- Auto-deploys on every push to the `main` branch on GitHub
+- SQLite database persisted on Render's attached disk
+- Auto-deploys on every push to the `main` branch via GitHub integration
+
+---
+
+## Known Limitations
+
+- **Payments are simulated** — Stripe integration is UI-complete but does not process real transactions (demo/hackathon scope)
+- **WhatsApp notifications** use `wa.me` deep-links — opens WhatsApp on the user's device rather than sending automated server-side messages
+- **Render free tier cold start** — first request after inactivity may take 30–60 seconds
+- **In-memory rate limiting** — resets on server restart; production would use Redis-backed rate limiting
 
 ---
 
 ## Notice
 
-This is a **private repository**. The source code, design, and all associated assets are proprietary and confidential. Unauthorised copying, distribution, or use of any part of this codebase is strictly prohibited.
+This is a **private repository**. The source code, design system, and all associated assets are the intellectual property of the Luxeluru team. Unauthorised copying, distribution, or commercial use of any part of this codebase is strictly prohibited.
 
 ---
 
+<div align="center">
+
 © 2026 Luxeluru · Built in Bengaluru 🇮🇳
+
+*Made with precision for the Indian luxury market*
+
+</div>
