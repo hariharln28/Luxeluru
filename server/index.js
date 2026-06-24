@@ -1700,6 +1700,46 @@ app.use((err, req, res, next) => {
 // Connect to Database first and then start server listening
 const MONGODB_URI = process.env.MONGODB_URI;
 db.connect(MONGODB_URI).then(async () => {
+  // ─── Patch Demo Salon KYC Data in DB ─────────────────────────────────────
+  // Directly UPDATE existing salon rows so admin sees full KYC details.
+  // Only patches rows where ownerName is currently missing (idempotent).
+  const DEMO_TL  = 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf';
+  const DEMO_TL2 = 'https://pdfobject.com/pdf/sample.pdf';
+  const demoKyc = [
+    { id:'LLANU569', ownerName:'Anjali Krishnamurthy',                phoneOwner:'+919845012301', panCardOwner:'ANJAK1234F', panCardBusiness:null,         tradeLicenseUrl:DEMO_TL,  registeredAt:'2024-03-15T09:30:00.000Z', bankDetails:[{id:'bd-1',accountHolderName:'Anjali Krishnamurthy',accountNumber:'3892740018273',ifscCode:'SBIN0010234',bankName:'State Bank of India',accountType:'current'}], upiDetails:[{id:'up-1',upiId:'anurahouseofbeauty@sbi',holderName:'Anjali Krishnamurthy'}] },
+    { id:'LLOLA824', ownerName:'Oleander Fernandes',                  phoneOwner:'+919845012302', panCardOwner:'OLEAF2345G', panCardBusiness:'AABCO1234K',  tradeLicenseUrl:DEMO_TL2, registeredAt:'2024-05-20T11:00:00.000Z', bankDetails:[{id:'bd-2',accountHolderName:'Olavu Beauty Heaven Pvt Ltd',accountNumber:'1234500078901',ifscCode:'HDFC0001234',bankName:'HDFC Bank',accountType:'current'}], upiDetails:[{id:'up-2',upiId:'olavubeauty@hdfcbank',holderName:'Olavu Beauty Heaven'},{id:'up-2b',upiId:'oleander.fernandes@okaxis',holderName:'Oleander Fernandes'}] },
+    { id:'LLHAI372', ownerName:'Harish Gowda',                        phoneOwner:'+919845012303', panCardOwner:'HARIG3456H', panCardBusiness:null,         tradeLicenseUrl:DEMO_TL,  registeredAt:'2024-01-10T08:00:00.000Z', bankDetails:[{id:'bd-3',accountHolderName:'Harish Gowda',accountNumber:'9870056712345',ifscCode:'ICIC0002345',bankName:'ICICI Bank',accountType:'savings'}], upiDetails:[{id:'up-3',upiId:'hairlounge.harish@icici',holderName:'Harish Gowda'}] },
+    { id:'LLLUM185', ownerName:'Luminita Sharma',                     phoneOwner:'+919845012304', panCardOwner:null,          panCardBusiness:'AABCS4567P',  tradeLicenseUrl:DEMO_TL2, registeredAt:'2024-06-01T10:15:00.000Z', bankDetails:[{id:'bd-4',accountHolderName:'Luminious Salon LLP',accountNumber:'5678900123456',ifscCode:'KOTAK0003456',bankName:'Kotak Mahindra Bank',accountType:'current'}], upiDetails:[{id:'up-4',upiId:'luminioussalon@kotak',holderName:'Luminious Salon'}] },
+    { id:'LLBEL903', ownerName:'Dr. Belinda Kamath',                  phoneOwner:'+919845012305', panCardOwner:'BELIK5678J', panCardBusiness:'AABCB5678R',  tradeLicenseUrl:DEMO_TL,  registeredAt:'2024-02-28T09:00:00.000Z', bankDetails:[{id:'bd-5',accountHolderName:'Belaku Derma Studio Pvt Ltd',accountNumber:'4321009876543',ifscCode:'AXIS0004567',bankName:'Axis Bank',accountType:'current'}], upiDetails:[{id:'up-5',upiId:'belakuderma@axisbank',holderName:'Belaku Derma Studio'}] },
+    { id:'LLMAI421', ownerName:'Madhuri Pillai',                      phoneOwner:'+919845012306', panCardOwner:'MADIP6789K', panCardBusiness:null,         tradeLicenseUrl:DEMO_TL2, registeredAt:'2024-04-12T10:30:00.000Z', bankDetails:[{id:'bd-6',accountHolderName:'Madhuri Pillai',accountNumber:'7654321098765',ifscCode:'PUNB0005678',bankName:'Punjab National Bank',accountType:'savings'}], upiDetails:[{id:'up-6',upiId:'maisonbeaute@paytm',holderName:'Madhuri Pillai'}] },
+    { id:'LLBLU756', ownerName:'Bhavana Shetty',                      phoneOwner:'+919845012307', panCardOwner:'BHAAS7890L', panCardBusiness:'AABCB7890S',  tradeLicenseUrl:DEMO_TL,  registeredAt:'2023-11-05T08:45:00.000Z', bankDetails:[{id:'bd-7',accountHolderName:'Blush Bridal Studio Pvt Ltd',accountNumber:'8765432109876',ifscCode:'SBIN0006789',bankName:'State Bank of India',accountType:'current'}], upiDetails:[{id:'up-7',upiId:'blushbridal@sbi',holderName:'Blush Bridal Studio'},{id:'up-7b',upiId:'bhavana.shetty@okicici',holderName:'Bhavana Shetty'}] },
+    { id:'LLZEN294', ownerName:'Zenaida Nambiar',                     phoneOwner:'+919845012308', panCardOwner:'ZENAI8901M', panCardBusiness:null,         tradeLicenseUrl:DEMO_TL2, registeredAt:'2024-01-20T11:30:00.000Z', bankDetails:[{id:'bd-8',accountHolderName:'Zenith Wellness Spa',accountNumber:'2109876543210',ifscCode:'HDFC0007890',bankName:'HDFC Bank',accountType:'current'}], upiDetails:[{id:'up-8',upiId:'zenithwellness@hdfcbank',holderName:'Zenith Wellness Spa'}] },
+    { id:'LLCHR618', ownerName:'Charu Mehta',                         phoneOwner:'+919845012309', panCardOwner:'CHAUM9012N', panCardBusiness:null,         tradeLicenseUrl:DEMO_TL,  registeredAt:'2024-03-08T09:00:00.000Z', bankDetails:[{id:'bd-9',accountHolderName:'Charu Mehta',accountNumber:'3210987654321',ifscCode:'ICIC0008901',bankName:'ICICI Bank',accountType:'savings'}], upiDetails:[{id:'up-9',upiId:'chromahair@icici',holderName:'Charu Mehta'}] },
+    { id:'LLROY502', ownerName:'Rohan Vijaykumar',                    phoneOwner:'+919845012310', panCardOwner:'ROHAV0123P', panCardBusiness:'AABCR0123T',  tradeLicenseUrl:DEMO_TL2, registeredAt:'2024-05-01T10:00:00.000Z', bankDetails:[{id:'bd-10',accountHolderName:'Royal Cut Barbershop',accountNumber:'4321098765432',ifscCode:'KOTAK0009012',bankName:'Kotak Mahindra Bank',accountType:'current'}], upiDetails:[{id:'up-10',upiId:'royalcut@kotak',holderName:'Royal Cut Barbershop'}] },
+    { id:'LLGLO839', ownerName:'Gloria Pinto',                        phoneOwner:'+919845012311', panCardOwner:'GLORIP123Q', panCardBusiness:null,         tradeLicenseUrl:DEMO_TL,  registeredAt:'2024-04-25T09:30:00.000Z', bankDetails:[{id:'bd-11',accountHolderName:'Gloria Pinto',accountNumber:'5432109876543',ifscCode:'AXIS0000123',bankName:'Axis Bank',accountType:'savings'}], upiDetails:[{id:'up-11',upiId:'glowgrace@axisbank',holderName:'Gloria Pinto'}] },
+    { id:'LLOPU467', ownerName:'Ravi Shankar (Opulence Luxury Group)',phoneOwner:'+919845012312', panCardOwner:'RAVIS2345R', panCardBusiness:'AABCO2345U',  tradeLicenseUrl:DEMO_TL2, registeredAt:'2023-09-10T08:00:00.000Z', bankDetails:[{id:'bd-12',accountHolderName:'Opulence Spa Lounge Pvt Ltd',accountNumber:'6543210987654',ifscCode:'SBIN0001234',bankName:'State Bank of India',accountType:'current'}], upiDetails:[{id:'up-12',upiId:'opulencespa@sbi',holderName:'Opulence Spa Lounge'},{id:'up-12b',upiId:'ravi.shankar@okhdfc',holderName:'Ravi Shankar'}] },
+    { id:'LLTRE138', ownerName:'Treesa Mathew',                       phoneOwner:'+919845012313', panCardOwner:'TREEM3456S', panCardBusiness:null,         tradeLicenseUrl:DEMO_TL,  registeredAt:'2024-02-14T10:00:00.000Z', bankDetails:[{id:'bd-13',accountHolderName:'Treesa Mathew',accountNumber:'7654321098765',ifscCode:'HDFC0002345',bankName:'HDFC Bank',accountType:'savings'}], upiDetails:[{id:'up-13',upiId:'tresstone@hdfcbank',holderName:'Treesa Mathew'}] },
+    { id:'LLECL981', ownerName:'Eclaire Rodrigues',                   phoneOwner:'+919845012314', panCardOwner:'ECLAR4567T', panCardBusiness:'AABCE4567V',  tradeLicenseUrl:DEMO_TL2, registeredAt:'2024-06-10T11:00:00.000Z', bankDetails:[{id:'bd-14',accountHolderName:'Eclat Beauty Bar Pvt Ltd',accountNumber:'8765432109876',ifscCode:'ICIC0003456',bankName:'ICICI Bank',accountType:'current'}], upiDetails:[{id:'up-14',upiId:'eclatbeauty@icici',holderName:'Eclat Beauty Bar'}] },
+    { id:'LLNIR725', ownerName:'Niranjana Iyer',                      phoneOwner:'+919845012315', panCardOwner:'NIRAI5678U', panCardBusiness:null,         tradeLicenseUrl:DEMO_TL,  registeredAt:'2023-12-01T09:00:00.000Z', bankDetails:[{id:'bd-15',accountHolderName:'Niranjana Iyer',accountNumber:'9876543210987',ifscCode:'KOTAK0004567',bankName:'Kotak Mahindra Bank',accountType:'savings'}], upiDetails:[{id:'up-15',upiId:'nirvanaspa@kotak',holderName:'Niranjana Iyer'}] },
+  ];
+  for (const kyc of demoKyc) {
+    try {
+      await db.updateSalon(kyc.id, {
+        ownerName:       kyc.ownerName,
+        phoneOwner:      kyc.phoneOwner,
+        panCardOwner:    kyc.panCardOwner  || null,
+        panCardBusiness: kyc.panCardBusiness || null,
+        tradeLicenseUrl: kyc.tradeLicenseUrl,
+        registeredAt:    kyc.registeredAt,
+        bankDetails:     kyc.bankDetails,
+        upiDetails:      kyc.upiDetails,
+      });
+      console.log(`[KYC Patch] Updated salon ${kyc.id} — ${kyc.ownerName}`);
+    } catch (e) {
+      console.warn(`[KYC Patch] Failed for ${kyc.id}:`, e.message);
+    }
+  }
+
   // ─── Seed Demo Closed Days for 3 Salons ──────────────────────────────────
   // Idempotent: skips if the date is already marked closed for that salon
   const demoClosedDays = [
