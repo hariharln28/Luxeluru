@@ -4,10 +4,100 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import crypto from 'crypto';
 import dotenv from 'dotenv';
+import fs from 'fs';
 import { db } from './db.js';
 import { createClient } from '@supabase/supabase-js';
 
 dotenv.config();
+
+// ─── Approved Salons Persistence ─────────────────────────────────────────────
+// approvedSalonsData.json is committed to git. When admin approves a salon,
+// we append it here via GitHub API so it survives every Render redeploy.
+const APPROVED_FILE = path.join(path.dirname(fileURLToPath(import.meta.url)), 'approvedSalonsData.json');
+
+function readApprovedSalons() {
+  try {
+    return JSON.parse(fs.readFileSync(APPROVED_FILE, 'utf8') || '[]');
+  } catch { return []; }
+}
+
+async function persistApprovedSalon(salon) {
+  // 1. Update local file
+  const list = readApprovedSalons();
+  const existing = list.findIndex(s => s.id === salon.id);
+  const entry = {
+    id: salon.id,
+    name: salon.name,
+    email: salon.email,
+    hashedPassword: salon.password,
+    ownerName: salon.ownerName || '',
+    phone: salon.phone || '',
+    address: salon.address || 'Bengaluru, Karnataka',
+    area: salon.area || 'Bengaluru',
+    lat: salon.lat || 12.9716,
+    lng: salon.lng || 77.5946,
+    tagline: salon.tagline || 'Premium Salon Experience',
+    image: salon.image || 'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=800&q=80',
+    openHours: salon.openHours || '10:00 AM - 8:00 PM',
+    rating: salon.rating || 5.0,
+    reviewCount: salon.reviewCount || 0,
+    categories: salon.categories || ['hair', 'skin', 'wellness'],
+    services: salon.services || [],
+    packages: salon.packages || [],
+    staff: salon.staff || [],
+    featured: salon.featured || false,
+    registeredAt: salon.registeredAt || new Date().toISOString(),
+  };
+  if (existing >= 0) { list[existing] = entry; } else { list.push(entry); }
+  fs.writeFileSync(APPROVED_FILE, JSON.stringify(list, null, 2));
+
+  // 2. Push to GitHub if token is configured (so next deploy seeds this salon)
+  const token = process.env.GITHUB_TOKEN;
+  const repo  = process.env.GITHUB_REPO || 'hariharln28/Luxeluru';
+  const filePath = 'server/approvedSalonsData.json';
+  if (token) {
+    try {
+      const apiBase = `https://api.github.com/repos/${repo}/contents/${filePath}`;
+      const getRes = await fetch(apiBase, { headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' } });
+      const getJson = await getRes.json();
+      const content = Buffer.from(JSON.stringify(list, null, 2)).toString('base64');
+      await fetch(apiBase, {
+        method: 'PUT',
+        headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: `chore: auto-persist approved salon ${salon.id}`, content, sha: getJson.sha }),
+      });
+      console.log(`[GitHub] approvedSalonsData.json updated for salon ${salon.id}`);
+    } catch (e) {
+      console.warn('[GitHub] Could not auto-commit approvedSalonsData.json:', e.message);
+    }
+  } else {
+    console.log(`[Persist] Salon ${salon.id} saved locally. Set GITHUB_TOKEN env var to auto-commit across deploys.`);
+  }
+}
+
+async function removeApprovedSalon(salonId) {
+  const list = readApprovedSalons().filter(s => s.id !== salonId);
+  fs.writeFileSync(APPROVED_FILE, JSON.stringify(list, null, 2));
+  const token = process.env.GITHUB_TOKEN;
+  const repo  = process.env.GITHUB_REPO || 'hariharln28/Luxeluru';
+  const filePath = 'server/approvedSalonsData.json';
+  if (token) {
+    try {
+      const apiBase = `https://api.github.com/repos/${repo}/contents/${filePath}`;
+      const getRes = await fetch(apiBase, { headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json' } });
+      const getJson = await getRes.json();
+      const content = Buffer.from(JSON.stringify(list, null, 2)).toString('base64');
+      await fetch(apiBase, {
+        method: 'PUT',
+        headers: { Authorization: `token ${token}`, Accept: 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: `chore: remove deactivated salon ${salonId}`, content, sha: getJson.sha }),
+      });
+    } catch (e) {
+      console.warn('[GitHub] Could not remove from approvedSalonsData.json:', e.message);
+    }
+  }
+}
+
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -641,6 +731,10 @@ app.post('/api/salons/:id/approve', async (req, res) => {
         isActive: true
       });
     }
+
+    // Persist to approvedSalonsData.json + GitHub so salon survives redeploys
+    const finalSalon = await db.getSalon(finalId);
+    if (finalSalon) await persistApprovedSalon(finalSalon);
 
     res.json({ success: true, newSalonId: finalId });
   } else {
@@ -1915,6 +2009,50 @@ db.connect(MONGODB_URI).then(async () => {
     }
   } catch (e) {
     console.warn('[Patch] Test salon password patch failed:', e.message);
+  }
+
+  // ─── Seed Approved Partner Salons From approvedSalonsData.json ──────────────
+  // This file is committed to git and auto-updated via GitHub API whenever
+  // admin approves a salon. Every redeploy reads it and restores all approved salons.
+  try {
+    const approvedList = readApprovedSalons();
+    for (const s of approvedList) {
+      if (!s.id || !s.email) continue;
+      const existing = await db.getSalon(s.id);
+      if (!existing) {
+        await db.createSalon({
+          id: s.id,
+          name: s.name || s.id,
+          tagline: s.tagline || 'Premium Salon Experience',
+          area: s.area || 'Bengaluru',
+          address: s.address || 'Bengaluru, Karnataka',
+          lat: s.lat || 12.9716,
+          lng: s.lng || 77.5946,
+          rating: s.rating || 5.0,
+          reviewCount: s.reviewCount || 0,
+          categories: s.categories || ['hair', 'skin', 'wellness'],
+          image: s.image || 'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=800&q=80',
+          openHours: s.openHours || '10:00 AM - 8:00 PM',
+          phone: s.phone || '',
+          email: s.email,
+          services: s.services || [],
+          packages: s.packages || [],
+          staff: s.staff || [],
+          featured: s.featured || false,
+          password: s.hashedPassword || '',
+          isActive: true,
+          registrationStatus: 'approved',
+          ownerName: s.ownerName || '',
+          phoneOwner: s.phone || '',
+          tradeLicenseUrl: '',
+          registeredAt: s.registeredAt || new Date().toISOString(),
+          commissionDue: 0,
+        });
+        console.log(`[Seed] Restored approved salon ${s.id} (${s.name}) from approvedSalonsData.json`);
+      }
+    }
+  } catch (e) {
+    console.warn('[Seed] approvedSalonsData.json seeding failed:', e.message);
   }
 
   // ─── Seed Approved Partner Salons From Environment Variable ─────────────────
