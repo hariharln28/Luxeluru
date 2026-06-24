@@ -1691,6 +1691,17 @@ app.post('/api/notifications/mark-all-read', async (req, res) => {
   }
 });
 
+// ─── Serve React Frontend (Production) ───────────────────────────────────────
+// Serve built Vite assets from dist/
+const distPath = path.join(__dirname, '..', 'dist');
+app.use(express.static(distPath));
+
+// SPA catch-all — any route not matched by an API route above serves index.html
+// so React Router handles client-side navigation (/admin, /login, /salons/:id, etc.)
+app.get('*', (req, res) => {
+  res.sendFile(path.join(distPath, 'index.html'));
+});
+
 // Express global error middleware
 app.use((err, req, res, next) => {
   console.error('[EXPRESS ERROR]', err.stack || err);
