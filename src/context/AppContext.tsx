@@ -38,7 +38,7 @@ interface AppContextType {
   login: (emailOrPhone: string, password: string) => Promise<boolean>;
   loginWithGoogle: () => Promise<void>;
   resetPassword: (email: string) => Promise<boolean>;
-  salonLogin: (name: string, id: string, email: string, checkPass: string) => Promise<boolean>;
+  salonLogin: (id: string, email: string, checkPass: string) => Promise<boolean>;
   adminLogin: (userStr: string, passStr: string) => Promise<boolean>;
   register: (data: Omit<User, 'id' | 'createdAt'>) => Promise<boolean>;
   salonRegister: (data: {
@@ -663,9 +663,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [addToast]);
 
-  const salonLogin = useCallback(async (name: string, id: string, email: string, checkPass: string): Promise<boolean | { attemptsRemaining?: number }> => {
+  const salonLogin = useCallback(async (id: string, email: string, checkPass: string): Promise<boolean | { attemptsRemaining?: number }> => {
     try {
-      const res = await api.salonLogin(name, id, email, checkPass);
+      const res = await api.salonLogin(id, email, checkPass);
       if (res.success) {
         setSalon(res.salon);
         sessionStore.set(STORAGE_KEYS.salonSession, res.salon.id);
@@ -693,7 +693,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const currentSalons = loadLocalSalons();
       const found = currentSalons.find(
         (s) =>
-          s.name.toLowerCase().trim() === name.toLowerCase().trim() &&
           s.id.toLowerCase().trim() === id.toLowerCase().trim() &&
           s.email.toLowerCase().trim() === email.toLowerCase().trim() &&
           s.password === checkPass

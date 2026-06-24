@@ -99,10 +99,10 @@ export const api = {
     }),
 
   // Salon operations
-  salonLogin: (name: string, id: string, email: string, checkPass: string) =>
+  salonLogin: (id: string, email: string, checkPass: string) =>
     request<{ success: boolean; salon: Salon }>('/api/salons/login', {
       method: 'POST',
-      body: JSON.stringify({ name, id, email, password: checkPass }),
+      body: JSON.stringify({ id, email, password: checkPass }),
     }),
 
   setSalonPassword: (email: string, salonId: string, newPassword: string) =>
@@ -121,6 +121,7 @@ export const api = {
     tradeLicenseUrl: string;
     panCardOwner?: string;
     panCardBusiness?: string;
+    password?: string;
   }) =>
     request<{ success: boolean; salonId: string }>('/api/salons/register', {
       method: 'POST',

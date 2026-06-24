@@ -20,7 +20,6 @@ export function LoginPage() {
   const [resetSent, setResetSent] = useState(false);
 
   // Salon states
-  const [salonName, setSalonName] = useState('');
   const [salonId, setSalonId] = useState('');
   const [salonEmail, setSalonEmail] = useState('');
   const [salonPassword, setSalonPassword] = useState('');
@@ -70,12 +69,12 @@ export function LoginPage() {
       }
       navigate('/dashboard');
     } else {
-      if (!salonName.trim() || !salonId.trim() || !salonEmail.trim() || !salonPassword) {
+      if (!salonId.trim() || !salonEmail.trim() || !salonPassword) {
         setError('All fields are required for salon login.');
         return;
       }
       setLoading(true);
-      const success = await salonLogin(salonName, salonId, salonEmail, salonPassword);
+      const success = await salonLogin(salonId, salonEmail, salonPassword);
       setLoading(false);
       if (!success) {
         const newCount = salonFailedAttempts + 1;
@@ -83,9 +82,9 @@ export function LoginPage() {
         if (newCount >= 5) {
           setError('Account may be locked. Please wait 30 minutes before trying again.');
         } else if (newCount >= 3) {
-          setError(`Invalid credentials. ${5 - newCount} attempt${5 - newCount > 1 ? 's' : ''} remaining before lockout.`);
+          setError(`Login failed. Check your Salon ID, email, and password. ${5 - newCount} attempt${5 - newCount > 1 ? 's' : ''} remaining before lockout.`);
         } else {
-          setError('Invalid salon login details. Verify name, ID, email, password and approval status.');
+          setError('Login failed. Check your Salon ID, email, and password.');
         }
         return;
       }
@@ -204,17 +203,6 @@ export function LoginPage() {
             </>
           ) : (
             <>
-              <div>
-                <label className="mb-1.5 block text-sm text-[#9a8fa8]">Salon Name</label>
-                <input
-                  type="text"
-                  value={salonName}
-                  onChange={(e) => setSalonName(e.target.value)}
-                  className="luxe-input"
-                  placeholder="e.g. Anura House of Beauty"
-                  style={{ fontSize: '16px' }}
-                />
-              </div>
               <div>
                 <label className="mb-1.5 block text-sm text-[#9a8fa8]">Salon ID</label>
                 <input

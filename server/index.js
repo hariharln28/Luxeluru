@@ -430,67 +430,48 @@ app.post('/api/salons/login', async (req, res) => {
   }
 
   // ─── 3. Credential Validation ──────────────────
+  // Match by ID + email only (name is NOT required for authentication)
   const salons = await db.getSalons();
-  const found = salons.find(s => 
-    s.name.toLowerCase().trim() === name.toLowerCase().trim() &&
+  const byIdEmail = salons.find(s =>
     s.id.toLowerCase().trim() === id.toLowerCase().trim() &&
-    s.email.toLowerCase().trim() === emailKey &&
-    (s.password === password || s.password === hashPassword(password))
+    s.email.toLowerCase().trim() === emailKey
   );
 
-  if (found) {
-    if (found.registrationStatus !== 'approved') {
-      return res.status(403).json({ success: false, message: 'Salon registration is not approved yet.' });
-    }
-
-    // Guard: password not yet set — salon must set it via Check Onboarding Status
-    if (!found.password) {
-      return res.status(403).json({
-        success: false,
-        message: 'Your account is approved but no password has been set yet. Please visit Partner with Us → Check Status → Set Password before signing in.'
-      });
-    }
-
-    // Success — reset all counters for this IP and account
-    ipAttempts.delete(clientIp);
-    accountAttempts.delete(emailKey);
-
-    // Strip sensitive fields before sending response
-    const { password: _pw, ...safeSalon } = found;
-    return res.json({ success: true, salon: safeSalon });
+  if (!byIdEmail) {
+    const currentIp = ipAttempts.get(clientIp);
+    if (currentIp) { currentIp.count++; } else { ipAttempts.set(clientIp, { count: 1, firstAttempt: now }); }
+    const currentAcct = accountAttempts.get(emailKey);
+    if (currentAcct) { currentAcct.count++; if (currentAcct.count >= LOCKOUT_MAX) { currentAcct.lockedUntil = now + LOCKOUT_DURATION; } } else { accountAttempts.set(emailKey, { count: 1, firstAttempt: now, lockedUntil: null }); }
+    const ai = accountAttempts.get(emailKey);
+    const rem = Math.max(0, LOCKOUT_MAX - (ai?.count || 0));
+    return res.status(401).json({ success: false, message: 'No salon found with this Salon ID and email. Check your credentials or re-register if data was lost.', attemptsRemaining: rem });
   }
 
-  // ─── 4. Failed Attempt — Track & Log ───────────
-  console.warn(`[SECURITY] Failed salon login | IP: ${clientIp} | Email: ${emailKey} | Time: ${new Date().toISOString()}`);
-
-  // Update IP counter
-  const currentIp = ipAttempts.get(clientIp);
-  if (currentIp) {
-    currentIp.count++;
-  } else {
-    ipAttempts.set(clientIp, { count: 1, firstAttempt: now });
+  if (byIdEmail.registrationStatus !== 'approved') {
+    return res.status(403).json({ success: false, message: 'Your salon is pending admin approval. You will be notified once approved.' });
   }
 
-  // Update account counter
-  const currentAcct = accountAttempts.get(emailKey);
-  if (currentAcct) {
-    currentAcct.count++;
-    if (currentAcct.count >= LOCKOUT_MAX) {
-      currentAcct.lockedUntil = now + LOCKOUT_DURATION;
-      console.warn(`[SECURITY] Account LOCKED: ${emailKey} for 30 minutes`);
-    }
-  } else {
-    accountAttempts.set(emailKey, { count: 1, firstAttempt: now, lockedUntil: null });
+  if (!byIdEmail.password) {
+    return res.status(403).json({ success: false, message: 'Salon approved but no password set. Go to Partner with Us → Check Onboarding Status → Set Your Password.' });
   }
 
-  const acctInfo = accountAttempts.get(emailKey);
-  const attemptsRemaining = Math.max(0, LOCKOUT_MAX - (acctInfo?.count || 0));
+  const passwordMatches = byIdEmail.password === password || byIdEmail.password === hashPassword(password);
+  if (!passwordMatches) {
+    console.warn(`[SECURITY] Failed salon login | IP: ${clientIp} | Email: ${emailKey}`);
+    const currentIp = ipAttempts.get(clientIp);
+    if (currentIp) { currentIp.count++; } else { ipAttempts.set(clientIp, { count: 1, firstAttempt: now }); }
+    const currentAcct = accountAttempts.get(emailKey);
+    if (currentAcct) { currentAcct.count++; if (currentAcct.count >= LOCKOUT_MAX) { currentAcct.lockedUntil = now + LOCKOUT_DURATION; } } else { accountAttempts.set(emailKey, { count: 1, firstAttempt: now, lockedUntil: null }); }
+    const ai2 = accountAttempts.get(emailKey);
+    const rem2 = Math.max(0, LOCKOUT_MAX - (ai2?.count || 0));
+    return res.status(401).json({ success: false, message: 'Incorrect password.', attemptsRemaining: rem2 });
+  }
 
-  return res.status(401).json({
-    success: false,
-    message: 'Invalid credentials',
-    attemptsRemaining
-  });
+  // SUCCESS
+  ipAttempts.delete(clientIp);
+  accountAttempts.delete(emailKey);
+  const { password: _pw, ...safeSalon } = byIdEmail;
+  return res.json({ success: true, salon: safeSalon });
 });
 
 // ─── Set Salon Password ───────────────────────
@@ -563,7 +544,7 @@ app.post('/api/salons/register', async (req, res) => {
       { id: 'staff-reg-1', name: 'Senior Expert', role: 'Chief Stylist', rating: 5.0, reviewCount: 0, specialties: ['Coloring', 'Makeup'], avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Expert' }
     ],
     featured: false,
-    password: '',
+    password: data.password ? hashPassword(data.password) : '',
     isActive: false,
     registrationStatus: 'pending',
     ownerName: data.ownerName,

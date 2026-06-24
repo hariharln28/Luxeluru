@@ -32,6 +32,9 @@ export function PartnerWithUsPage() {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [panCardOwner, setPanCardOwner] = useState('');
   const [panCardBusiness, setPanCardBusiness] = useState('');
+  const [regPassword, setRegPassword] = useState('');
+  const [regConfirmPassword, setRegConfirmPassword] = useState('');
+  const [showRegPass, setShowRegPass] = useState(false);
 
   // Exit state
   const [exitSalonId, setExitSalonId] = useState('');
@@ -101,6 +104,9 @@ export function PartnerWithUsPage() {
       // fallback to filename
     }
 
+    if (regPassword.length < 8) { setError('Password must be at least 8 characters.'); return; }
+    if (regPassword !== regConfirmPassword) { setError('Passwords do not match.'); return; }
+
     // Auto generate ID and return it
     const generatedId = await salonRegister({
       ownerName,
@@ -112,6 +118,7 @@ export function PartnerWithUsPage() {
       panCardOwner,
       panCardBusiness,
       tradeLicenseUrl,
+      password: regPassword,
     });
 
     setSuccessMsg(
@@ -132,6 +139,8 @@ export function PartnerWithUsPage() {
     setTermsAccepted(false);
     setPanCardOwner('');
     setPanCardBusiness('');
+    setRegPassword('');
+    setRegConfirmPassword('');
   }
 
   async function handleExitSubmit(e: React.FormEvent) {
@@ -400,6 +409,36 @@ export function PartnerWithUsPage() {
               </span>
             </label>
           </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="mb-1.5 block text-sm text-[#9a8fa8]">Password <span className="text-red-400">*</span></label>
+              <div className="relative">
+                <input
+                  type={showRegPass ? 'text' : 'password'}
+                  value={regPassword}
+                  onChange={(e) => setRegPassword(e.target.value)}
+                  className="luxe-input pr-10"
+                  placeholder="Min 8 characters"
+                  minLength={8}
+                />
+                <button type="button" onClick={() => setShowRegPass(!showRegPass)} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9a8fa8]" style={{touchAction:'manipulation'}}>
+                  {showRegPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </div>
+            <div>
+              <label className="mb-1.5 block text-sm text-[#9a8fa8]">Confirm Password <span className="text-red-400">*</span></label>
+              <input
+                type="password"
+                value={regConfirmPassword}
+                onChange={(e) => setRegConfirmPassword(e.target.value)}
+                className="luxe-input"
+                placeholder="Re-enter password"
+              />
+            </div>
+          </div>
+          <p className="text-xs text-[#9a8fa8]">You will use this password to sign in after admin approval.</p>
 
           <button type="submit" className="luxe-btn w-full">
             Submit Registration Details
