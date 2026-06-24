@@ -1736,6 +1736,37 @@ app.post('/api/salons/:id/change-password', async (req, res) => {
   res.json({ success: true, message: 'Password updated successfully' });
 });
 
+// Notification endpoints (must be BEFORE the SPA wildcard)
+app.get('/api/notifications', async (req, res) => {
+  try {
+    const { target } = req.query;
+    const notifications = await db.getNotifications(target || null);
+    res.json(notifications);
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Failed to get notifications' });
+  }
+});
+
+app.post('/api/notifications/:id/read', async (req, res) => {
+  try {
+    await db.markNotificationRead(req.params.id);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Failed to mark notification read' });
+  }
+});
+
+app.post('/api/notifications/mark-all-read', async (req, res) => {
+  try {
+    const { target } = req.body;
+    if (!target) return res.status(400).json({ success: false, message: 'target is required' });
+    await db.markAllNotificationsRead(target);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Failed to mark all read' });
+  }
+});
+
 // Serve static assets from the frontend build folder in production
 const distPath = path.join(__dirname, '../dist');
 app.use(express.static(distPath));
@@ -1776,37 +1807,6 @@ process.on('unhandledRejection', (reason, promise) => {
 
 process.on('uncaughtException', (err) => {
   console.error('[FATAL] Uncaught Exception:', err);
-});
-
-// Notification endpoints
-app.get('/api/notifications', async (req, res) => {
-  try {
-    const { target } = req.query;
-    const notifications = await db.getNotifications(target || null);
-    res.json(notifications);
-  } catch (err) {
-    res.status(500).json({ success: false, message: 'Failed to get notifications' });
-  }
-});
-
-app.post('/api/notifications/:id/read', async (req, res) => {
-  try {
-    await db.markNotificationRead(req.params.id);
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ success: false, message: 'Failed to mark notification read' });
-  }
-});
-
-app.post('/api/notifications/mark-all-read', async (req, res) => {
-  try {
-    const { target } = req.body;
-    if (!target) return res.status(400).json({ success: false, message: 'target is required' });
-    await db.markAllNotificationsRead(target);
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ success: false, message: 'Failed to mark all read' });
-  }
 });
 
 // Express global error middleware

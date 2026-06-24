@@ -35,10 +35,12 @@ import {
   Save,
   Trash2 as TrashIcon,
   ShieldCheck,
-  BadgeCheck
+  BadgeCheck,
+  ExternalLink
 } from 'lucide-react';
 import type { PaymentMethod } from '../types';
 import { CheckoutModal } from '../components/CheckoutModal';
+import { SalonLocationPicker } from '../components/SalonLocationPicker';
 
 export function SalonDashboardPage() {
   const { 
