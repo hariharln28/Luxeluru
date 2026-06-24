@@ -359,7 +359,6 @@ The Admin Control Centre is **not linked from any public page** (by design). Use
 | **Email** | `luxurysalonadmin@test.com` |
 | **Password** | `salon@admin-test789` |
 
-> **Salon login requires only: Salon ID + Email + Password** (Salon Name field has been removed from the login form).
 
 **What to explore:** Appointments · Staff management · Services & pricing · Walk-in slot blocking · **Closed Days** (Manage Slots tab → Close Entire Day) · Commission Dues tab · Encrypted messages · Payout settings
 
@@ -385,28 +384,6 @@ Luxeluru/
 ├── render.yaml           # Render deployment configuration
 └── public/
 ```
-
----
-
-## Deployment
-
-Luxeluru is deployed as a **monorepo on Render**:
-- Frontend built with `npm run build` and served as static files by the Express server
-- Backend runs as a Node.js web service on the same dyno
-- SQLite database persisted on Render's attached disk
-- Auto-deploys on every push to the `main` branch via GitHub integration
-
----
-
-## Known Limitations
-
-- **Payments are simulated** — Stripe integration is UI-complete but does not process real transactions (demo/hackathon scope)
-- **Render free tier cold start** — first request after inactivity may take 30–60 seconds
-- **In-memory rate limiting** — resets on server restart; production would use Redis-backed rate limiting
-- **Trade license storage** — Uploaded as base64 `data:` URLs in SQLite; production would use cloud object storage (S3/GCS) for large files
-- **SQLite on Render** — Test salon (`LLLUX456`) and test user (`adminuser1@test.com`) are auto-created on every server startup. They are completely isolated and never interfere with real salon registrations, logins, or demo seeding
-- **Approved partner salon persistence** — When admin approves a salon, the server automatically commits its data to `server/approvedSalonsData.json` via the GitHub API (requires `GITHUB_TOKEN` env var). On every future Render redeploy, this file is read at startup and all approved salons are restored — zero manual steps needed
-- **Demo salon seeding** — 15 demo salons are auto-seeded on first page load. Each salon is checked individually by ID, so test or approved salons already in the DB are never overwritten or duplicated
 
 ---
 
