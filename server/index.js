@@ -1887,11 +1887,41 @@ db.connect(MONGODB_URI).then(async () => {
   }
 
   // ─── Ensure Test Salon LLLUX456 Has Correct Password & Status ──────────────
-  // Idempotent: sets the hashed password, correct name, approved status, and active flag.
+  // Idempotent: creates or updates so salon login always works, even after a fresh DB.
   try {
     const testSalon = await db.getSalon('LLLUX456');
     const correctPassword = hashPassword('salon@admin-test789');
-    if (testSalon) {
+    if (!testSalon) {
+      // Create the test salon if DB is fresh (e.g. after Render redeploy)
+      await db.createSalon({
+        id: 'LLLUX456',
+        name: 'luxury salon admin',
+        tagline: 'Premium Luxury Salon Experience',
+        area: 'Indiranagar',
+        address: 'Indiranagar, Bengaluru, Karnataka',
+        lat: 12.9784,
+        lng: 77.6408,
+        rating: 4.9,
+        reviewCount: 120,
+        categories: ['Hair', 'Skin', 'Nails'],
+        image: '',
+        openHours: '10:00 AM - 9:00 PM',
+        phone: '+919999999998',
+        email: 'luxurysalonadmin@test.com',
+        services: [],
+        packages: [],
+        staff: [],
+        featured: true,
+        password: correctPassword,
+        isActive: true,
+        registrationStatus: 'approved',
+        ownerName: 'Admin Owner',
+        phoneOwner: '+919999999998',
+        registeredAt: new Date().toISOString(),
+        commissionDue: 0,
+      });
+      console.log('[Patch] Test salon LLLUX456 created in DB.');
+    } else {
       await db.updateSalon('LLLUX456', {
         name: 'luxury salon admin',
         password: correctPassword,
