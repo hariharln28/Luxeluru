@@ -468,28 +468,27 @@ export function PartnerWithUsPage() {
                 {statusResult.registrationStatus === 'approved' && !statusResult.exitRequestStatus && (
                   <div className="mt-4 p-4 bg-green-500/10 rounded-lg text-green-200 text-xs leading-relaxed border border-green-500/20 space-y-3">
                     <p><strong>✅ Approved:</strong> Your application has been approved and activated! You are now live on the Luxeluru platform.</p>
-                    <p className="pt-1">You can log in to the Salon Partner Portal from the Sign In page using the details below:</p>
                     <ul className="list-disc pl-4 space-y-1 mt-1 text-[#e8d5a3]">
                       <li><strong>Salon Name:</strong> {statusResult.name}</li>
                       <li><strong>Salon ID:</strong> {statusResult.id}</li>
                       <li><strong>Salon Email:</strong> {statusResult.email}</li>
-                      <li><strong>Default Password:</strong> <span className="font-mono bg-[#0f0d12] px-1.5 py-0.5 rounded text-[#c9a962]">SALON@123</span></li>
                     </ul>
 
-                    {/* Set Custom Password */}
+                    {/* Set Password — mandatory before sign-in */}
                     <div className="mt-4 pt-3 border-t border-green-500/20">
                       {passwordSet ? (
                         <div className="flex items-center gap-2 text-emerald-400">
                           <CheckCircle className="h-4 w-4" />
-                          <span className="text-sm font-semibold">Password updated successfully! Use your new password to sign in.</span>
+                          <span className="text-sm font-semibold">Password set successfully! You can now sign in to the Salon Dashboard.</span>
                         </div>
                       ) : (
                         <>
-                          <div className="flex items-center gap-2 mb-3">
+                          <div className="flex items-center gap-2 mb-2">
                             <KeyRound className="h-4 w-4 text-[#c9a962]" />
-                            <span className="text-sm font-semibold text-[#e8d5a3]">Set Custom Password</span>
+                            <span className="text-sm font-semibold text-[#e8d5a3]">Set Your Password</span>
+                            <span className="ml-auto text-[9px] bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full font-bold">Required to sign in</span>
                           </div>
-                          <p className="text-[#9a8fa8] mb-3">Replace the default password with your own secure password (minimum 8 characters).</p>
+                          <p className="text-[#9a8fa8] mb-3">Create a secure password (minimum 8 characters) to access your Salon Dashboard.</p>
 
                           {passwordError && (
                             <p className="text-red-400 text-xs mb-2">{passwordError}</p>
@@ -539,7 +538,7 @@ export function PartnerWithUsPage() {
                                     setPasswordSet(true);
                                     setNewPassword('');
                                     setConfirmPassword('');
-                                    addToast('success', 'Salon password updated successfully!');
+                                    addToast('success', 'Password set! You can now sign in to the Salon Dashboard.');
                                   }
                                 } catch (err: any) {
                                   setPasswordError(err?.message || 'Failed to set password. Please try again.');
@@ -551,9 +550,9 @@ export function PartnerWithUsPage() {
                               }`}
                             >
                               {passwordSetting ? (
-                                <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Updating...</>
+                                <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Setting Password...</>
                               ) : (
-                                <><Lock className="h-3.5 w-3.5" /> Set Password</>
+                                <><Lock className="h-3.5 w-3.5" /> Set Password & Activate Account</>
                               )}
                             </button>
                           </div>
@@ -562,6 +561,7 @@ export function PartnerWithUsPage() {
                     </div>
                   </div>
                 )}
+
 
                 {statusResult.registrationStatus === 'rejected' && !statusResult.exitRequestStatus && (
                   <div className="mt-4 space-y-4">

@@ -830,7 +830,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           { id: 'staff-reg-1', name: 'Senior Expert', role: 'Chief Stylist', rating: 5.0, reviewCount: 0, specialties: ['Coloring', 'Makeup'], avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Expert' }
         ],
         featured: false,
-        password: 'SALON@123',
+        password: '',
         isActive: false,
         registrationStatus: 'pending' as const,
         ownerName: data.ownerName,

@@ -397,6 +397,14 @@ app.post('/api/salons/login', async (req, res) => {
       return res.status(403).json({ success: false, message: 'Salon registration is not approved yet.' });
     }
 
+    // Guard: password not yet set — salon must set it via Check Onboarding Status
+    if (!found.password) {
+      return res.status(403).json({
+        success: false,
+        message: 'Your account is approved but no password has been set yet. Please visit Partner with Us → Check Status → Set Password before signing in.'
+      });
+    }
+
     // Success — reset all counters for this IP and account
     ipAttempts.delete(clientIp);
     accountAttempts.delete(emailKey);
@@ -509,7 +517,7 @@ app.post('/api/salons/register', async (req, res) => {
       { id: 'staff-reg-1', name: 'Senior Expert', role: 'Chief Stylist', rating: 5.0, reviewCount: 0, specialties: ['Coloring', 'Makeup'], avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Expert' }
     ],
     featured: false,
-    password: hashPassword('SALON@123'),
+    password: '',
     isActive: false,
     registrationStatus: 'pending',
     ownerName: data.ownerName,
