@@ -132,5 +132,72 @@
     ],
     "featured": false,
     "registeredAt": "2026-06-24T18:04:22.936Z"
+  },
+  {
+    "id": "LLGRW400",
+    "name": "grwm ",
+    "email": "sharanyaaa.ks@gmail.com",
+    "hashedPassword": "SALON@123",
+    "ownerName": "Sharanya KS",
+    "phone": "8217632710",
+    "address": "jp nagar 6th phase 1st main 2nd cross, 560078",
+    "area": "jp nagar 6th phase 1st main 2nd cross",
+    "lat": 12.9716,
+    "lng": 77.5946,
+    "tagline": "Premium boutique beauty services",
+    "image": "https://images.unsplash.com/photo-1560066984-138dadb4c035?w=800&q=80",
+    "openHours": "10:00 AM - 8:00 PM",
+    "rating": 5,
+    "reviewCount": 0,
+    "categories": [
+      "hair",
+      "skin",
+      "wellness"
+    ],
+    "services": [
+      {
+        "id": "s-reg-1",
+        "name": "Signature Haircut",
+        "duration": 45,
+        "price": 1500,
+        "category": "hair"
+      },
+      {
+        "id": "s-reg-2",
+        "name": "Glow Facial",
+        "duration": 60,
+        "price": 2500,
+        "category": "skin"
+      }
+    ],
+    "packages": [
+      {
+        "id": "p-reg-1",
+        "name": "Luxe Starter Pack",
+        "description": "Basic styling and skin rejuvenation",
+        "services": [
+          "s-reg-1",
+          "s-reg-2"
+        ],
+        "price": 3400,
+        "savings": 600
+      }
+    ],
+    "staff": [
+      {
+        "id": "staff-reg-1",
+        "name": "Senior Expert",
+        "role": "Chief Stylist",
+        "rating": 5,
+        "reviewCount": 0,
+        "specialties": [
+          "Coloring",
+          "Makeup"
+        ],
+        "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=Expert"
+      }
+    ],
+    "featured": false,
+    "registeredAt": "2026-06-23T07:36:12.736Z"
   }
 ]
