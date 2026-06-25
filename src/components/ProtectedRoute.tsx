@@ -22,6 +22,6 @@ export function SalonRoute({ children }: { children: ReactNode }) {
 
 export function AdminRoute({ children }: { children: ReactNode }) {
   const { isAdmin } = useApp();
-  if (!isAdmin) return <Navigate to="/partner-with-us?tab=admin" replace />;
+  if (!isAdmin) return <Navigate to="/" replace />;
   return <>{children}</>;
 }
