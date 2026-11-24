@@ -1,4 +1,4 @@
-import type { User, Salon, Booking, StaffReview, BlockedSlot, Notification } from '../types';
+import type { User, Salon, Booking, StaffReview, BlockedSlot, Notification, Message, Announcement } from '../types';
 
 let authToken: string | null = null;
 
@@ -138,9 +138,10 @@ export const api = {
       method: 'POST',
     }),
 
-  rejectSalonExit: (id: string) =>
+  rejectSalonExit: (id: string, rejectReason: string) =>
     request<{ success: boolean }>(`/api/salons/${id}/reject-exit`, {
       method: 'POST',
+      body: JSON.stringify({ rejectReason }),
     }),
 
   approveSalon: (id: string) =>
@@ -283,5 +284,34 @@ export const api = {
     request<{ success: boolean }>('/api/notifications/mark-all-read', {
       method: 'POST',
       body: JSON.stringify({ target }),
+    }),
+
+  // Messages (E2E encrypted 1:1 conversations)
+  getMessages: (salonId: string) =>
+    request<Message[]>(`/api/messages/${salonId}`),
+
+  sendMessage: (salonId: string, sender: 'admin' | 'salon', encryptedContent: string, context: 'direct' | 'exit-dispute' = 'direct') =>
+    request<{ success: boolean; message: Message }>(`/api/messages/${salonId}`, {
+      method: 'POST',
+      body: JSON.stringify({ sender, encryptedContent, context }),
+    }),
+
+  markMessageRead: (id: string) =>
+    request<{ success: boolean }>(`/api/messages/read/${id}`, { method: 'POST' }),
+
+  // Announcements (admin broadcast to all salons)
+  getAnnouncements: () =>
+    request<Announcement[]>('/api/announcements'),
+
+  createAnnouncement: (title: string, content: string) =>
+    request<{ success: boolean; announcement: Announcement }>('/api/announcements', {
+      method: 'POST',
+      body: JSON.stringify({ title, content }),
+    }),
+
+  markAnnouncementRead: (id: string, salonId: string) =>
+    request<{ success: boolean }>(`/api/announcements/${id}/read`, {
+      method: 'POST',
+      body: JSON.stringify({ salonId }),
     }),
 };

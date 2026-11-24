@@ -17,7 +17,10 @@ import type {
   PaymentMethod,
   BlockedSlot,
   Notification,
+  Message,
+  Announcement,
 } from '../types';
+import { encryptMessage, decryptMessage } from '../utils/encryption';
 import { salons as defaultSalons } from '../data/salons';
 import { scheduleFeedbackRequest } from '../utils/notifications';
 import { api, setAuthToken } from '../services/api';
@@ -49,7 +52,7 @@ interface AppContextType {
   }) => Promise<string>;
   salonExit: (salonId: string, reason: string) => Promise<boolean>;
   approveSalonExit: (salonId: string) => Promise<boolean>;
-  rejectSalonExit: (salonId: string) => Promise<boolean>;
+  rejectSalonExit: (salonId: string, rejectReason: string) => Promise<boolean>;
   logout: () => void;
   bookings: Booking[];
   createBooking: (booking: Omit<Booking, 'id' | 'createdAt' | 'status' | 'userId'>) => Promise<Booking>;
@@ -90,6 +93,13 @@ interface AppContextType {
   fetchNotifications: (target: string) => Promise<void>;
   markNotificationRead: (id: string) => Promise<void>;
   markAllNotificationsRead: (target: string) => Promise<void>;
+  // Messaging
+  messages: Message[];
+  announcements: Announcement[];
+  sendDirectMessage: (salonId: string, plaintext: string, sender: 'admin' | 'salon', context?: 'direct' | 'exit-dispute') => Promise<boolean>;
+  fetchMessages: (salonId: string) => Promise<void>;
+  createAnnouncement: (title: string, content: string) => Promise<boolean>;
+  markAnnouncementRead: (id: string) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -246,6 +256,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [staffReviews, setStaffReviews] = useState<StaffReview[]>([]);
   const [blockedSlots, setBlockedSlots] = useState<BlockedSlot[]>([]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   
   const [user, setUser] = useState<User | null>(null);
   const [salon, setSalon] = useState<Salon | null>(null);
@@ -881,34 +893,118 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [addToast]);
 
-  const rejectSalonExit = useCallback(async (salonId: string): Promise<boolean> => {
+  const rejectSalonExit = useCallback(async (salonId: string, rejectReason: string): Promise<boolean> => {
     try {
-      const res = await api.rejectSalonExit(salonId);
+      const res = await api.rejectSalonExit(salonId, rejectReason);
       if (res.success) {
-        setSalonsList(prev => prev.map(s => s.id === salonId ? { ...s, exitRequestStatus: undefined, exitReason: undefined } : s));
-        addToast('success', `Salon exit request rejected.`);
+        setSalonsList(prev => prev.map(s => s.id === salonId
+          ? { ...s, exitRequestStatus: 'rejected' as const, exitRejectReason: rejectReason }
+          : s
+        ));
+        addToast('success', 'Salon exit request rejected. Reason saved.');
         return true;
       }
       return false;
     } catch {
       // Local fallback
       setSalonsList(prev => {
-        const updated = prev.map(s => {
-          if (s.id === salonId) {
-            const copy = { ...s };
-            delete copy.exitRequestStatus;
-            delete copy.exitReason;
-            return copy;
-          }
-          return s;
-        });
+        const updated = prev.map(s =>
+          s.id === salonId
+            ? { ...s, exitRequestStatus: 'rejected' as const, exitRejectReason: rejectReason }
+            : s
+        );
         localStorage.setItem(STORAGE_KEYS.salons, JSON.stringify(updated));
         return updated;
       });
-      addToast('success', `Salon exit request rejected.`);
+      addToast('success', 'Salon exit request rejected.');
       return true;
     }
   }, [addToast]);
+
+  // ── Messaging & Announcements ──────────────────────────────────────────
+  const fetchMessages = useCallback(async (salonId: string) => {
+    try {
+      const raw = await api.getMessages(salonId);
+      // Decrypt all messages client-side
+      const decrypted = await Promise.all(
+        raw.map(async (m) => {
+          const decryptedContent = await decryptMessage(m.encryptedContent, salonId);
+          return { ...m, decryptedContent };
+        })
+      );
+      setMessages(prev => {
+        // Replace messages for this salonId
+        const others = prev.filter(m => m.salonId !== salonId);
+        return [...others, ...decrypted];
+      });
+    } catch (err) {
+      console.warn('Failed to fetch messages:', err);
+    }
+  }, []);
+
+  const sendDirectMessage = useCallback(async (
+    salonId: string,
+    plaintext: string,
+    sender: 'admin' | 'salon',
+    context: 'direct' | 'exit-dispute' = 'direct'
+  ): Promise<boolean> => {
+    try {
+      const encrypted = await encryptMessage(plaintext, salonId);
+      const res = await api.sendMessage(salonId, sender, encrypted, context);
+      if (res.success) {
+        // Optimistically add the sent message with decryptedContent
+        const newMsg: Message = {
+          ...res.message,
+          decryptedContent: plaintext,
+        };
+        setMessages(prev => [...prev, newMsg]);
+        return true;
+      }
+      return false;
+    } catch (err) {
+      console.warn('Failed to send message:', err);
+      return false;
+    }
+  }, []);
+
+  const fetchAnnouncements = useCallback(async () => {
+    try {
+      const data = await api.getAnnouncements();
+      setAnnouncements(data);
+    } catch (err) {
+      console.warn('Failed to fetch announcements:', err);
+    }
+  }, []);
+
+  const createAnnouncement = useCallback(async (title: string, content: string): Promise<boolean> => {
+    try {
+      const res = await api.createAnnouncement(title, content);
+      if (res.success) {
+        setAnnouncements(prev => [res.announcement, ...prev]);
+        addToast('success', 'Announcement sent to all active salons.');
+        return true;
+      }
+      return false;
+    } catch {
+      addToast('error', 'Failed to send announcement.');
+      return false;
+    }
+  }, [addToast]);
+
+  const markAnnouncementRead = useCallback(async (id: string) => {
+    if (!salon) return;
+    try {
+      await api.markAnnouncementRead(id, salon.id);
+      setAnnouncements(prev =>
+        prev.map(a => a.id === id && !a.readBy.includes(salon.id)
+          ? { ...a, readBy: [...a.readBy, salon.id] }
+          : a
+        )
+      );
+    } catch (err) {
+      console.warn('Failed to mark announcement read:', err);
+    }
+  }, [salon]);
 
   const logout = useCallback(() => {
     // Clear all authentication state
@@ -1692,6 +1788,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
     requestLocation();
   }, [requestLocation]);
 
+  // Poll messages and announcements every 15s when salon or admin is logged in
+  useEffect(() => {
+    if (!salon && !isAdmin) return;
+    // Fetch announcements for salons and admin
+    fetchAnnouncements();
+    const annInterval = setInterval(fetchAnnouncements, 30000);
+    // Fetch salon-specific messages
+    if (salon) {
+      fetchMessages(salon.id);
+      const msgInterval = setInterval(() => fetchMessages(salon.id), 15000);
+      return () => { clearInterval(annInterval); clearInterval(msgInterval); };
+    }
+    return () => clearInterval(annInterval);
+  }, [salon, isAdmin, fetchMessages, fetchAnnouncements]);
+
   return (
     <AppContext.Provider
       value={{
@@ -1749,6 +1860,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
         fetchNotifications,
         markNotificationRead,
         markAllNotificationsRead,
+        messages,
+        announcements,
+        sendDirectMessage,
+        fetchMessages,
+        createAnnouncement,
+        markAnnouncementRead,
       }}
     >
       {children}

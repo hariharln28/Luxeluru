@@ -25,7 +25,7 @@ async function ensureDataDir() {
 // ==========================================
 // MongoDB Schema Definitions
 // ==========================================
-let MongoUser, MongoSalon, MongoBooking, MongoReview, MongoBlockedSlot, MongoNotification;
+let MongoUser, MongoSalon, MongoBooking, MongoReview, MongoBlockedSlot, MongoNotification, MongoMessage, MongoAnnouncement;
 
 function initMongoModels() {
   if (MongoUser) return;
@@ -69,7 +69,9 @@ function initMongoModels() {
     registeredAt: { type: String },
     commissionDue: { type: Number, default: 0 },
     commissionPaidUntil: { type: String },
-    exitReason: { type: String }
+    exitReason: { type: String },
+    exitRequestStatus: { type: String },
+    exitRejectReason: { type: String }
   });
 
   const bookingSchema = new mongoose.Schema({
@@ -138,12 +140,32 @@ function initMongoModels() {
     read: { type: Boolean, default: false }
   });
 
+  const messageSchema = new mongoose.Schema({
+    id: { type: String, required: true, unique: true },
+    salonId: { type: String, required: true },
+    sender: { type: String, required: true }, // 'admin' or 'salon'
+    encryptedContent: { type: String, required: true },
+    context: { type: String, default: 'direct' }, // 'direct' or 'exit-dispute'
+    createdAt: { type: String, required: true },
+    isRead: { type: Boolean, default: false }
+  });
+
+  const announcementSchema = new mongoose.Schema({
+    id: { type: String, required: true, unique: true },
+    title: { type: String, required: true },
+    content: { type: String, required: true },
+    createdAt: { type: String, required: true },
+    readBy: [String] // array of salonIds
+  });
+
   MongoUser = mongoose.model('User', userSchema);
   MongoSalon = mongoose.model('Salon', salonSchema);
   MongoBooking = mongoose.model('Booking', bookingSchema);
   MongoReview = mongoose.model('Review', reviewSchema);
   MongoBlockedSlot = mongoose.model('BlockedSlot', blockedSlotSchema);
   MongoNotification = mongoose.model('Notification', notificationSchema);
+  MongoMessage = mongoose.model('Message', messageSchema);
+  MongoAnnouncement = mongoose.model('Announcement', announcementSchema);
 }
 
 // ==========================================
@@ -266,6 +288,24 @@ async function initSqlite() {
       createdAt TEXT,
       read INTEGER DEFAULT 0
     );
+
+    CREATE TABLE IF NOT EXISTS messages (
+      id TEXT PRIMARY KEY,
+      salonId TEXT NOT NULL,
+      sender TEXT NOT NULL,
+      encryptedContent TEXT NOT NULL,
+      context TEXT DEFAULT 'direct',
+      createdAt TEXT NOT NULL,
+      isRead INTEGER DEFAULT 0
+    );
+
+    CREATE TABLE IF NOT EXISTS announcements (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      content TEXT NOT NULL,
+      createdAt TEXT NOT NULL,
+      readBy TEXT DEFAULT '[]'
+    );
   `);
 
   try {
@@ -282,6 +322,14 @@ async function initSqlite() {
   } catch (e) { /* already exists */ }
   try {
     await sqliteDb.run("ALTER TABLE bookings ADD COLUMN payoutStatus TEXT");
+  } catch (e) { /* already exists */ }
+
+  // Add missing salon columns for exit status tracking
+  try {
+    await sqliteDb.run("ALTER TABLE salons ADD COLUMN exitRequestStatus TEXT");
+  } catch (e) { /* already exists */ }
+  try {
+    await sqliteDb.run("ALTER TABLE salons ADD COLUMN exitRejectReason TEXT");
   } catch (e) { /* already exists */ }
 }
 
@@ -779,6 +827,95 @@ class DatabaseManager {
       }
     }
     console.log('Seeding process completed.');
+  }
+
+  // MESSAGES
+  async getMessages(salonId) {
+    if (this.mode === 'mongodb') {
+      const docs = await MongoMessage.find({ salonId }).sort({ createdAt: 1 });
+      return docs.map(d => d.toObject());
+    } else {
+      const rows = await sqliteDb.all('SELECT * FROM messages WHERE salonId = ? ORDER BY createdAt ASC', salonId);
+      return rows.map(r => ({ ...r, isRead: Boolean(r.isRead) }));
+    }
+  }
+
+  async createMessage(data) {
+    if (this.mode === 'mongodb') {
+      const doc = new MongoMessage(data);
+      await doc.save();
+      return doc.toObject();
+    } else {
+      await sqliteDb.run(
+        `INSERT INTO messages (id, salonId, sender, encryptedContent, context, createdAt, isRead)
+         VALUES (?, ?, ?, ?, ?, ?, 0)`,
+        data.id, data.salonId, data.sender, data.encryptedContent,
+        data.context || 'direct', data.createdAt
+      );
+      return data;
+    }
+  }
+
+  async markMessageRead(id) {
+    if (this.mode === 'mongodb') {
+      await MongoMessage.findOneAndUpdate({ id }, { $set: { isRead: true } });
+    } else {
+      await sqliteDb.run('UPDATE messages SET isRead = 1 WHERE id = ?', id);
+    }
+  }
+
+  async getUnreadMessageCount(salonId, sender) {
+    // sender = who sent the unread messages (i.e., the OTHER party's messages)
+    if (this.mode === 'mongodb') {
+      return MongoMessage.countDocuments({ salonId, sender, isRead: false });
+    } else {
+      const row = await sqliteDb.get(
+        'SELECT COUNT(*) as count FROM messages WHERE salonId = ? AND sender = ? AND isRead = 0',
+        salonId, sender
+      );
+      return row?.count || 0;
+    }
+  }
+
+  // ANNOUNCEMENTS
+  async getAnnouncements() {
+    if (this.mode === 'mongodb') {
+      const docs = await MongoAnnouncement.find({}).sort({ createdAt: -1 });
+      return docs.map(d => d.toObject());
+    } else {
+      const rows = await sqliteDb.all('SELECT * FROM announcements ORDER BY createdAt DESC');
+      return rows.map(r => ({ ...r, readBy: r.readBy ? JSON.parse(r.readBy) : [] }));
+    }
+  }
+
+  async createAnnouncement(data) {
+    if (this.mode === 'mongodb') {
+      const doc = new MongoAnnouncement(data);
+      await doc.save();
+      return doc.toObject();
+    } else {
+      await sqliteDb.run(
+        `INSERT INTO announcements (id, title, content, createdAt, readBy)
+         VALUES (?, ?, ?, ?, '[]')`,
+        data.id, data.title, data.content, data.createdAt
+      );
+      return data;
+    }
+  }
+
+  async markAnnouncementReadBySalon(id, salonId) {
+    if (this.mode === 'mongodb') {
+      await MongoAnnouncement.findOneAndUpdate({ id }, { $addToSet: { readBy: salonId } });
+    } else {
+      const row = await sqliteDb.get('SELECT readBy FROM announcements WHERE id = ?', id);
+      if (row) {
+        const readBy = JSON.parse(row.readBy || '[]');
+        if (!readBy.includes(salonId)) {
+          readBy.push(salonId);
+          await sqliteDb.run('UPDATE announcements SET readBy = ? WHERE id = ?', JSON.stringify(readBy), id);
+        }
+      }
+    }
   }
 }
 

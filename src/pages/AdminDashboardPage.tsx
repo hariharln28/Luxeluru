@@ -30,7 +30,11 @@ import {
   Clock,
   Phone,
   Mail,
-  Bell
+  Bell,
+  MessageSquare,
+  Send,
+  Megaphone,
+  ChevronRight
 } from 'lucide-react';
 
 export function AdminDashboardPage() {
@@ -53,11 +57,17 @@ export function AdminDashboardPage() {
     notifications,
     fetchNotifications,
     markNotificationRead,
-    markAllNotificationsRead
+    markAllNotificationsRead,
+    messages,
+    announcements,
+    sendDirectMessage,
+    fetchMessages,
+    createAnnouncement,
+    activeSalons
   } = useApp();
   
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'pending' | 'salons' | 'users' | 'platform' | 'test-signin' | 'notifications'>('pending');
+  const [activeTab, setActiveTab] = useState<'pending' | 'salons' | 'users' | 'platform' | 'test-signin' | 'notifications' | 'messages'>('pending');
   const [refreshing, setRefreshing] = useState(false);
   const [networkError, setNetworkError] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -69,6 +79,19 @@ export function AdminDashboardPage() {
   const [blockingUserId, setBlockingUserId] = useState<string | null>(null);
   const [blockDays, setBlockDays] = useState('3');
   const [deletingSalonId, setDeletingSalonId] = useState<string | null>(null);
+
+  // Exit rejection modal state
+  const [rejectExitId, setRejectExitId] = useState<string | null>(null);
+  const [rejectExitReason, setRejectExitReason] = useState('');
+
+  // Messages tab state
+  const [selectedSalonId, setSelectedSalonId] = useState<string | null>(null);
+  const [adminMsgInput, setAdminMsgInput] = useState('');
+  const [adminMsgSending, setAdminMsgSending] = useState(false);
+  const [broadcastTitle, setBroadcastTitle] = useState('');
+  const [broadcastContent, setBroadcastContent] = useState('');
+  const [broadcastSending, setBroadcastSending] = useState(false);
+  const [adminMsgSubTab, setAdminMsgSubTab] = useState<'conversations' | 'broadcast'>('conversations');
 
   // Auto-refresh data on mount and every 30 seconds
   const handleRefresh = useCallback(async () => {
@@ -381,6 +404,21 @@ export function AdminDashboardPage() {
             </span>
           )}
         </button>
+        <button
+          onClick={() => setActiveTab('messages')}
+          className={`relative flex flex-1 items-center justify-center gap-2 rounded-lg py-2.5 text-xs font-semibold transition ${
+            activeTab === 'messages' ? 'bg-[#c9a962] text-[#0f0d12]' : 'text-[#9a8fa8] hover:text-[#e8d5a3]'
+          }`}
+          style={{ touchAction: 'manipulation' }}
+        >
+          <MessageSquare className="h-4 w-4" />
+          Messages
+          {messages.filter(m => m.sender === 'salon' && !m.isRead).length > 0 && (
+            <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+              {messages.filter(m => m.sender === 'salon' && !m.isRead).length > 9 ? '9+' : messages.filter(m => m.sender === 'salon' && !m.isRead).length}
+            </span>
+          )}
+        </button>
       </div>
 
       {/* TABS VIEWS */}
@@ -514,7 +552,7 @@ export function AdminDashboardPage() {
                         Approve Exit
                       </button>
                       <button
-                        onClick={() => rejectSalonExit(salon.id)}
+                        onClick={() => { setRejectExitId(salon.id); setRejectExitReason(''); }}
                         className="flex-1 luxe-btn-outline py-2 text-sm"
                       >
                         Reject
@@ -1259,6 +1297,217 @@ export function AdminDashboardPage() {
         </div>
       )}
 
+      {/* MESSAGES TAB */}
+      {activeTab === 'messages' && (
+        <div className="space-y-6 animate-fade-in">
+          {/* Sub-tabs */}
+          <div className="flex gap-1 rounded-xl bg-[#130f18]/60 p-1 border border-[#c9a962]/10">
+            <button
+              onClick={() => setAdminMsgSubTab('conversations')}
+              className={`flex-1 flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-medium transition ${
+                adminMsgSubTab === 'conversations' ? 'bg-[#c9a962] text-[#0f0d12]' : 'text-[#9a8fa8] hover:text-[#e8d5a3]'
+              }`}
+              style={{ touchAction: 'manipulation' }}
+            >
+              <Users className="h-4 w-4" /> Salon Conversations
+            </button>
+            <button
+              onClick={() => setAdminMsgSubTab('broadcast')}
+              className={`flex-1 flex items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-medium transition ${
+                adminMsgSubTab === 'broadcast' ? 'bg-[#c9a962] text-[#0f0d12]' : 'text-[#9a8fa8] hover:text-[#e8d5a3]'
+              }`}
+              style={{ touchAction: 'manipulation' }}
+            >
+              <Megaphone className="h-4 w-4" /> Broadcast to All
+            </button>
+          </div>
+
+          {/* Conversations */}
+          {adminMsgSubTab === 'conversations' && (
+            <div className="grid gap-4 lg:grid-cols-3">
+              {/* Salon List */}
+              <div className="luxe-card p-4">
+                <h3 className="font-display text-lg text-[#e8d5a3] mb-3">Active Salons</h3>
+                <div className="space-y-2 max-h-[60dvh] overflow-y-auto">
+                  {activeSalons.filter(s => s.isActive).map(s => {
+                    const unread = messages.filter(m => m.salonId === s.id && m.sender === 'salon' && !m.isRead).length;
+                    return (
+                      <button
+                        key={s.id}
+                        onClick={() => { setSelectedSalonId(s.id); fetchMessages(s.id); }}
+                        className={`w-full flex items-center gap-3 rounded-xl p-3 text-left transition relative ${
+                          selectedSalonId === s.id
+                            ? 'bg-[#c9a962]/15 border border-[#c9a962]/40'
+                            : 'hover:bg-[#221c28] border border-transparent'
+                        }`}
+                        style={{ touchAction: 'manipulation' }}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-[#e8d5a3] truncate">{s.name}</p>
+                          <p className="text-[11px] text-[#9a8fa8] truncate">{s.id}</p>
+                        </div>
+                        {unread > 0 && (
+                          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white">
+                            {unread}
+                          </span>
+                        )}
+                        <ChevronRight className="h-4 w-4 text-[#9a8fa8] shrink-0" />
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Chat panel */}
+              <div className="lg:col-span-2 luxe-card p-5">
+                {!selectedSalonId ? (
+                  <div className="flex flex-col items-center justify-center h-full py-16 text-[#9a8fa8]">
+                    <MessageSquare className="h-12 w-12 mb-3 opacity-30" />
+                    <p className="text-sm">Select a salon to view conversation</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-2 mb-4 border-b border-[#c9a962]/10 pb-3">
+                      <Lock className="h-4 w-4 text-[#c9a962]" />
+                      <h3 className="font-display text-lg text-[#e8d5a3] truncate">
+                        {activeSalons.find(s => s.id === selectedSalonId)?.name || selectedSalonId}
+                      </h3>
+                      <span className="ml-auto shrink-0 text-[10px] text-[#9a8fa8] bg-[#c9a962]/10 px-2 py-0.5 rounded-full">🔒 Encrypted</span>
+                    </div>
+
+                    {/* Messages */}
+                    <div className="space-y-3 max-h-[45dvh] overflow-y-auto pr-1 mb-4">
+                      {messages.filter(m => m.salonId === selectedSalonId).length === 0 ? (
+                        <div className="text-center py-10 text-[#9a8fa8]">
+                          <p className="text-sm">No messages yet. Start the conversation.</p>
+                        </div>
+                      ) : (
+                        messages
+                          .filter(m => m.salonId === selectedSalonId)
+                          .map((m) => (
+                            <div key={m.id} className={`flex ${m.sender === 'admin' ? 'justify-end' : 'justify-start'}`}>
+                              <div
+                                className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
+                                  m.sender === 'admin'
+                                    ? 'bg-[#c9a962] text-[#0f0d12] rounded-br-sm'
+                                    : 'bg-[#221c28] border border-[#c9a962]/15 text-[#e8d5a3] rounded-bl-sm'
+                                }`}
+                              >
+                                {m.decryptedContent || m.encryptedContent}
+                              </div>
+                            </div>
+                          ))
+                      )}
+                    </div>
+
+                    {/* Input */}
+                    <form
+                      onSubmit={async (e) => {
+                        e.preventDefault();
+                        if (!adminMsgInput.trim() || !selectedSalonId) return;
+                        setAdminMsgSending(true);
+                        await sendDirectMessage(selectedSalonId, adminMsgInput.trim(), 'admin', 'direct');
+                        setAdminMsgInput('');
+                        setAdminMsgSending(false);
+                      }}
+                      className="flex gap-2"
+                    >
+                      <input
+                        value={adminMsgInput}
+                        onChange={(e) => setAdminMsgInput(e.target.value)}
+                        placeholder="Type a message..."
+                        className="luxe-input flex-1"
+                        style={{ fontSize: 16 }}
+                        disabled={adminMsgSending}
+                      />
+                      <button
+                        type="submit"
+                        disabled={!adminMsgInput.trim() || adminMsgSending}
+                        className="luxe-btn px-4 disabled:opacity-50"
+                        style={{ touchAction: 'manipulation', minHeight: 44 }}
+                      >
+                        <Send className="h-4 w-4" />
+                      </button>
+                    </form>
+                  </>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Broadcast */}
+          {adminMsgSubTab === 'broadcast' && (
+            <div className="luxe-card p-6 space-y-5">
+              <div className="border-b border-[#c9a962]/10 pb-4">
+                <h3 className="font-display text-xl text-[#e8d5a3]">📣 Broadcast Announcement</h3>
+                <p className="text-sm text-[#9a8fa8] mt-1">Send a platform-wide message to all active salon partners.</p>
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm text-[#9a8fa8] mb-1.5">Announcement Title</label>
+                  <input
+                    value={broadcastTitle}
+                    onChange={(e) => setBroadcastTitle(e.target.value)}
+                    className="luxe-input"
+                    placeholder="e.g. Platform Maintenance Notice, New Feature Update"
+                    style={{ fontSize: 16 }}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm text-[#9a8fa8] mb-1.5">Message Content</label>
+                  <textarea
+                    value={broadcastContent}
+                    onChange={(e) => setBroadcastContent(e.target.value)}
+                    className="luxe-input min-h-[140px]"
+                    placeholder="Type your announcement message here..."
+                    style={{ fontSize: 16, resize: 'vertical' }}
+                  />
+                </div>
+                <button
+                  onClick={async () => {
+                    if (!broadcastTitle.trim() || !broadcastContent.trim()) {
+                      addToast('error', 'Please fill in both title and message.');
+                      return;
+                    }
+                    setBroadcastSending(true);
+                    await createAnnouncement(broadcastTitle.trim(), broadcastContent.trim());
+                    setBroadcastTitle('');
+                    setBroadcastContent('');
+                    setBroadcastSending(false);
+                  }}
+                  disabled={broadcastSending || !broadcastTitle.trim() || !broadcastContent.trim()}
+                  className="luxe-btn w-full disabled:opacity-50 flex items-center justify-center gap-2"
+                  style={{ touchAction: 'manipulation', minHeight: 48 }}
+                >
+                  {broadcastSending ? (
+                    <><span className="animate-spin">⏳</span> Sending...</>
+                  ) : (
+                    <><Megaphone className="h-5 w-5" /> Send to All Active Salons</>
+                  )}
+                </button>
+              </div>
+
+              {/* Recent announcements */}
+              {announcements.length > 0 && (
+                <div className="border-t border-[#c9a962]/10 pt-4 space-y-3">
+                  <h4 className="text-sm font-semibold text-[#9a8fa8]">Recent Announcements</h4>
+                  {announcements.slice(0, 5).map(a => (
+                    <div key={a.id} className="rounded-xl border border-[#c9a962]/10 bg-[#130f18]/40 p-3">
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="text-sm font-semibold text-[#e8d5a3]">{a.title}</p>
+                        <p className="text-[10px] text-[#9a8fa8]">{a.readBy.length} salons read</p>
+                      </div>
+                      <p className="text-xs text-[#9a8fa8] line-clamp-2">{a.content}</p>
+                      <p className="text-[10px] text-[#6b6175] mt-1">{new Date(a.createdAt).toLocaleString('en-IN')}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* BLOCK USER MODAL */}
       {blockingUserId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
@@ -1343,6 +1592,48 @@ export function AdminDashboardPage() {
           </div>
         );
       })()}
+      {/* Exit Rejection Reason Modal */}
+      {rejectExitId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4 backdrop-blur-sm">
+          <div className="luxe-card w-full max-w-md p-6 animate-fade-in">
+            <h3 className="font-display text-xl text-[#e8d5a3] mb-4">Reject Exit Request</h3>
+            <p className="text-sm text-[#9a8fa8] mb-4">
+              Provide a reason for rejecting this salon's exit request. The salon will see this reason.
+            </p>
+            <textarea
+              value={rejectExitReason}
+              onChange={(e) => setRejectExitReason(e.target.value)}
+              className="luxe-input min-h-[100px] mb-4"
+              placeholder="Reason for rejection (e.g. outstanding dues, pending bookings, etc.)"
+              style={{ fontSize: 16 }}
+            />
+            <div className="flex gap-3">
+              <button
+                onClick={() => setRejectExitId(null)}
+                className="luxe-btn-outline flex-1"
+                style={{ touchAction: 'manipulation' }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  if (!rejectExitReason.trim()) {
+                    addToast('error', 'Please provide a reason for rejection.');
+                    return;
+                  }
+                  await rejectSalonExit(rejectExitId, rejectExitReason.trim());
+                  setRejectExitId(null);
+                  setRejectExitReason('');
+                }}
+                className="luxe-btn flex-1"
+                style={{ touchAction: 'manipulation' }}
+              >
+                Confirm Rejection
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

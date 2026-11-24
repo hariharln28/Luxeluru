@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Shield, FileText, LogOut, Lock, Building, Search, CheckCircle, Clock, Eye, EyeOff, Loader2, KeyRound } from 'lucide-react';
+import { Shield, FileText, LogOut, Lock, Building, Search, CheckCircle, Clock, Eye, EyeOff, Loader2, KeyRound, Send, MessageSquare, XCircle, AlertTriangle } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { api } from '../services/api';
 
 export function PartnerWithUsPage() {
-  const { salonRegister, salonExit, salons, addToast } = useApp();
+  const { salonRegister, salonExit, salons, addToast, sendDirectMessage, messages } = useApp();
 
   const [searchParams, setSearchParams] = useSearchParams();
   const tabParam = searchParams.get('tab');
@@ -48,10 +48,16 @@ export function PartnerWithUsPage() {
   // Set password state
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [showNewPass, setShowNewPass] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
   const [passwordSetting, setPasswordSetting] = useState(false);
   const [passwordSet, setPasswordSet] = useState(false);
-  const [passwordError, setPasswordError] = useState('');
+  const [showNewPass, setShowNewPass] = useState(false);
+
+
+  // Exit dispute reply state
+  const [exitReplyMsg, setExitReplyMsg] = useState('');
+  const [exitReplySending, setExitReplySending] = useState(false);
+
 
   async function handleRegisterSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -424,14 +430,15 @@ export function PartnerWithUsPage() {
                 <p><strong>Owner Name:</strong> {statusResult.ownerName}</p>
                 <p><strong>Business Email:</strong> {statusResult.email}</p>
                 <p><strong>Location:</strong> {statusResult.address}</p>
-                
-                {statusResult.registrationStatus === 'pending' && (
+
+                {/* ── REGISTRATION STATUS SECTION ── */}
+                {statusResult.registrationStatus === 'pending' && !statusResult.exitRequestStatus && (
                   <div className="mt-4 p-4 bg-amber-500/10 rounded-lg text-amber-200 text-xs leading-relaxed border border-amber-500/20">
                     <strong>⏳ Under Review:</strong> Your salon registration details and Trade License are currently being verified by the administrator. Approval generally takes up to 5 business days. Your unique Salon ID will be auto-generated once your application is approved. Check back using your email.
                   </div>
                 )}
 
-                {statusResult.registrationStatus === 'approved' && (
+                {statusResult.registrationStatus === 'approved' && !statusResult.exitRequestStatus && (
                   <div className="mt-4 p-4 bg-green-500/10 rounded-lg text-green-200 text-xs leading-relaxed border border-green-500/20 space-y-3">
                     <p><strong>✅ Approved:</strong> Your application has been approved and activated! You are now live on the Luxeluru platform.</p>
                     <p className="pt-1">You can log in to the Salon Partner Portal from the Sign In page using the details below:</p>
@@ -529,12 +536,137 @@ export function PartnerWithUsPage() {
                   </div>
                 )}
 
-                {statusResult.registrationStatus === 'rejected' && (
+                {statusResult.registrationStatus === 'rejected' && !statusResult.exitRequestStatus && (
                   <div className="mt-4 p-4 bg-red-500/10 rounded-lg text-red-200 text-xs leading-relaxed border border-red-500/20">
                     <strong>❌ Application Inactive:</strong> This application has been rejected or the salon has opted to exit the platform.
                     {statusResult.exitReason && (
                       <p className="mt-2"><strong>Deregistration Reason:</strong> {statusResult.exitReason}</p>
                     )}
+                  </div>
+                )}
+
+                {/* ── EXIT REQUEST STATUS SECTION ── */}
+                {statusResult.exitRequestStatus === 'pending' && (
+                  <div className="mt-4 space-y-3">
+                    <div className="p-4 bg-amber-500/10 rounded-xl text-amber-200 text-xs leading-relaxed border border-amber-500/20">
+                      <strong>⏳ Exit Request Pending:</strong> Your exit request has been submitted and is awaiting admin review. You will see the decision here once it's processed.
+                    </div>
+                    {/* Show exit dispute messages from admin */}
+                    {(() => {
+                      const disputeMsgs = messages.filter(m => m.salonId === statusResult.id && m.context === 'exit-dispute');
+                      if (disputeMsgs.length === 0) return null;
+                      return (
+                        <div className="rounded-xl border border-amber-500/20 bg-[#130f18]/60 p-4">
+                          <p className="text-xs font-semibold text-[#e8d5a3] mb-3 flex items-center gap-1.5">
+                            <MessageSquare className="h-3.5 w-3.5 text-[#c9a962]" /> Messages from Admin
+                          </p>
+                          <div className="space-y-2">
+                            {disputeMsgs.map(m => (
+                              <div key={m.id} className={`flex ${m.sender === 'admin' ? 'justify-start' : 'justify-end'}`}>
+                                <div className={`max-w-[85%] rounded-xl px-3 py-2 text-xs ${
+                                  m.sender === 'admin' ? 'bg-[#221c28] border border-amber-500/20 text-amber-200' : 'bg-[#c9a962] text-[#0f0d12]'
+                                }`}>
+                                  {m.decryptedContent || m.encryptedContent}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                )}
+
+                {statusResult.exitRequestStatus === 'rejected' && (
+                  <div className="mt-4 space-y-4">
+                    <div className="p-4 bg-red-500/10 rounded-xl text-red-200 text-sm leading-relaxed border border-red-500/20">
+                      <div className="flex items-center gap-2 mb-2">
+                        <XCircle className="h-5 w-5 text-red-400" />
+                        <strong className="text-red-300">Exit Request Not Approved</strong>
+                      </div>
+                      {statusResult.exitRejectReason ? (
+                        <div className="mt-2 p-3 bg-[#0f0d12]/60 rounded-lg border border-red-500/15">
+                          <p className="text-[10px] font-semibold text-red-400/70 uppercase tracking-wide mb-1">Admin's Reason:</p>
+                          <p className="text-red-200 text-xs">{statusResult.exitRejectReason}</p>
+                        </div>
+                      ) : (
+                        <p className="text-xs mt-1 text-red-300/70">No specific reason provided.</p>
+                      )}
+                    </div>
+
+                    {/* Reply to admin about exit rejection */}
+                    <div className="rounded-xl border border-[#c9a962]/20 bg-[#130f18]/60 p-4 space-y-3">
+                      <p className="text-xs font-semibold text-[#e8d5a3] flex items-center gap-1.5">
+                        <MessageSquare className="h-3.5 w-3.5 text-[#c9a962]" /> Reply to Admin
+                        <span className="ml-auto text-[9px] bg-[#c9a962]/10 text-[#9a8fa8] px-2 py-0.5 rounded-full">🔒 Encrypted</span>
+                      </p>
+
+                      {/* Existing exit dispute messages */}
+                      {(() => {
+                        const disputeMsgs = messages.filter(m => m.salonId === statusResult.id && m.context === 'exit-dispute');
+                        if (disputeMsgs.length === 0) return null;
+                        return (
+                          <div className="space-y-2 max-h-[200px] overflow-y-auto">
+                            {disputeMsgs.map(m => (
+                              <div key={m.id} className={`flex ${m.sender === 'admin' ? 'justify-start' : 'justify-end'}`}>
+                                <div className={`max-w-[85%] rounded-xl px-3 py-2 text-xs leading-relaxed ${
+                                  m.sender === 'admin' ? 'bg-[#221c28] border border-[#c9a962]/15 text-[#e8d5a3]' : 'bg-[#c9a962] text-[#0f0d12]'
+                                }`}>
+                                  {m.decryptedContent || m.encryptedContent}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      })()}
+
+                      <form
+                        onSubmit={async (e) => {
+                          e.preventDefault();
+                          if (!exitReplyMsg.trim()) return;
+                          setExitReplySending(true);
+                          const ok = await sendDirectMessage(statusResult.id, exitReplyMsg.trim(), 'salon', 'exit-dispute');
+                          if (ok) {
+                            setExitReplyMsg('');
+                            addToast('success', 'Reply sent to admin.');
+                          } else {
+                            addToast('error', 'Failed to send reply. Please try again.');
+                          }
+                          setExitReplySending(false);
+                        }}
+                        className="flex gap-2"
+                      >
+                        <input
+                          value={exitReplyMsg}
+                          onChange={(e) => setExitReplyMsg(e.target.value)}
+                          placeholder="Type your response to admin..."
+                          className="luxe-input flex-1 text-sm"
+                          style={{ fontSize: 16 }}
+                          disabled={exitReplySending}
+                        />
+                        <button
+                          type="submit"
+                          disabled={!exitReplyMsg.trim() || exitReplySending}
+                          className="luxe-btn px-4 disabled:opacity-50 flex items-center gap-1.5"
+                          style={{ touchAction: 'manipulation', minHeight: 44 }}
+                        >
+                          {exitReplySending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                        </button>
+                      </form>
+                    </div>
+
+                    {/* Helpful info */}
+                    <div className="p-3 bg-[#c9a962]/5 rounded-lg border border-[#c9a962]/15 text-xs text-[#9a8fa8]">
+                      <AlertTriangle className="h-3.5 w-3.5 text-[#c9a962] inline mr-1" />
+                      You may still log in to your Salon Dashboard to continue operations, or contact admin for clarification.
+                    </div>
+                  </div>
+                )}
+
+                {statusResult.exitRequestStatus === 'approved' && (
+                  <div className="mt-4 p-4 bg-emerald-500/10 rounded-xl text-emerald-200 text-sm leading-relaxed border border-emerald-500/20">
+                    <CheckCircle className="h-5 w-5 inline mr-2 text-emerald-400" />
+                    <strong>Exit Approved:</strong> Your exit request has been approved by admin. Your salon has been deactivated from the platform. Thank you for being a Luxeluru partner.
                   </div>
                 )}
               </div>
