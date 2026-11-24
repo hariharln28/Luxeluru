@@ -17,11 +17,11 @@ export function RegisterPage() {
   const { register, language } = useApp();
   const tr = useT();
   const navigate = useNavigate();
-
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
-    if (!name || !email || !phone || !password) {
+
+    if (!name || !email || !phone || !password || !confirmPassword) {
       setError(tr('required'));
       return;
     }
@@ -33,7 +33,7 @@ export function RegisterPage() {
       setError('Password must be at least 6 characters');
       return;
     }
-    const ok = register({
+    const ok = await register({
       name,
       email,
       phone,
@@ -44,9 +44,8 @@ export function RegisterPage() {
       setError(tr('emailExists'));
       return;
     }
-    navigate('/dashboard');
+    navigate('/login', { state: { fromRegister: true } });
   }
-
   return (
     <div className="flex min-h-[calc(100vh-140px)] items-center justify-center px-4 py-12">
       <div className="w-full max-w-md animate-fade-in">

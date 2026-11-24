@@ -14,7 +14,9 @@ import { NavigatorPage } from './pages/NavigatorPage';
 import { BookingsPage } from './pages/BookingsPage';
 import { LeaderboardPage } from './pages/LeaderboardPage';
 import { ProfilePage } from './pages/ProfilePage';
-import { SalonPortalPage } from './pages/SalonPortalPage';
+import { PartnerWithUsPage } from './pages/PartnerWithUsPage';
+import { SalonDashboardPage } from './pages/SalonDashboardPage';
+import { AdminDashboardPage } from './pages/AdminDashboardPage';
 
 export default function App() {
   return (
@@ -35,7 +37,9 @@ export default function App() {
             <Route path="/navigator" element={<ProtectedRoute><NavigatorPage /></ProtectedRoute>} />
             <Route path="/bookings" element={<ProtectedRoute><BookingsPage /></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
-            <Route path="/salon-portal" element={<ProtectedRoute><SalonPortalPage /></ProtectedRoute>} />
+            <Route path="/partner-with-us" element={<PartnerWithUsPage />} />
+            <Route path="/salon-dashboard" element={<SalonDashboardPage />} />
+            <Route path="/admin-dashboard" element={<AdminDashboardPage />} />
           </Route>
         </Routes>
       </BrowserRouter>

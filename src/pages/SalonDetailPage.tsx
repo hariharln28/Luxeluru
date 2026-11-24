@@ -21,7 +21,7 @@ const TIME_SLOTS = [
 export function SalonDetailPage() {
   const { id } = useParams<{ id: string }>();
   const salon = getSalonById(id ?? '');
-  const { user, createBooking, addStaffReview, staffReviews, addToast } = useApp();
+  const { user, createBooking, addStaffReview, staffReviews, addToast, isUserBlocked } = useApp();
   const tr = useT();
 
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
@@ -64,8 +64,13 @@ export function SalonDetailPage() {
     setSelectedServices([]);
   }
 
-  function handleBook() {
+  async function handleBook() {
     if (!user) return;
+    const blockStatus = isUserBlocked(user.id);
+    if (blockStatus.blocked) {
+      addToast('error', blockStatus.reason || 'You are blocked from booking appointments.');
+      return;
+    }
     if (!date || !time) {
       addToast('error', 'Please select date and time');
       return;
@@ -81,7 +86,7 @@ export function SalonDetailPage() {
 
     const staff = currentSalon.staff.find((st) => st.id === selectedStaff);
 
-    createBooking({
+    await createBooking({
       salonId: currentSalon.id,
       salonName: currentSalon.name,
       serviceIds: pkg ? pkg.services : selectedServices,
@@ -368,9 +373,21 @@ export function SalonDetailPage() {
               </div>
             </div>
 
+            {user && isUserBlocked(user.id).blocked && (
+              <div className="mt-4 rounded-lg bg-red-500/10 border border-red-500/20 p-3 text-xs text-red-400">
+                {isUserBlocked(user.id).reason}
+              </div>
+            )}
+
             <div className="mt-6 flex gap-3">
               <button onClick={() => setShowBooking(false)} className="luxe-btn-outline flex-1">{tr('cancel')}</button>
-              <button onClick={handleBook} className="luxe-btn flex-1">{tr('confirmBooking')}</button>
+              <button 
+                onClick={handleBook} 
+                disabled={user ? isUserBlocked(user.id).blocked : false}
+                className={`luxe-btn flex-1 ${user && isUserBlocked(user.id).blocked ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                {tr('confirmBooking')}
+              </button>
             </div>
           </div>
         </div>

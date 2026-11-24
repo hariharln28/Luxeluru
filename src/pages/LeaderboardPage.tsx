@@ -31,9 +31,16 @@ export function LeaderboardPage() {
     });
   });
 
-  const topStylists = [...staffMap.values()]
-    .sort((a, b) => b.rating - a.rating || b.reviews - a.reviews)
-    .slice(0, 10);
+  const allStylists = [...staffMap.values()]
+    .sort((a, b) => b.rating - a.rating || b.reviews - a.reviews);
+
+  // Deduplicate by name — keep only the highest-rated entry per name
+  const seen = new Set<string>();
+  const topStylists = allStylists.filter((s) => {
+    if (seen.has(s.name)) return false;
+    seen.add(s.name);
+    return true;
+  }).slice(0, 10);
 
   const medals = ['🥇', '🥈', '🥉'];
 
