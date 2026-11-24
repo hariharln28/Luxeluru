@@ -70,6 +70,20 @@ export function AdminDashboardPage() {
     return () => clearInterval(interval);
   }, [handleRefresh, refreshData]);
 
+  // HIGH SECURITY: Auto sign-out admin when leaving the dashboard
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      // Clear admin session on tab/browser close
+      sessionStorage.removeItem('adminSession');
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      // Sign out admin when navigating away from dashboard
+      logout();
+    };
+  }, [logout]);
+
   // Guard page for unauthorized users
   if (!isAdmin) {
     return (
@@ -287,10 +301,39 @@ export function AdminDashboardPage() {
                         <p><strong>Salon Email:</strong> {s.email}</p>
                         <p><strong>Salon Phone:</strong> {s.phone}</p>
                         <p><strong>Address:</strong> {s.address}</p>
-                        <p className="flex items-center gap-1.5 mt-2 bg-[#0f0d12]/50 p-2 rounded text-[#e8d5a3]">
-                          <FileText className="h-4 w-4 text-[#c9a962]" /> 
-                          <span>Trade License File: <strong>{s.tradeLicenseUrl || 'N/A'}</strong></span>
-                        </p>
+                        {s.panCardOwner && (
+                          <p><strong>Owner PAN:</strong> <span className="font-mono text-[#e8d5a3]">{s.panCardOwner}</span></p>
+                        )}
+                        {s.panCardBusiness && (
+                          <p><strong>Business PAN:</strong> <span className="font-mono text-[#e8d5a3]">{s.panCardBusiness}</span></p>
+                        )}
+                        <div className="mt-2 bg-[#0f0d12]/50 p-2 rounded">
+                          <p className="flex items-center gap-1.5 text-[#e8d5a3]">
+                            <FileText className="h-4 w-4 text-[#c9a962]" />
+                            <span>Trade License: </span>
+                            {s.tradeLicenseUrl && s.tradeLicenseUrl.startsWith('data:') ? (
+                              <a
+                                href={s.tradeLicenseUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-[#c9a962] underline hover:text-[#e8d5a3] font-semibold"
+                              >
+                                📄 View Document
+                              </a>
+                            ) : s.tradeLicenseUrl && (s.tradeLicenseUrl.startsWith('http') || s.tradeLicenseUrl.startsWith('blob')) ? (
+                              <a
+                                href={s.tradeLicenseUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-[#c9a962] underline hover:text-[#e8d5a3] font-semibold"
+                              >
+                                📄 View Document
+                              </a>
+                            ) : (
+                              <strong>{s.tradeLicenseUrl || 'N/A'}</strong>
+                            )}
+                          </p>
+                        </div>
                       </div>
                     </div>
 

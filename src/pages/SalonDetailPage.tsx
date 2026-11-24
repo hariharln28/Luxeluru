@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
   Star, MapPin, Clock, Phone, Mail, Package, Check,
-  CreditCard, Banknote,
+  CreditCard, Banknote, Navigation,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useT } from '../hooks/useT';
@@ -157,6 +157,14 @@ export function SalonDetailPage() {
             <span className="flex items-center gap-1"><Clock className="h-4 w-4" /> {currentSalon.openHours}</span>
             <a href={`tel:${currentSalon.phone}`} className="flex items-center gap-1 hover:text-[#c9a962]"><Phone className="h-4 w-4" /> {currentSalon.phone}</a>
             <a href={`mailto:${currentSalon.email}`} className="flex items-center gap-1 hover:text-[#c9a962]"><Mail className="h-4 w-4" /> {currentSalon.email}</a>
+            <a
+              href={`https://www.google.com/maps/dir/?api=1&destination=${currentSalon.lat},${currentSalon.lng}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1 text-[#c9a962] hover:text-[#e8d5a3] font-semibold"
+            >
+              <Navigation className="h-4 w-4" /> Get Directions
+            </a>
           </div>
 
           <section>

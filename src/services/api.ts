@@ -115,6 +115,18 @@ export const api = {
       method: 'DELETE',
     }),
 
+  updateSalonLocation: (id: string, address: string, lat: number, lng: number) =>
+    request<{ success: boolean }>(`/api/salons/${id}/update-location`, {
+      method: 'POST',
+      body: JSON.stringify({ address, lat, lng }),
+    }),
+
+  updateSalonStaff: (id: string, staff: any[]) =>
+    request<{ success: boolean }>(`/api/salons/${id}/update-staff`, {
+      method: 'POST',
+      body: JSON.stringify({ staff }),
+    }),
+
   paySalonCommission: (id: string) =>
     request<{ success: boolean }>(`/api/salons/${id}/pay-commission`, {
       method: 'POST',
