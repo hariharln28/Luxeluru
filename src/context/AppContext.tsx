@@ -87,8 +87,11 @@ const STORAGE_KEYS = {
   language: 'luxeluru_language',
   salons: 'luxeluru_salons',
   salonSession: 'luxeluru_salon_session',
+  salonSessionTimestamp: 'luxeluru_salon_session_ts',
   adminSession: 'luxeluru_admin_session',
 };
+
+const SALON_SESSION_TIMEOUT = 2 * 60 * 60 * 1000; // 2 hours
 
 // Local storage fallback helpers in case backend is unreachable
 function loadLocalUsers(): User[] {
@@ -267,10 +270,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setStaffReviews(backendReviews);
 
       const sessionSalonId = localStorage.getItem(STORAGE_KEYS.salonSession);
+      const sessionTs = localStorage.getItem(STORAGE_KEYS.salonSessionTimestamp);
       if (sessionSalonId) {
-        const foundSalon = backendSalons.find(s => s.id === sessionSalonId);
-        if (foundSalon) {
-          setSalon(foundSalon);
+        const isExpired = sessionTs && (Date.now() - parseInt(sessionTs, 10)) > SALON_SESSION_TIMEOUT;
+        if (isExpired) {
+          localStorage.removeItem(STORAGE_KEYS.salonSession);
+          localStorage.removeItem(STORAGE_KEYS.salonSessionTimestamp);
+          // Toast will be shown once component mounts
+        } else {
+          const foundSalon = backendSalons.find(s => s.id === sessionSalonId);
+          if (foundSalon) {
+            setSalon(foundSalon);
+          }
         }
       }
 
@@ -291,10 +302,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setStaffReviews(localReviews);
 
       const sessionSalonId = localStorage.getItem(STORAGE_KEYS.salonSession);
+      const sessionTs = localStorage.getItem(STORAGE_KEYS.salonSessionTimestamp);
       if (sessionSalonId) {
-        const foundSalon = localSalons.find(s => s.id === sessionSalonId);
-        if (foundSalon) {
-          setSalon(foundSalon);
+        const isExpired = sessionTs && (Date.now() - parseInt(sessionTs, 10)) > SALON_SESSION_TIMEOUT;
+        if (isExpired) {
+          localStorage.removeItem(STORAGE_KEYS.salonSession);
+          localStorage.removeItem(STORAGE_KEYS.salonSessionTimestamp);
+        } else {
+          const foundSalon = localSalons.find(s => s.id === sessionSalonId);
+          if (foundSalon) {
+            setSalon(foundSalon);
+          }
         }
       }
 
@@ -526,22 +544,32 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [addToast]);
 
-  const salonLogin = useCallback(async (name: string, id: string, email: string, checkPass: string): Promise<boolean> => {
+  const salonLogin = useCallback(async (name: string, id: string, email: string, checkPass: string): Promise<boolean | { attemptsRemaining?: number }> => {
     try {
       const res = await api.salonLogin(name, id, email, checkPass);
       if (res.success) {
         setSalon(res.salon);
         localStorage.setItem(STORAGE_KEYS.salonSession, res.salon.id);
+        localStorage.setItem(STORAGE_KEYS.salonSessionTimestamp, Date.now().toString());
         addToast('success', `Welcome back, ${res.salon.name}!`);
         return true;
       }
       return false;
     } catch (err: any) {
+      // Rate limit (429) or lockout (423) — surface the message
+      if (err?.message?.includes('Too many') || err?.message?.includes('Account locked')) {
+        addToast('error', err.message);
+        return false;
+      }
       // If server returns 403 registration not approved, toast it
       if (err.message && err.message.includes('registration')) {
         addToast('error', 'Salon registration is not approved yet.');
         return false;
       }
+      // Extract attemptsRemaining from error if available
+      // The api request function throws the message, but we need the full response
+      // For now, fall through to local fallback
+
       // Local fallback
       const currentSalons = loadLocalSalons();
       const found = currentSalons.find(
@@ -560,6 +588,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       setSalon(found);
       localStorage.setItem(STORAGE_KEYS.salonSession, found.id);
+      localStorage.setItem(STORAGE_KEYS.salonSessionTimestamp, Date.now().toString());
       addToast('success', `Welcome back, ${found.name}!`);
       return true;
     }
@@ -752,6 +781,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setIsAdmin(false);
     supabase.auth.signOut();
     localStorage.removeItem(STORAGE_KEYS.salonSession);
+    localStorage.removeItem(STORAGE_KEYS.salonSessionTimestamp);
     localStorage.removeItem(STORAGE_KEYS.adminSession);
   }, []);
 

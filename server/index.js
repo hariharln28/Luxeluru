@@ -32,6 +32,29 @@ const supabase = createClient(
   supabaseAnonKey || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.placeholder'
 );
 
+// ─── Salon Login Security ─────────────────────────
+const RATE_LIMIT_MAX = 5;           // max attempts per window
+const RATE_LIMIT_WINDOW = 15 * 60 * 1000; // 15 minutes
+const LOCKOUT_MAX = 5;              // max failed per account
+const LOCKOUT_DURATION = 30 * 60 * 1000;  // 30 minutes
+
+// Maps: IP → { count, firstAttempt }
+const ipAttempts = new Map();
+// Maps: email → { count, lockedUntil }
+const accountAttempts = new Map();
+
+// Cleanup stale entries every 10 minutes
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, data] of ipAttempts) {
+    if (now - data.firstAttempt > RATE_LIMIT_WINDOW) ipAttempts.delete(ip);
+  }
+  for (const [email, data] of accountAttempts) {
+    if (data.lockedUntil && now > data.lockedUntil) accountAttempts.delete(email);
+    else if (!data.lockedUntil && now - data.firstAttempt > RATE_LIMIT_WINDOW) accountAttempts.delete(email);
+  }
+}, 10 * 60 * 1000);
+
 const authenticateJWT = async (req, res, next) => {
   // If Supabase is not configured, allow all requests in development mode only
   if (!supabaseConfigured) {
@@ -192,24 +215,94 @@ app.post('/api/users/:id/update', authenticateJWT, async (req, res) => {
 
 app.post('/api/salons/login', async (req, res) => {
   const { name, id, email, password } = req.body;
+  const clientIp = req.ip || req.headers['x-forwarded-for'] || 'unknown';
+  const emailKey = (email || '').toLowerCase().trim();
+  const now = Date.now();
+
+  // ─── 1. IP Rate Limiting ───────────────────────
+  const ipData = ipAttempts.get(clientIp);
+  if (ipData) {
+    if (now - ipData.firstAttempt > RATE_LIMIT_WINDOW) {
+      ipAttempts.delete(clientIp); // window expired, reset
+    } else if (ipData.count >= RATE_LIMIT_MAX) {
+      const retryAfterMs = RATE_LIMIT_WINDOW - (now - ipData.firstAttempt);
+      const retryMin = Math.ceil(retryAfterMs / 60000);
+      console.warn(`[SECURITY] Rate limit hit for IP: ${clientIp}`);
+      return res.status(429).json({
+        success: false,
+        message: `Too many login attempts. Please try again in ${retryMin} minute${retryMin > 1 ? 's' : ''}.`
+      });
+    }
+  }
+
+  // ─── 2. Account Lockout Check ──────────────────
+  const acctData = accountAttempts.get(emailKey);
+  if (acctData && acctData.lockedUntil) {
+    if (now < acctData.lockedUntil) {
+      const retryMin = Math.ceil((acctData.lockedUntil - now) / 60000);
+      return res.status(423).json({
+        success: false,
+        message: `Account locked due to too many failed attempts. Try again in ${retryMin} minute${retryMin > 1 ? 's' : ''}.`
+      });
+    } else {
+      accountAttempts.delete(emailKey); // lockout expired
+    }
+  }
+
+  // ─── 3. Credential Validation ──────────────────
   const salons = await db.getSalons();
-  
   const found = salons.find(s => 
     s.name.toLowerCase().trim() === name.toLowerCase().trim() &&
     s.id.toLowerCase().trim() === id.toLowerCase().trim() &&
-    s.email.toLowerCase().trim() === email.toLowerCase().trim() &&
+    s.email.toLowerCase().trim() === emailKey &&
     (s.password === password || s.password === hashPassword(password))
   );
 
   if (found) {
     if (found.registrationStatus !== 'approved') {
-      res.status(403).json({ success: false, message: 'Salon registration is not approved yet.' });
-    } else {
-      res.json({ success: true, salon: found });
+      return res.status(403).json({ success: false, message: 'Salon registration is not approved yet.' });
+    }
+
+    // Success — reset all counters for this IP and account
+    ipAttempts.delete(clientIp);
+    accountAttempts.delete(emailKey);
+
+    // Strip sensitive fields before sending response
+    const { password: _pw, ...safeSalon } = found;
+    return res.json({ success: true, salon: safeSalon });
+  }
+
+  // ─── 4. Failed Attempt — Track & Log ───────────
+  console.warn(`[SECURITY] Failed salon login | IP: ${clientIp} | Email: ${emailKey} | Time: ${new Date().toISOString()}`);
+
+  // Update IP counter
+  const currentIp = ipAttempts.get(clientIp);
+  if (currentIp) {
+    currentIp.count++;
+  } else {
+    ipAttempts.set(clientIp, { count: 1, firstAttempt: now });
+  }
+
+  // Update account counter
+  const currentAcct = accountAttempts.get(emailKey);
+  if (currentAcct) {
+    currentAcct.count++;
+    if (currentAcct.count >= LOCKOUT_MAX) {
+      currentAcct.lockedUntil = now + LOCKOUT_DURATION;
+      console.warn(`[SECURITY] Account LOCKED: ${emailKey} for 30 minutes`);
     }
   } else {
-    res.status(401).json({ success: false, message: 'Invalid credentials' });
+    accountAttempts.set(emailKey, { count: 1, firstAttempt: now, lockedUntil: null });
   }
+
+  const acctInfo = accountAttempts.get(emailKey);
+  const attemptsRemaining = Math.max(0, LOCKOUT_MAX - (acctInfo?.count || 0));
+
+  return res.status(401).json({
+    success: false,
+    message: 'Invalid credentials',
+    attemptsRemaining
+  });
 });
 
 app.post('/api/salons/register', async (req, res) => {

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Eye, EyeOff, User as UserIcon, Scissors, Loader2, Mail, KeyRound } from 'lucide-react';
+import { Eye, EyeOff, User as UserIcon, Scissors, Loader2, Mail, KeyRound, AlertTriangle } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useT } from '../hooks/useT';
 import logoUrl from '../assets/logo.png.jpeg';
@@ -24,6 +24,7 @@ export function LoginPage() {
   const [salonEmail, setSalonEmail] = useState('');
   const [salonPassword, setSalonPassword] = useState('');
   const [showSalonPass, setShowSalonPass] = useState(false);
+  const [salonFailedAttempts, setSalonFailedAttempts] = useState(0);
 
   const [error, setError] = useState('');
   const { login, loginWithGoogle, resetPassword, salonLogin } = useApp();
@@ -75,9 +76,18 @@ export function LoginPage() {
       const success = await salonLogin(salonName, salonId, salonEmail, salonPassword);
       setLoading(false);
       if (!success) {
-        setError('Invalid salon login details. Verify name, ID, email, password and approval status.');
+        const newCount = salonFailedAttempts + 1;
+        setSalonFailedAttempts(newCount);
+        if (newCount >= 5) {
+          setError('Account may be locked. Please wait 30 minutes before trying again.');
+        } else if (newCount >= 3) {
+          setError(`Invalid credentials. ${5 - newCount} attempt${5 - newCount > 1 ? 's' : ''} remaining before lockout.`);
+        } else {
+          setError('Invalid salon login details. Verify name, ID, email, password and approval status.');
+        }
         return;
       }
+      setSalonFailedAttempts(0);
       navigate('/salon-dashboard');
     }
   }
@@ -226,6 +236,18 @@ export function LoginPage() {
                 </div>
               </div>
             </>
+          )}
+
+          {/* Failed attempts warning banner */}
+          {loginType === 'salon' && salonFailedAttempts >= 3 && (
+            <div className="flex items-center gap-2 rounded-lg bg-amber-500/10 border border-amber-500/30 p-3 text-xs text-amber-300">
+              <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+              <span>
+                <strong>Security Warning:</strong> {5 - salonFailedAttempts > 0
+                  ? `${5 - salonFailedAttempts} attempt${5 - salonFailedAttempts > 1 ? 's' : ''} remaining before your account is locked for 30 minutes.`
+                  : 'Account locked. Please wait 30 minutes.'}
+              </span>
+            </div>
           )}
 
           <button type="submit" disabled={loading} className="luxe-btn w-full disabled:opacity-60 disabled:cursor-not-allowed">
