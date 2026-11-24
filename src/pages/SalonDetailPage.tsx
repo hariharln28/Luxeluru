@@ -8,7 +8,6 @@ import { useApp } from '../context/AppContext';
 import { useT } from '../hooks/useT';
 import {
   sendWhatsAppConfirmation,
-  sendEmailConfirmation,
 } from '../utils/notifications';
 import { CheckoutModal } from '../components/CheckoutModal';
 import type { PaymentMethod } from '../types';
@@ -132,10 +131,8 @@ export function SalonDetailPage() {
   ) {
     await createBooking(bookingData);
     sendWhatsAppConfirmation(user!.phone, currentSalon.name, bookingData.date, bookingData.time, serviceNames);
-    sendEmailConfirmation(user!.email, currentSalon.name, bookingData.date, bookingData.time, serviceNames, total);
     addToast('success', tr('bookingSuccess'));
     addToast('info', tr('whatsappSent'));
-    addToast('info', tr('emailSent'));
     addToast('info', tr('feedback24h'));
     setShowBooking(false);
     setShowCheckout(false);
