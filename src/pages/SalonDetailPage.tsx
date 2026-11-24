@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   Star, MapPin, Clock, Phone, Mail, Package, Check,
   CreditCard, Banknote, Navigation,
@@ -23,6 +23,7 @@ export function SalonDetailPage() {
   const { user, salons, createBooking, addStaffReview, staffReviews, addToast, isUserBlocked, bookings, fetchBlockedSlots, blockedSlots, styleRecommendation, setStyleRecommendation } = useApp();
   const salon = salons.find((s) => s.id === id);
   const tr = useT();
+  const navigate = useNavigate();
 
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [selectedPackage, setSelectedPackage] = useState<string | null>(null);
@@ -142,6 +143,8 @@ export function SalonDetailPage() {
     setSelectedServices([]);
     setSelectedPackage(null);
     setStyleRecommendation(null);
+    // Redirect to dashboard to show the newly booked upcoming appointment
+    navigate('/dashboard');
   }
 
   function submitReview() {
