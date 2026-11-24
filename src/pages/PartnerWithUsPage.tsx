@@ -75,11 +75,9 @@ export function PartnerWithUsPage() {
     });
 
     setSuccessMsg(
-      `Thank you for registering with Luxeluru! Your application has been received and is pending approval from the platform. We will verify your trade license and details within 5 days.
+      `Thank you for registering with Luxeluru! Your application has been received and is pending approval from the platform. We will verify your trade license and details within 5 business days.
 
-      YOUR AUTO-GENERATED SALON ID IS: ${generatedId}
-
-      IMPORTANT: Please save this Salon ID. You will need it to search your application status and log in once approved!`
+      Use your registered business email (${email}) to check your application status anytime under the "Check Status" tab. Your unique Salon ID will be auto-generated after admin approval.`
     );
     addToast('success', 'Application submitted successfully!');
 
@@ -145,18 +143,21 @@ export function PartnerWithUsPage() {
     setStatusResult(null);
 
     if (!statusSearch.trim()) {
-      setError('Please enter your Salon Email or Salon ID to search.');
+      setError('Please enter your registered business email to check status.');
+      return;
+    }
+
+    if (!statusSearch.includes('@')) {
+      setError('Please enter a valid email address (e.g. salon@example.com).');
       return;
     }
 
     const found = salons.find(
-      (s) =>
-        s.id.toLowerCase().trim() === statusSearch.toLowerCase().trim() ||
-        s.email.toLowerCase().trim() === statusSearch.toLowerCase().trim()
+      (s) => s.email.toLowerCase().trim() === statusSearch.toLowerCase().trim()
     );
 
     if (!found) {
-      setError('No registered salon application found matching that ID or Email.');
+      setError('No registered salon application found with that email address.');
       return;
     }
 
@@ -367,7 +368,7 @@ export function PartnerWithUsPage() {
                 value={statusSearch}
                 onChange={(e) => setStatusSearch(e.target.value)}
                 className="luxe-input"
-                placeholder="Enter Salon ID (e.g. LLANU569) or Registered Business Email"
+                placeholder="Enter your registered business email (e.g. salon@example.com)"
                 required
               />
             </div>
@@ -381,7 +382,11 @@ export function PartnerWithUsPage() {
               <div className="flex justify-between items-start border-b border-[#c9a962]/10 pb-3">
                 <div>
                   <h4 className="font-display text-xl text-[#e8d5a3] font-bold">{statusResult.name}</h4>
-                  <p className="text-xs text-[#9a8fa8] mt-0.5">Salon Code: <span className="font-mono font-semibold text-[#c9a962]">{statusResult.id}</span></p>
+                  {statusResult.registrationStatus === 'approved' ? (
+                    <p className="text-xs text-[#9a8fa8] mt-0.5">Salon Code: <span className="font-mono font-semibold text-[#c9a962]">{statusResult.id}</span></p>
+                  ) : (
+                    <p className="text-xs text-[#9a8fa8] mt-0.5">Salon ID: <span className="text-amber-300 italic">Assigned after approval</span></p>
+                  )}
                 </div>
                 <span className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-bold ${
                   statusResult.registrationStatus === 'approved' ? 'bg-green-500/20 text-green-400' :
@@ -402,7 +407,7 @@ export function PartnerWithUsPage() {
                 
                 {statusResult.registrationStatus === 'pending' && (
                   <div className="mt-4 p-4 bg-amber-500/10 rounded-lg text-amber-200 text-xs leading-relaxed border border-amber-500/20">
-                    <strong>⏳ Under Review:</strong> Your salon registration details and Trade License are currently being verified by the administrator. Approval generally takes up to 5 business days. Please save your Salon ID (<span className="font-mono text-[#c9a962]">{statusResult.id}</span>) to log in once approval is complete.
+                    <strong>⏳ Under Review:</strong> Your salon registration details and Trade License are currently being verified by the administrator. Approval generally takes up to 5 business days. Your unique Salon ID will be auto-generated once your application is approved. Check back using your email.
                   </div>
                 )}
 

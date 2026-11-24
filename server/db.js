@@ -461,6 +461,14 @@ class DatabaseManager {
     }
   }
 
+  async deleteSalon(id) {
+    if (this.mode === 'mongodb') {
+      await MongoSalon.deleteOne({ id });
+    } else {
+      await sqliteDb.run('DELETE FROM salons WHERE id = ?', id);
+    }
+  }
+
   // BOOKINGS
   async getBookings() {
     if (this.mode === 'mongodb') {

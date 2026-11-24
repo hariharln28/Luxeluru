@@ -215,13 +215,11 @@ app.post('/api/salons/login', async (req, res) => {
 app.post('/api/salons/register', async (req, res) => {
   const data = req.body;
   
-  const cleanedName = data.name.trim().replace(/[^a-zA-Z]/g, '');
-  const prefix = (cleanedName.slice(0, 3) || 'REG').toUpperCase();
-  const randomDigits = Math.floor(100 + Math.random() * 900);
-  const generatedId = `LL${prefix}${randomDigits}`;
+  // Use a temporary pending ID — real ID is generated after admin approval
+  const tempId = `PENDING-${Date.now()}`;
   
   const newSalon = {
-    id: generatedId,
+    id: tempId,
     name: data.name,
     tagline: 'Premium boutique beauty services',
     area: data.address.split(',')[0] || 'Bengaluru',
@@ -258,7 +256,7 @@ app.post('/api/salons/register', async (req, res) => {
   };
 
   await db.createSalon(newSalon);
-  res.json({ success: true, salonId: generatedId });
+  res.json({ success: true, salonId: tempId });
 });
 
 app.post('/api/salons/:id/exit', async (req, res) => {
@@ -283,11 +281,36 @@ app.post('/api/salons/:id/approve', async (req, res) => {
   const salon = await db.getSalon(id);
   
   if (salon) {
-    await db.updateSalon(id, {
-      registrationStatus: 'approved',
-      isActive: true
-    });
-    res.json({ success: true });
+    // Generate real salon ID on approval if currently a temp PENDING ID
+    let finalId = id;
+    if (id.startsWith('PENDING-')) {
+      const cleanedName = salon.name.trim().replace(/[^a-zA-Z]/g, '');
+      const prefix = (cleanedName.slice(0, 3) || 'SAL').toUpperCase();
+      const randomDigits = Math.floor(100 + Math.random() * 900);
+      finalId = `LL${prefix}${randomDigits}`;
+
+      // Create salon with new ID and delete the old pending one
+      const approvedSalon = {
+        ...salon,
+        id: finalId,
+        registrationStatus: 'approved',
+        isActive: true
+      };
+      // Remove _id field from mongo if present
+      if (approvedSalon._id) delete approvedSalon._id;
+      if (approvedSalon.__v !== undefined) delete approvedSalon.__v;
+
+      await db.createSalon(approvedSalon);
+      // Remove old pending entry
+      await db.deleteSalon(id);
+    } else {
+      await db.updateSalon(id, {
+        registrationStatus: 'approved',
+        isActive: true
+      });
+    }
+
+    res.json({ success: true, newSalonId: finalId });
   } else {
     res.status(404).json({ success: false, message: 'Salon not found' });
   }
