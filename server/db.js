@@ -25,7 +25,7 @@ async function ensureDataDir() {
 // ==========================================
 // MongoDB Schema Definitions
 // ==========================================
-let MongoUser, MongoSalon, MongoBooking, MongoReview;
+let MongoUser, MongoSalon, MongoBooking, MongoReview, MongoBlockedSlot;
 
 function initMongoModels() {
   if (MongoUser) return;
@@ -116,10 +116,21 @@ function initMongoModels() {
     createdAt: { type: String }
   });
 
+  const blockedSlotSchema = new mongoose.Schema({
+    id: { type: String, required: true, unique: true },
+    salonId: { type: String, required: true },
+    date: { type: String, required: true },
+    time: { type: String, required: true },
+    customerName: { type: String },
+    reason: { type: String },
+    createdAt: { type: String, required: true }
+  });
+
   MongoUser = mongoose.model('User', userSchema);
   MongoSalon = mongoose.model('Salon', salonSchema);
   MongoBooking = mongoose.model('Booking', bookingSchema);
   MongoReview = mongoose.model('Review', reviewSchema);
+  MongoBlockedSlot = mongoose.model('BlockedSlot', blockedSlotSchema);
 }
 
 // ==========================================
@@ -218,6 +229,16 @@ async function initSqlite() {
       comment TEXT,
       staffId TEXT,
       staffName TEXT,
+      createdAt TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS blocked_slots (
+      id TEXT PRIMARY KEY,
+      salonId TEXT,
+      date TEXT,
+      time TEXT,
+      customerName TEXT,
+      reason TEXT,
       createdAt TEXT
     );
   `);
@@ -565,6 +586,47 @@ class DatabaseManager {
       );
       return revData;
     }
+  }
+
+  // ─── Blocked Slots ───────────────────────
+  async getBlockedSlots(salonId) {
+    if (this.mode === 'mongo') {
+      const docs = await MongoBlockedSlot.find({ salonId });
+      return docs.map(d => d.toObject());
+    } else {
+      const rows = await sqliteDb.all('SELECT * FROM blocked_slots WHERE salonId = ?', salonId);
+      return rows;
+    }
+  }
+
+  async addBlockedSlot(slotData) {
+    if (this.mode === 'mongo') {
+      const doc = new MongoBlockedSlot(slotData);
+      await doc.save();
+      return slotData;
+    } else {
+      await sqliteDb.run(
+        `INSERT INTO blocked_slots (id, salonId, date, time, customerName, reason, createdAt)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        slotData.id,
+        slotData.salonId,
+        slotData.date,
+        slotData.time,
+        slotData.customerName || null,
+        slotData.reason || null,
+        slotData.createdAt
+      );
+      return slotData;
+    }
+  }
+
+  async removeBlockedSlot(id) {
+    if (this.mode === 'mongo') {
+      await MongoBlockedSlot.deleteOne({ id });
+    } else {
+      await sqliteDb.run('DELETE FROM blocked_slots WHERE id = ?', id);
+    }
+    return true;
   }
 
   // Dynamic Seeding Helper

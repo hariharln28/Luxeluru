@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
   Star, MapPin, Clock, Phone, Mail, Package, Check,
@@ -19,7 +19,7 @@ const TIME_SLOTS = [
 
 export function SalonDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const { user, salons, createBooking, addStaffReview, staffReviews, addToast, isUserBlocked } = useApp();
+  const { user, salons, createBooking, addStaffReview, staffReviews, addToast, isUserBlocked, bookings, fetchBlockedSlots, blockedSlots } = useApp();
   const salon = salons.find((s) => s.id === id);
   const tr = useT();
 
@@ -33,6 +33,13 @@ export function SalonDetailPage() {
   const [reviewStaff, setReviewStaff] = useState('');
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState('');
+
+  // Fetch blocked slots when date changes
+  useEffect(() => {
+    if (date && salon) {
+      fetchBlockedSlots(salon.id);
+    }
+  }, [date, salon, fetchBlockedSlots]);
 
   if (!salon) {
     return (
@@ -333,14 +340,33 @@ export function SalonDetailPage() {
               <div>
                 <label className="text-sm text-[#9a8fa8]">{tr('selectTime')}</label>
                 <div className="mt-2 grid grid-cols-3 gap-2">
-                  {TIME_SLOTS.map((slot) => (
-                    <button key={slot} onClick={() => setTime(slot)}
-                      className={`rounded-lg py-2 text-xs transition ${
-                        time === slot ? 'bg-[#c9a962] text-[#0f0d12]' : 'border border-[#c9a962]/20 hover:border-[#c9a962]/50'
-                      }`}>
-                      {slot}
-                    </button>
-                  ))}
+                  {TIME_SLOTS.map((slot) => {
+                    const isBlockedSlot = date && blockedSlots.some(
+                      (bs) => bs.salonId === currentSalon.id && bs.date === date && bs.time === slot
+                    );
+                    const isAlreadyBooked = date && bookings.some(
+                      (b) => b.salonId === currentSalon.id && b.date === date && b.time === slot && b.status === 'confirmed'
+                    );
+                    const isUnavailable = isBlockedSlot || isAlreadyBooked;
+
+                    return (
+                      <button key={slot}
+                        onClick={() => !isUnavailable && setTime(slot)}
+                        disabled={!!isUnavailable}
+                        className={`rounded-lg py-2 text-xs transition ${
+                          isUnavailable
+                            ? 'border border-red-500/20 text-red-400/60 cursor-not-allowed bg-red-500/5'
+                            : time === slot
+                            ? 'bg-[#c9a962] text-[#0f0d12]'
+                            : 'border border-[#c9a962]/20 hover:border-[#c9a962]/50'
+                        }`}>
+                        {slot}
+                        {isUnavailable && (
+                          <span className="block text-[9px] opacity-60 mt-0.5">Booked</span>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
               <div>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { 
@@ -14,7 +14,10 @@ import {
   TrendingUp,
   CreditCard,
   Percent,
-  Award
+  Award,
+  Lock,
+  Unlock,
+  UserPlus
 } from 'lucide-react';
 import type { PaymentMethod } from '../types';
 
@@ -25,13 +28,28 @@ export function SalonDashboardPage() {
     updateBookingPayment, 
     reportFakeBooking, 
     paySalonCommission, 
-    logout 
+    logout,
+    blockedSlots,
+    fetchBlockedSlots,
+    blockSlot,
+    unblockSlot
   } = useApp();
   
   const navigate = useNavigate();
   
   // Dashboard Tabs
-  const [activeTab, setActiveTab] = useState<'appointments' | 'insights'>('appointments');
+  const [activeTab, setActiveTab] = useState<'appointments' | 'slots' | 'insights'>('appointments');
+
+  // Manage Slots state
+  const [slotDate, setSlotDate] = useState(new Date().toISOString().split('T')[0]);
+  const [blockCustomerName, setBlockCustomerName] = useState('');
+  const [blockReason, setBlockReason] = useState('');
+  const [blockingTime, setBlockingTime] = useState<string | null>(null);
+
+  const TIME_SLOTS = [
+    '10:00 AM', '11:00 AM', '12:00 PM', '1:00 PM', '2:00 PM',
+    '3:00 PM', '4:00 PM', '5:00 PM', '6:00 PM', '7:00 PM', '8:00 PM',
+  ];
 
   // Modals / forms state
   const [editingBookingId, setEditingBookingId] = useState<string | null>(null);
@@ -177,24 +195,33 @@ export function SalonDashboardPage() {
       )}
 
       {/* Navigation Tabs */}
-      <div className="mb-8 flex rounded-xl border border-[#c9a962]/20 bg-[#1a1520] p-1 max-w-md">
+      <div className="mb-8 flex rounded-xl border border-[#c9a962]/20 bg-[#1a1520] p-1 max-w-lg overflow-x-auto">
         <button
           onClick={() => setActiveTab('appointments')}
-          className={`flex flex-1 items-center justify-center gap-2 rounded-lg py-2.5 text-xs font-semibold transition ${
+          className={`flex flex-1 items-center justify-center gap-2 rounded-lg py-2.5 text-xs font-semibold transition whitespace-nowrap px-3 ${
             activeTab === 'appointments' ? 'bg-[#c9a962] text-[#0f0d12]' : 'text-[#9a8fa8] hover:text-[#e8d5a3]'
           }`}
         >
           <Calendar className="h-4 w-4" />
-          Manage Appointments ({activeBookings.length})
+          Appointments ({activeBookings.length})
+        </button>
+        <button
+          onClick={() => { setActiveTab('slots'); if (salon) fetchBlockedSlots(salon.id); }}
+          className={`flex flex-1 items-center justify-center gap-2 rounded-lg py-2.5 text-xs font-semibold transition whitespace-nowrap px-3 ${
+            activeTab === 'slots' ? 'bg-[#c9a962] text-[#0f0d12]' : 'text-[#9a8fa8] hover:text-[#e8d5a3]'
+          }`}
+        >
+          <Lock className="h-4 w-4" />
+          Manage Slots
         </button>
         <button
           onClick={() => setActiveTab('insights')}
-          className={`flex flex-1 items-center justify-center gap-2 rounded-lg py-2.5 text-xs font-semibold transition ${
+          className={`flex flex-1 items-center justify-center gap-2 rounded-lg py-2.5 text-xs font-semibold transition whitespace-nowrap px-3 ${
             activeTab === 'insights' ? 'bg-[#c9a962] text-[#0f0d12]' : 'text-[#9a8fa8] hover:text-[#e8d5a3]'
           }`}
         >
           <TrendingUp className="h-4 w-4" />
-          Business Insights & Analytics
+          Insights
         </button>
       </div>
 
@@ -463,6 +490,175 @@ export function SalonDashboardPage() {
           </div>
         </div>
       )}
+
+      {/* MANAGE SLOTS TAB */}
+      {activeTab === 'slots' && (
+        <div className="space-y-6">
+          <div className="luxe-card p-6">
+            <h3 className="font-display text-xl text-[#e8d5a3] mb-4">Block Slots for Walk-In Customers</h3>
+            <p className="text-sm text-[#9a8fa8] mb-6">
+              Block time slots for customers who visit your salon directly. Blocked slots will appear as unavailable to online customers.
+            </p>
+
+            {/* Date Picker */}
+            <div className="mb-6">
+              <label className="block text-sm text-[#9a8fa8] mb-1.5">Select Date</label>
+              <input
+                type="date"
+                value={slotDate}
+                min={new Date().toISOString().split('T')[0]}
+                onChange={(e) => setSlotDate(e.target.value)}
+                className="luxe-input max-w-xs"
+              />
+            </div>
+
+            {/* Time Slot Grid */}
+            <div className="mb-6">
+              <label className="block text-sm text-[#9a8fa8] mb-3">Time Slots for {slotDate}</label>
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                {TIME_SLOTS.map((slot) => {
+                  const isBlocked = blockedSlots.some(
+                    (bs) => bs.salonId === salon!.id && bs.date === slotDate && bs.time === slot
+                  );
+                  const existingBooking = bookings.find(
+                    (b) => b.salonId === salon!.id && b.date === slotDate && b.time === slot && b.status === 'confirmed'
+                  );
+                  const isBooked = !!existingBooking;
+                  const blockedSlotData = blockedSlots.find(
+                    (bs) => bs.salonId === salon!.id && bs.date === slotDate && bs.time === slot
+                  );
+
+                  return (
+                    <button
+                      key={slot}
+                      onClick={() => {
+                        if (isBooked) return;
+                        if (isBlocked && blockedSlotData) {
+                          if (confirm(`Unblock ${slot} on ${slotDate}?`)) {
+                            unblockSlot(salon!.id, blockedSlotData.id);
+                          }
+                        } else {
+                          setBlockingTime(slot);
+                          setBlockCustomerName('');
+                          setBlockReason('');
+                        }
+                      }}
+                      disabled={isBooked}
+                      className={`rounded-lg py-3 px-2 text-sm font-medium transition text-center ${
+                        isBooked
+                          ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20 cursor-not-allowed opacity-60'
+                          : isBlocked
+                          ? 'bg-red-500/10 text-red-400 border border-red-500/30 hover:bg-red-500/20'
+                          : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20'
+                      }`}
+                    >
+                      <span className="block text-xs">{slot}</span>
+                      <span className="block text-[10px] mt-0.5 opacity-70">
+                        {isBooked ? 'Online Booking' : isBlocked ? '🔒 Blocked' : '✓ Available'}
+                      </span>
+                      {isBlocked && blockedSlotData?.customerName && (
+                        <span className="block text-[9px] mt-0.5 truncate opacity-50">
+                          {blockedSlotData.customerName}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="mt-3 flex flex-wrap gap-4 text-[10px] text-[#9a8fa8]">
+                <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-emerald-400" /> Available — click to block</span>
+                <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-red-400" /> Blocked — click to unblock</span>
+                <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-blue-400" /> Online Booking</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Upcoming Blocked Slots List */}
+          {blockedSlots.filter((bs) => bs.salonId === salon!.id && bs.date >= new Date().toISOString().split('T')[0]).length > 0 && (
+            <div className="luxe-card p-6">
+              <h3 className="font-display text-lg text-[#e8d5a3] mb-4">Upcoming Blocked Slots</h3>
+              <div className="space-y-2">
+                {blockedSlots
+                  .filter((bs) => bs.salonId === salon!.id && bs.date >= new Date().toISOString().split('T')[0])
+                  .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time))
+                  .map((bs) => (
+                    <div key={bs.id} className="flex items-center justify-between rounded-lg bg-[#0f0d12]/60 px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        <Lock className="h-4 w-4 text-red-400" />
+                        <div>
+                          <p className="text-sm font-medium text-[#e8d5a3]">{bs.date} • {bs.time}</p>
+                          {bs.customerName && <p className="text-xs text-[#9a8fa8]">{bs.customerName}</p>}
+                          {bs.reason && <p className="text-xs text-[#9a8fa8]/60">{bs.reason}</p>}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => unblockSlot(salon!.id, bs.id)}
+                        className="flex items-center gap-1 rounded-lg border border-emerald-500/30 px-3 py-1.5 text-xs text-emerald-400 hover:bg-emerald-500/10 transition"
+                      >
+                        <Unlock className="h-3 w-3" /> Unblock
+                      </button>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Block Slot Modal */}
+      {blockingTime && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-sm luxe-card p-6 animate-fade-in">
+            <div className="flex items-center gap-2 mb-4">
+              <UserPlus className="h-5 w-5 text-[#c9a962]" />
+              <h3 className="font-display text-lg text-[#e8d5a3]">Block Slot</h3>
+            </div>
+            <p className="text-sm text-[#9a8fa8] mb-4">
+              Blocking <strong className="text-[#c9a962]">{blockingTime}</strong> on <strong className="text-[#c9a962]">{slotDate}</strong>
+            </p>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs text-[#9a8fa8] mb-1">Customer Name (optional)</label>
+                <input
+                  type="text"
+                  value={blockCustomerName}
+                  onChange={(e) => setBlockCustomerName(e.target.value)}
+                  className="luxe-input text-sm"
+                  placeholder="Walk-in customer name"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-[#9a8fa8] mb-1">Reason (optional)</label>
+                <input
+                  type="text"
+                  value={blockReason}
+                  onChange={(e) => setBlockReason(e.target.value)}
+                  className="luxe-input text-sm"
+                  placeholder="e.g. Walk-in appointment"
+                />
+              </div>
+            </div>
+            <div className="mt-5 flex gap-3">
+              <button
+                onClick={() => setBlockingTime(null)}
+                className="flex-1 rounded-lg border border-[#c9a962]/20 bg-[#1a1520] py-2.5 text-sm font-medium text-[#e8d5a3] hover:bg-[#c9a962]/10 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  await blockSlot(salon!.id, slotDate, blockingTime!, blockCustomerName || undefined, blockReason || undefined);
+                  setBlockingTime(null);
+                }}
+                className="luxe-btn flex-1"
+              >
+                Block Slot
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
 
       {/* UPDATE PAYMENT / PACKAGE MODAL */}
       {editingBookingId && (

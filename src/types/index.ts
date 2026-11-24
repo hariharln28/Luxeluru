@@ -112,6 +112,16 @@ export interface Booking {
   fakeReportReason?: string;
 }
 
+export interface BlockedSlot {
+  id: string;
+  salonId: string;
+  date: string;
+  time: string;
+  customerName?: string;
+  reason?: string;
+  createdAt: string;
+}
+
 export interface StaffReview {
   id: string;
   staffId: string;

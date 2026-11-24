@@ -15,6 +15,7 @@ import type {
   StyleRecommendation,
   Salon,
   PaymentMethod,
+  BlockedSlot,
 } from '../types';
 import { salons as defaultSalons } from '../data/salons';
 import { scheduleFeedbackRequest } from '../utils/notifications';
@@ -70,6 +71,10 @@ interface AppContextType {
   blockUserForcefully: (userId: string, dateStr: string) => void;
   unblockUserForcefully: (userId: string) => void;
   isUserBlocked: (userId: string) => { blocked: boolean; reason?: string; until?: string };
+  blockedSlots: BlockedSlot[];
+  fetchBlockedSlots: (salonId: string) => Promise<BlockedSlot[]>;
+  blockSlot: (salonId: string, date: string, time: string, customerName?: string, reason?: string) => Promise<boolean>;
+  unblockSlot: (salonId: string, slotId: string) => Promise<boolean>;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -214,6 +219,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [salonsList, setSalonsList] = useState<Salon[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [staffReviews, setStaffReviews] = useState<StaffReview[]>([]);
+  const [blockedSlots, setBlockedSlots] = useState<BlockedSlot[]>([]);
   
   const [user, setUser] = useState<User | null>(null);
   const [salon, setSalon] = useState<Salon | null>(null);
@@ -788,6 +794,49 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return { blocked: false };
   }, [users, bookings]);
 
+  // ─── Blocked Slots ────────────────────────────────────
+  const fetchBlockedSlots = useCallback(async (salonId: string): Promise<BlockedSlot[]> => {
+    try {
+      const slots = await api.getBlockedSlots(salonId);
+      setBlockedSlots(slots);
+      return slots;
+    } catch {
+      return [];
+    }
+  }, []);
+
+  const blockSlot = useCallback(async (
+    salonId: string, date: string, time: string, customerName?: string, reason?: string
+  ): Promise<boolean> => {
+    try {
+      const res = await api.blockSlot(salonId, { date, time, customerName, reason });
+      if (res.success) {
+        setBlockedSlots(prev => [...prev, res.slot]);
+        addToast('success', `Slot blocked: ${time} on ${date}`);
+        return true;
+      }
+      return false;
+    } catch {
+      addToast('error', 'Failed to block slot');
+      return false;
+    }
+  }, [addToast]);
+
+  const unblockSlot = useCallback(async (salonId: string, slotId: string): Promise<boolean> => {
+    try {
+      const res = await api.unblockSlot(salonId, slotId);
+      if (res.success) {
+        setBlockedSlots(prev => prev.filter(s => s.id !== slotId));
+        addToast('success', 'Slot unblocked');
+        return true;
+      }
+      return false;
+    } catch {
+      addToast('error', 'Failed to unblock slot');
+      return false;
+    }
+  }, [addToast]);
+
   const createBooking = useCallback(
     async (data: Omit<Booking, 'id' | 'createdAt' | 'status' | 'userId'>): Promise<Booking> => {
       const blockStatus = isUserBlocked(user!.id);
@@ -1342,6 +1391,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         blockUserForcefully,
         unblockUserForcefully,
         isUserBlocked,
+        blockedSlots,
+        fetchBlockedSlots,
+        blockSlot,
+        unblockSlot,
       }}
     >
       {children}
