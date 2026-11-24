@@ -540,6 +540,12 @@ app.post('/api/salons/:id/reject', async (req, res) => {
 
 app.post('/api/salons/:id/force-deactivate', async (req, res) => {
   const { id } = req.params;
+
+  // Protect test salon from any admin action
+  if (id === 'LLLUX456') {
+    return res.status(403).json({ success: false, message: 'This is a protected test salon and cannot be removed.' });
+  }
+
   const salon = await db.getSalon(id);
 
   if (salon) {
@@ -553,6 +559,12 @@ app.post('/api/salons/:id/force-deactivate', async (req, res) => {
 // Permanently delete a salon from the database
 app.delete('/api/salons/:id', async (req, res) => {
   const { id } = req.params;
+
+  // Protect test salon from permanent deletion
+  if (id === 'LLLUX456') {
+    return res.status(403).json({ success: false, message: 'This is a protected test salon and cannot be deleted.' });
+  }
+
   const salon = await db.getSalon(id);
 
   if (!salon) {
@@ -625,9 +637,19 @@ app.post('/api/admin/login', async (req, res) => {
 // User blocking endpoints
 app.post('/api/admin/block-user', async (req, res) => {
   const { userId, blockedUntil } = req.body;
+
+  // Protect test user from being blocked
+  if (userId === 'usr-admin-test') {
+    return res.status(403).json({ success: false, message: 'This is a protected test account and cannot be blocked.' });
+  }
+
   const user = await db.getUser(userId);
 
   if (user) {
+    // Also protect by email (belt-and-suspenders)
+    if (user.email === 'adminuser1@test.com') {
+      return res.status(403).json({ success: false, message: 'This is a protected test account and cannot be blocked.' });
+    }
     await db.updateUser(userId, { blockedUntil });
     res.json({ success: true });
   } else {
