@@ -146,7 +146,7 @@ export function CheckoutModal({ amount, salonName, paymentMethod: initialPayment
               <Smartphone className="h-5 w-5 text-[#c9a962]" />
               <h3 className="font-display text-lg text-[#e8d5a3]">Complete UPI Payment</h3>
             </div>
-            <button onClick={() => { if (timerRef.current) clearInterval(timerRef.current); setShowQrModal(false); }} className="text-[#9a8fa8] hover:text-white transition">
+            <button onClick={() => { if (timerRef.current) clearInterval(timerRef.current); setShowQrModal(false); }} className="p-2 -m-2 text-[#9a8fa8] hover:text-white transition">
               <X className="h-5 w-5" />
             </button>
           </div>
@@ -247,7 +247,7 @@ export function CheckoutModal({ amount, salonName, paymentMethod: initialPayment
   // Main Checkout Modal
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-      <div className="w-full max-w-lg rounded-2xl bg-[#1a1520] border border-[#c9a962]/20 overflow-hidden animate-fade-in">
+      <div className="w-full max-w-lg rounded-2xl bg-[#1a1520] border border-[#c9a962]/20 overflow-y-auto max-h-[90dvh] animate-fade-in">
         {/* Header */}
         <div className="bg-gradient-to-r from-[#c9a962]/10 to-purple-500/10 border-b border-[#c9a962]/10 px-6 py-4 flex items-center justify-between">
           <div>
@@ -309,6 +309,10 @@ export function CheckoutModal({ amount, salonName, paymentMethod: initialPayment
                     placeholder="4242 4242 4242 4242"
                     maxLength={19}
                     className="luxe-input text-sm pl-10 font-mono tracking-wider"
+                    inputMode="numeric"
+                    pattern="[0-9 ]*"
+                    autoComplete="cc-number"
+                    style={{ fontSize: '16px' }}
                   />
                   <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#9a8fa8]" />
                 </div>
@@ -321,6 +325,9 @@ export function CheckoutModal({ amount, salonName, paymentMethod: initialPayment
                   onChange={(e) => setCardName(e.target.value)}
                   placeholder="Name on card"
                   className="luxe-input text-sm"
+                  autoComplete="cc-name"
+                  autoCapitalize="words"
+                  style={{ fontSize: '16px' }}
                 />
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -332,7 +339,10 @@ export function CheckoutModal({ amount, salonName, paymentMethod: initialPayment
                     onChange={(e) => setCardExpiry(formatExpiry(e.target.value))}
                     placeholder="MM/YY"
                     maxLength={5}
-                    className="luxe-input text-sm font-mono"
+                    className="luxe-input text-base font-mono"
+                    inputMode="numeric"
+                    autoComplete="cc-exp"
+                    style={{ fontSize: '16px' }}
                   />
                 </div>
                 <div>
@@ -343,7 +353,10 @@ export function CheckoutModal({ amount, salonName, paymentMethod: initialPayment
                     onChange={(e) => setCardCvc(e.target.value.replace(/\D/g, '').slice(0, 4))}
                     placeholder="123"
                     maxLength={4}
-                    className="luxe-input text-sm font-mono"
+                    className="luxe-input text-base font-mono"
+                    inputMode="numeric"
+                    autoComplete="cc-csc"
+                    style={{ fontSize: '16px' }}
                   />
                 </div>
               </div>
@@ -385,6 +398,9 @@ export function CheckoutModal({ amount, salonName, paymentMethod: initialPayment
                     placeholder="username@upi"
                     className="luxe-input text-sm pl-10 font-mono"
                     disabled={upiVerified}
+                    autoComplete="off"
+                    spellCheck={false}
+                    style={{ fontSize: '16px' }}
                   />
                   <Smartphone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#9a8fa8]" />
                   {upiVerified && (
@@ -432,7 +448,7 @@ export function CheckoutModal({ amount, salonName, paymentMethod: initialPayment
           )}
 
           {/* Trust Badges */}
-          <div className="mt-6 flex items-center justify-center gap-4 text-[10px] text-[#9a8fa8]/50">
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-3 text-[10px] text-[#9a8fa8]/50">
             <span className="flex items-center gap-1">
               <Shield className="h-3 w-3" /> SSL Encrypted
             </span>

@@ -23,7 +23,8 @@ export function BookingsPage() {
       {userBookings.length === 0 ? (
         <div className="luxe-card mt-8 p-12 text-center">
           <Calendar className="mx-auto h-12 w-12 text-[#9a8fa8]" />
-          <p className="mt-4 text-[#9a8fa8]">{tr('noBookings')}</p>
+          <p className="mt-4 font-display text-lg text-[#e8d5a3]">{tr('noBookings')}</p>
+          <p className="mt-1 text-sm text-[#9a8fa8]">Your upcoming and past appointments will appear here.</p>
           <Link to="/salons" className="luxe-btn mt-4 inline-block">{tr('bookNow')}</Link>
         </div>
       ) : (
@@ -130,7 +131,8 @@ function BookingCard({
                   value={newDate}
                   min={new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
                   onChange={(e) => setNewDate(e.target.value)}
-                  className="luxe-input text-xs py-1 px-2"
+                  className="luxe-input text-sm py-2 px-2"
+                  style={{ fontSize: '16px' }}
                 />
               </div>
               <div>
@@ -138,7 +140,8 @@ function BookingCard({
                 <select
                   value={newTime}
                   onChange={(e) => setNewTime(e.target.value)}
-                  className="luxe-input text-xs py-1.5 px-2"
+                  className="luxe-input text-sm py-2 px-2"
+                  style={{ fontSize: '16px' }}
                 >
                   {TIME_SLOTS.map(slot => (
                     <option key={slot} value={slot}>{slot}</option>
@@ -146,12 +149,12 @@ function BookingCard({
                 </select>
               </div>
               <div className="flex gap-2 pt-2">
-                <button onClick={handleSave} className="luxe-btn text-[10px] py-1 px-3">
+                <button onClick={handleSave} className="luxe-btn text-xs py-2 px-3 min-h-[40px]">
                   Save Changes
                 </button>
                 <button 
                   onClick={() => { setIsRescheduling(false); setNewDate(booking.date); setNewTime(booking.time); }} 
-                  className="luxe-btn-outline text-[10px] py-1 px-3 border-red-500/30 text-red-400"
+                  className="luxe-btn-outline text-xs py-2 px-3 min-h-[40px] border-red-500/30 text-red-400"
                 >
                   Cancel
                 </button>
@@ -258,13 +261,13 @@ function BookingCard({
           {canReschedule && (
             <button 
               onClick={() => setIsRescheduling(true)} 
-              className="luxe-btn text-sm py-2 px-4"
+              className="luxe-btn text-sm py-2 px-4 min-h-[40px]"
             >
               Reschedule
             </button>
           )}
           {onCancel && booking.status === 'confirmed' && (
-            <button onClick={() => setShowCancelConfirm(true)} className="flex items-center gap-1 text-sm text-red-400 hover:underline">
+            <button onClick={() => setShowCancelConfirm(true)} className="flex items-center gap-1 text-sm text-red-400 hover:underline py-2 px-3 rounded-lg -mx-3">
               <X className="h-4 w-4" /> {tr('cancel')}
             </button>
           )}

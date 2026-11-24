@@ -71,7 +71,7 @@ export function RegisterPage() {
   }
 
   return (
-    <div className="flex min-h-[calc(100vh-140px)] items-center justify-center px-4 py-12">
+    <div className="flex min-h-[calc(100dvh-140px)] items-center justify-center px-4 py-12">
       <div className="w-full max-w-md animate-fade-in">
         <div className="mb-8 text-center">
           <img src={logoUrl} alt="Luxeluru" className="mx-auto h-20 w-auto object-contain mix-blend-screen" />
@@ -91,6 +91,8 @@ export function RegisterPage() {
               className="luxe-input"
               placeholder="Your full name"
               autoComplete="name"
+              autoCapitalize="words"
+              style={{ fontSize: '16px' }}
             />
           </div>
           <div>
@@ -102,6 +104,8 @@ export function RegisterPage() {
               className="luxe-input"
               placeholder="you@example.com"
               autoComplete="email"
+              inputMode="email"
+              style={{ fontSize: '16px' }}
             />
           </div>
           <div>
@@ -113,6 +117,8 @@ export function RegisterPage() {
               className="luxe-input"
               placeholder="+91 98765 43210"
               autoComplete="tel"
+              inputMode="tel"
+              style={{ fontSize: '16px' }}
             />
           </div>
           <div>
@@ -125,9 +131,10 @@ export function RegisterPage() {
                 className="luxe-input pr-10"
                 placeholder="Min. 6 characters"
                 autoComplete="new-password"
+                style={{ fontSize: '16px' }}
               />
               <button type="button" onClick={() => setShowPass(!showPass)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9a8fa8] hover:text-[#e8d5a3] transition">
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-2 -m-2 text-[#9a8fa8] hover:text-[#e8d5a3] transition">
                 {showPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
@@ -141,6 +148,7 @@ export function RegisterPage() {
               className="luxe-input"
               placeholder="Re-enter password"
               autoComplete="new-password"
+              style={{ fontSize: '16px' }}
             />
           </div>
           <button type="submit" disabled={loading} className="luxe-btn w-full disabled:opacity-60 disabled:cursor-not-allowed">

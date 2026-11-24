@@ -43,19 +43,19 @@ export function ProfilePage() {
             <label className="mb-1.5 flex items-center gap-2 text-sm text-[#9a8fa8]">
               <User className="h-4 w-4" /> {tr('name')}
             </label>
-            <input value={name} onChange={(e) => setName(e.target.value)} className="luxe-input" />
+            <input value={name} onChange={(e) => setName(e.target.value)} className="luxe-input" autoCapitalize="words" style={{ fontSize: '16px' }} />
           </div>
           <div>
             <label className="mb-1.5 flex items-center gap-2 text-sm text-[#9a8fa8]">
               <Mail className="h-4 w-4" /> {tr('email')}
             </label>
-            <input value={user.email} disabled className="luxe-input opacity-60" />
+            <input value={user.email} disabled className="luxe-input opacity-60" style={{ fontSize: '16px' }} />
           </div>
           <div>
             <label className="mb-1.5 flex items-center gap-2 text-sm text-[#9a8fa8]">
               <Phone className="h-4 w-4" /> {tr('phone')}
             </label>
-            <input value={phone} onChange={(e) => setPhone(e.target.value)} className="luxe-input" />
+            <input value={phone} onChange={(e) => setPhone(e.target.value)} className="luxe-input" type="tel" inputMode="tel" style={{ fontSize: '16px' }} />
           </div>
           <button type="submit" className="luxe-btn w-full">{tr('submit')}</button>
         </form>
