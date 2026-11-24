@@ -1,7 +1,7 @@
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import {
   Sparkles, MapPin, Calendar, Trophy, Scissors, AlertTriangle,
-  ArrowRight, Clock, LogOut, Trash2,
+  ArrowRight, Clock,
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useT } from '../hooks/useT';
@@ -9,16 +9,11 @@ import { SalonCard } from '../components/SalonCard';
 import { knnRank } from '../utils/knn';
 import { PanicModal } from '../components/PanicModal';
 import { useState } from 'react';
-import { supabase, supabaseConfigured } from '../services/supabaseClient';
 
 export function DashboardPage() {
-  const { user, bookings, activeSalons, userLocation, logout, addToast } = useApp();
+  const { user, bookings, activeSalons, userLocation } = useApp();
   const tr = useT();
-  const navigate = useNavigate();
   const [panicOpen, setPanicOpen] = useState(false);
-  const [deleteOpen, setDeleteOpen] = useState(false);
-  const [deleteConfirm, setDeleteConfirm] = useState('');
-  const [deleting, setDeleting] = useState(false);
 
   const userBookings = bookings.filter((b) => b.userId === user?.id);
   const upcoming = userBookings.filter((b) => b.status === 'confirmed').slice(0, 3);
@@ -32,29 +27,6 @@ export function DashboardPage() {
     { to: '/leaderboard', icon: Trophy, label: tr('leaderboard'), color: 'from-yellow-500/20 to-amber-500/20' },
   ];
 
-  async function handleDeleteAccount() {
-    if (deleteConfirm !== 'DELETE') return;
-    setDeleting(true);
-    try {
-      // Delete from Supabase auth
-      if (supabaseConfigured) {
-        const { error } = await supabase.auth.admin.deleteUser(user!.id);
-        if (error) {
-          // If admin delete fails, try signing out and notify
-          console.warn('Admin delete failed, user may need manual removal:', error.message);
-        }
-      }
-      // Sign out and clear local data
-      await supabase.auth.signOut();
-      logout();
-      addToast('success', 'Your account has been deleted. We\'re sorry to see you go.');
-      navigate('/');
-    } catch (err: any) {
-      addToast('error', err.message || 'Failed to delete account. Please contact support.');
-    } finally {
-      setDeleting(false);
-    }
-  }
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
@@ -130,70 +102,6 @@ export function DashboardPage() {
           )}
         </div>
       </div>
-
-      {/* Account Actions */}
-      <div className="mt-12 border-t border-[#c9a962]/10 pt-8">
-        <h2 className="mb-4 font-display text-xl text-[#9a8fa8]">Account</h2>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <button
-            onClick={() => { logout(); navigate('/login'); }}
-            className="flex items-center justify-center gap-2 rounded-lg border border-[#c9a962]/20 bg-[#1a1520] px-6 py-3 text-sm font-medium text-[#e8d5a3] transition hover:bg-[#c9a962]/10"
-          >
-            <LogOut className="h-4 w-4" />
-            Sign Out
-          </button>
-          <button
-            onClick={() => setDeleteOpen(true)}
-            className="flex items-center justify-center gap-2 rounded-lg border border-red-500/30 bg-red-500/5 px-6 py-3 text-sm font-medium text-red-400 transition hover:bg-red-500/15"
-          >
-            <Trash2 className="h-4 w-4" />
-            Delete Account
-          </button>
-        </div>
-      </div>
-
-      {/* Delete Account Confirmation Modal */}
-      {deleteOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
-          <div className="w-full max-w-md animate-fade-in luxe-card p-6 sm:p-8">
-            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-500/10 mx-auto">
-              <Trash2 className="h-6 w-6 text-red-400" />
-            </div>
-            <h3 className="text-center font-display text-xl text-red-400">Delete Your Account?</h3>
-            <p className="mt-3 text-center text-sm text-[#9a8fa8]">
-              This action is <strong className="text-red-400">permanent</strong> and cannot be undone. 
-              All your bookings, reviews, and profile data will be removed.
-            </p>
-            <div className="mt-4">
-              <label className="mb-1.5 block text-sm text-[#9a8fa8]">
-                Type <strong className="text-red-400">DELETE</strong> to confirm
-              </label>
-              <input
-                type="text"
-                value={deleteConfirm}
-                onChange={(e) => setDeleteConfirm(e.target.value)}
-                className="luxe-input border-red-500/30 focus:border-red-500/50"
-                placeholder="DELETE"
-              />
-            </div>
-            <div className="mt-6 flex gap-3">
-              <button
-                onClick={() => { setDeleteOpen(false); setDeleteConfirm(''); }}
-                className="flex-1 rounded-lg border border-[#c9a962]/20 bg-[#1a1520] px-4 py-2.5 text-sm font-medium text-[#e8d5a3] transition hover:bg-[#c9a962]/10"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleDeleteAccount}
-                disabled={deleteConfirm !== 'DELETE' || deleting}
-                className="flex-1 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                {deleting ? 'Deleting...' : 'Delete Forever'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {panicOpen && <PanicModal onClose={() => setPanicOpen(false)} />}
     </div>

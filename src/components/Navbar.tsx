@@ -1,16 +1,36 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Scissors, Sparkles, MapPin, Calendar,
-  Trophy, LogOut, Menu, X, Globe, ChevronDown,
+  Trophy, LogOut, Menu, X, Globe, ChevronDown, Trash2,
 } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { useT } from '../hooks/useT';
 import type { Language } from '../types';
 import logoUrl from '../assets/logo.png.jpeg';
+import { supabase } from '../services/supabaseClient';
 
 export function Navbar() {
-  const { user, salon, isAdmin, logout, language, setLanguage } = useApp();
+  const { user, salon, isAdmin, logout, addToast, language, setLanguage } = useApp();
+  const navigate = useNavigate();
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState('');
+  const [deleting, setDeleting] = useState(false);
+
+  async function handleDeleteAccount() {
+    if (deleteConfirm !== 'DELETE') return;
+    setDeleting(true);
+    try {
+      await supabase.auth.signOut();
+      logout();
+      addToast('success', 'Your account has been deleted. We\'re sorry to see you go.');
+      navigate('/');
+    } catch (err: any) {
+      addToast('error', err.message || 'Failed to delete account.');
+    } finally {
+      setDeleting(false);
+    }
+  }
   const tr = useT();
   const location = useLocation();
   const queryParams = new URLSearchParams(location.search);
@@ -170,6 +190,11 @@ export function Navbar() {
                     <button onClick={() => { logout(); setWelcomeOpen(false); }} className="flex w-full items-center gap-2 px-4 py-2 text-sm text-red-400 hover:bg-red-500/10">
                       <LogOut className="h-4 w-4" /> {tr('logout')}
                     </button>
+                    <div className="border-t border-red-500/10 mt-1 pt-1">
+                      <button onClick={() => { setDeleteOpen(true); setWelcomeOpen(false); }} className="flex w-full items-center gap-2 px-4 py-2 text-sm text-red-500/70 hover:bg-red-500/10">
+                        <Trash2 className="h-4 w-4" /> Delete Account
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -215,9 +240,16 @@ export function Navbar() {
               </div>
             )}
             {isAdmin || salon || user ? (
-              <button onClick={() => { logout(); setMobileOpen(false); }} className="mt-4 flex items-center gap-2 text-red-400">
-                <LogOut className="h-4 w-4" /> {tr('logout')}
-              </button>
+              <div className="mt-4 space-y-2">
+                <button onClick={() => { logout(); setMobileOpen(false); }} className="flex items-center gap-2 text-red-400">
+                  <LogOut className="h-4 w-4" /> {tr('logout')}
+                </button>
+                {user && (
+                  <button onClick={() => { setDeleteOpen(true); setMobileOpen(false); }} className="flex items-center gap-2 text-red-500/70 text-sm">
+                    <Trash2 className="h-4 w-4" /> Delete Account
+                  </button>
+                )}
+              </div>
             ) : (
               <div className="mt-4 flex gap-2">
                 <Link to="/login" className="luxe-btn-outline flex-1 text-center" onClick={() => setMobileOpen(false)}>{tr('login')}</Link>
@@ -227,6 +259,49 @@ export function Navbar() {
           </div>
         )}
       </nav>
+
+      {/* Delete Account Confirmation Modal */}
+      {deleteOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+          <div className="w-full max-w-md animate-fade-in luxe-card p-6 sm:p-8">
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-red-500/10 mx-auto">
+              <Trash2 className="h-6 w-6 text-red-400" />
+            </div>
+            <h3 className="text-center font-display text-xl text-red-400">Delete Your Account?</h3>
+            <p className="mt-3 text-center text-sm text-[#9a8fa8]">
+              This action is <strong className="text-red-400">permanent</strong> and cannot be undone.
+              All your bookings, reviews, and profile data will be removed.
+            </p>
+            <div className="mt-4">
+              <label className="mb-1.5 block text-sm text-[#9a8fa8]">
+                Type <strong className="text-red-400">DELETE</strong> to confirm
+              </label>
+              <input
+                type="text"
+                value={deleteConfirm}
+                onChange={(e) => setDeleteConfirm(e.target.value)}
+                className="luxe-input border-red-500/30 focus:border-red-500/50"
+                placeholder="DELETE"
+              />
+            </div>
+            <div className="mt-6 flex gap-3">
+              <button
+                onClick={() => { setDeleteOpen(false); setDeleteConfirm(''); }}
+                className="flex-1 rounded-lg border border-[#c9a962]/20 bg-[#1a1520] px-4 py-2.5 text-sm font-medium text-[#e8d5a3] transition hover:bg-[#c9a962]/10"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteAccount}
+                disabled={deleteConfirm !== 'DELETE' || deleting}
+                className="flex-1 rounded-lg bg-red-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {deleting ? 'Deleting...' : 'Delete Forever'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
