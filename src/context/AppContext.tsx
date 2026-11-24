@@ -565,7 +565,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
       });
 
       if (error) {
-        addToast('error', error.message);
+        // Provide user-friendly messages for common errors
+        if (error.message.includes('rate limit') || error.status === 429) {
+          addToast('error', 'Too many attempts. Please wait a minute and try again.');
+        } else if (error.message.includes('already registered') || error.message.includes('already been registered')) {
+          addToast('error', 'An account with this email already exists. Please sign in instead.');
+        } else {
+          addToast('error', error.message);
+        }
+        return false;
+      }
+
+      // Supabase returns a user with a fake id when email already exists (security feature)
+      // Check for this case: identities array will be empty
+      if (authData.user && authData.user.identities && authData.user.identities.length === 0) {
+        addToast('error', 'An account with this email already exists. Please sign in instead.');
         return false;
       }
 
@@ -578,12 +592,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
           createdAt: new Date().toISOString(),
         };
         await api.userRegister(newUser);
-        addToast('success', 'Registration successful! Check your email to verify your account.');
+        addToast('success', 'Account created! Check your email to verify, then sign in.');
         return true;
       }
       return false;
     } catch (err: any) {
-      addToast('error', err.message || 'Registration failed');
+      if (err.message && err.message.includes('fetch')) {
+        addToast('error', 'Network error. Please check your internet connection.');
+      } else {
+        addToast('error', err.message || 'Registration failed. Please try again.');
+      }
       return false;
     }
   }, [addToast]);
