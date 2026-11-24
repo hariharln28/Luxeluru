@@ -1,4 +1,4 @@
-import type { User, Salon, Booking, StaffReview, BlockedSlot } from '../types';
+import type { User, Salon, Booking, StaffReview, BlockedSlot, Notification } from '../types';
 
 let authToken: string | null = null;
 
@@ -95,6 +95,16 @@ export const api = {
     request<{ success: boolean }>(`/api/salons/${id}/exit`, {
       method: 'POST',
       body: JSON.stringify({ reason }),
+    }),
+
+  approveSalonExit: (id: string) =>
+    request<{ success: boolean }>(`/api/salons/${id}/approve-exit`, {
+      method: 'POST',
+    }),
+
+  rejectSalonExit: (id: string) =>
+    request<{ success: boolean }>(`/api/salons/${id}/reject-exit`, {
+      method: 'POST',
     }),
 
   approveSalon: (id: string) =>
@@ -224,5 +234,18 @@ export const api = {
     request<{ success: boolean; review: StaffReview }>('/api/reviews', {
       method: 'POST',
       body: JSON.stringify(reviewData),
+    }),
+
+  // Notifications
+  getNotifications: (target: string) =>
+    request<Notification[]>(`/api/notifications?target=${encodeURIComponent(target)}`),
+
+  markNotificationRead: (id: string) =>
+    request<{ success: boolean }>(`/api/notifications/${id}/read`, { method: 'POST' }),
+
+  markAllNotificationsRead: (target: string) =>
+    request<{ success: boolean }>('/api/notifications/mark-all-read', {
+      method: 'POST',
+      body: JSON.stringify({ target }),
     }),
 };

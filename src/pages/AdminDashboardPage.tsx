@@ -29,7 +29,8 @@ import {
   Banknote,
   Clock,
   Phone,
-  Mail
+  Mail,
+  Bell
 } from 'lucide-react';
 
 export function AdminDashboardPage() {
@@ -44,14 +45,23 @@ export function AdminDashboardPage() {
     deleteSalonPermanently,
     blockUserForcefully, 
     unblockUserForcefully,
+    approveSalonExit,
+    rejectSalonExit,
     logout,
     refreshData,
-    addToast
+    addToast,
+    notifications,
+    fetchNotifications,
+    markNotificationRead,
+    markAllNotificationsRead
   } = useApp();
   
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'pending' | 'salons' | 'users' | 'platform' | 'test-signin'>('pending');
+  const [activeTab, setActiveTab] = useState<'pending' | 'salons' | 'users' | 'platform' | 'test-signin' | 'notifications'>('pending');
   const [refreshing, setRefreshing] = useState(false);
+
+  const adminNotifications = notifications.filter(n => n.target === 'admin');
+  const adminUnreadCount = adminNotifications.filter(n => !n.read).length;
   
   // Blocking modal state
   const [blockingUserId, setBlockingUserId] = useState<string | null>(null);
@@ -303,13 +313,27 @@ export function AdminDashboardPage() {
           Platform Analytics
         </button>
         <button
-          onClick={() => setActiveTab('test-signin')}
+          onClick={() => { setActiveTab('test-signin'); }}
           className={`flex flex-1 items-center justify-center gap-2 rounded-lg py-2.5 text-xs font-semibold transition ${
             activeTab === 'test-signin' ? 'bg-[#c9a962] text-[#0f0d12]' : 'text-[#9a8fa8] hover:text-[#e8d5a3]'
           }`}
         >
           <LogIn className="h-4 w-4" />
           Test Sign In
+        </button>
+        <button
+          onClick={() => { setActiveTab('notifications'); fetchNotifications('admin'); }}
+          className={`relative flex flex-1 items-center justify-center gap-2 rounded-lg py-2.5 text-xs font-semibold transition ${
+            activeTab === 'notifications' ? 'bg-[#c9a962] text-[#0f0d12]' : 'text-[#9a8fa8] hover:text-[#e8d5a3]'
+          }`}
+        >
+          <Bell className="h-4 w-4" />
+          Notifications
+          {adminUnreadCount > 0 && (
+            <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+              {adminUnreadCount > 9 ? '9+' : adminUnreadCount}
+            </span>
+          )}
         </button>
       </div>
 
@@ -415,6 +439,46 @@ export function AdminDashboardPage() {
             <h3 className="font-display text-2xl text-[#e8d5a3]">Manage Partner Salons</h3>
             <p className="text-xs text-[#9a8fa8] mt-0.5">Audit billing, verify dues payments, and forcefully remove problematic salons.</p>
           </div>
+
+          {/* Exit Requests */}
+          {salons.filter(s => s.exitRequestStatus === 'pending').length > 0 && (
+            <div className="mb-8">
+              <h2 className="mb-4 font-display text-xl text-amber-400 flex items-center gap-2">
+                <AlertCircle className="h-5 w-5" /> Exit Requests
+              </h2>
+              <div className="grid gap-4 sm:grid-cols-2">
+                {salons.filter(s => s.exitRequestStatus === 'pending').map(salon => (
+                  <div key={salon.id} className="luxe-card p-5 border border-amber-500/20">
+                    <div className="flex justify-between items-start mb-3">
+                      <div>
+                        <h3 className="font-display text-lg text-[#e8d5a3]">{salon.name}</h3>
+                        <p className="text-xs text-[#9a8fa8]">{salon.ownerName}</p>
+                      </div>
+                      <span className="bg-amber-500/20 text-amber-400 px-2 py-1 rounded-full text-[10px] font-bold">Pending Exit</span>
+                    </div>
+                    <div className="mb-4 bg-[#0f0d12]/50 p-3 rounded-lg text-xs">
+                      <p className="text-[#9a8fa8]">Reason for exit:</p>
+                      <p className="text-[#e8d5a3] mt-1 italic">"{salon.exitReason || 'No reason provided'}"</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => approveSalonExit(salon.id)}
+                        className="flex-1 bg-red-500/10 text-red-400 border border-red-500/20 py-2 rounded-lg text-sm font-semibold hover:bg-red-500/20 transition"
+                      >
+                        Approve Exit
+                      </button>
+                      <button
+                        onClick={() => rejectSalonExit(salon.id)}
+                        className="flex-1 luxe-btn-outline py-2 text-sm"
+                      >
+                        Reject
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="overflow-x-auto rounded-xl border border-[#c9a962]/15 bg-[#1a1520]/60 backdrop-blur-xl">
             <table className="w-full text-left border-collapse text-sm">
@@ -1081,6 +1145,74 @@ export function AdminDashboardPage() {
               <LogOut className="h-4 w-4" /> Log Out Admin Session & Go to Login Page
             </button>
           </div>
+        </div>
+      )}
+
+      {/* NOTIFICATIONS PANEL */}
+      {activeTab === 'notifications' && (
+        <div className="luxe-card p-6 animate-fade-in">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <Bell className="h-5 w-5 text-[#c9a962]" />
+              <h3 className="font-display text-2xl text-[#e8d5a3]">Payout & Commission Notifications</h3>
+              {adminUnreadCount > 0 && (
+                <span className="flex items-center justify-center rounded-full bg-red-500/20 border border-red-500/30 px-2 py-0.5 text-xs font-semibold text-red-400">
+                  {adminUnreadCount} unread
+                </span>
+              )}
+            </div>
+            {adminUnreadCount > 0 && (
+              <button
+                onClick={() => markAllNotificationsRead('admin')}
+                className="text-xs text-[#c9a962] hover:text-[#e8d5a3] transition underline"
+              >
+                Mark all as read
+              </button>
+            )}
+          </div>
+
+          {adminNotifications.length === 0 ? (
+            <div className="text-center py-20 text-[#9a8fa8]">
+              <Bell className="h-16 w-16 mx-auto mb-4 opacity-20" />
+              <p className="text-sm font-medium">No notifications yet.</p>
+              <p className="text-xs mt-1 opacity-70">Payout confirmations and commission alerts will appear here when appointments are completed.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {adminNotifications.map(notif => (
+                <div
+                  key={notif.id}
+                  className={`flex items-start gap-4 rounded-xl border p-5 transition cursor-pointer ${
+                    notif.read
+                      ? 'border-[#c9a962]/10 bg-[#0f0d12]/40'
+                      : 'border-[#c9a962]/40 bg-[#c9a962]/5 shadow-lg'
+                  }`}
+                  onClick={() => !notif.read && markNotificationRead(notif.id)}
+                >
+                  <div className={`mt-1 flex-shrink-0 rounded-full p-2.5 ${
+                    notif.type === 'payout' ? 'bg-emerald-500/20 text-emerald-400' :
+                    notif.type === 'payment_received' ? 'bg-blue-500/20 text-blue-400' :
+                    'bg-amber-500/20 text-amber-400'
+                  }`}>
+                    {notif.type === 'payout' ? <CheckCircle className="h-5 w-5" /> :
+                     notif.type === 'payment_received' ? <CreditCard className="h-5 w-5" /> :
+                     <IndianRupee className="h-5 w-5" />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-sm leading-relaxed ${notif.read ? 'text-[#9a8fa8]' : 'text-[#e8d5a3]'}`}>
+                      {notif.message}
+                    </p>
+                    <p className="mt-2 text-xs text-[#9a8fa8]/70">
+                      {new Date(notif.createdAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}
+                    </p>
+                  </div>
+                  {!notif.read && (
+                    <div className="mt-2 flex-shrink-0 h-2.5 w-2.5 rounded-full bg-[#c9a962] animate-pulse" />
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

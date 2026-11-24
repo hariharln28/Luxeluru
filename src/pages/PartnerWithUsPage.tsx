@@ -38,7 +38,8 @@ export function PartnerWithUsPage() {
   const [exitReason, setExitReason] = useState('');
   const [exitPassword, setExitPassword] = useState('');
 
-
+  // Derived state for exit
+  const currentSalon = salons.find(s => s.id === exitSalonId);
 
   // Status check state
   const [statusSearch, setStatusSearch] = useState('');
@@ -133,15 +134,24 @@ export function PartnerWithUsPage() {
       return;
     }
 
+    if (targetSalon.exitRequestStatus === 'pending') {
+      setError('Your exit request is already pending approval by the Admin.');
+      return;
+    }
+
+    if ((targetSalon.commissionDue || 0) > 0) {
+      setError(`You have outstanding commission dues of ₹${targetSalon.commissionDue}. You must pay all dues before you can request to exit the platform.`);
+      return;
+    }
+
     const success = await salonExit(exitSalonId, exitReason);
     if (success) {
-      addToast('success', 'Salon exited successfully.');
-      setSuccessMsg(`Salon "${targetSalon.name}" (${exitSalonId}) has been successfully deactivated and removed from the Luxeluru platform.`);
+      setSuccessMsg(`Your exit request for Salon "${targetSalon.name}" (${exitSalonId}) has been sent to the Admin for approval.`);
       setExitSalonId('');
       setExitReason('');
       setExitPassword('');
     } else {
-      setError('Failed to exit salon. Please check details.');
+      setError('Failed to request exit. Please check details or try again later.');
     }
   }
 
@@ -579,7 +589,23 @@ export function PartnerWithUsPage() {
             <strong>WARNING:</strong> Exiting the platform is permanent. Your salon will be hidden from search listings, and active user bookings will be terminated.
           </div>
 
-          <button type="submit" className="luxe-btn-outline border-red-500/30 text-red-400 hover:bg-red-500/10 w-full">
+          {currentSalon?.exitRequestStatus === 'pending' && (
+            <div className="rounded-lg bg-amber-500/10 border border-amber-500/20 p-4 text-sm text-amber-400 font-semibold text-center">
+              Your exit request is pending approval by the Admin.
+            </div>
+          )}
+
+          {(currentSalon?.commissionDue || 0) > 0 && currentSalon?.exitRequestStatus !== 'pending' && (
+            <div className="rounded-lg bg-red-500/10 border border-red-500/20 p-4 text-sm text-red-400 font-semibold text-center">
+              You have outstanding commission dues of ₹{currentSalon!.commissionDue}. You must pay all dues before you can request to exit the platform.
+            </div>
+          )}
+
+          <button 
+            type="submit" 
+            className="luxe-btn-outline border-red-500/30 text-red-400 hover:bg-red-500/10 w-full disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={currentSalon?.exitRequestStatus === 'pending' || (currentSalon?.commissionDue || 0) > 0}
+          >
             Submit Exit Request & Deactivate
           </button>
         </form>

@@ -19,7 +19,7 @@ const TIME_SLOTS = [
 
 export function SalonDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const { user, salons, createBooking, addStaffReview, staffReviews, addToast, isUserBlocked, bookings, fetchBlockedSlots, blockedSlots } = useApp();
+  const { user, salons, createBooking, addStaffReview, staffReviews, addToast, isUserBlocked, bookings, fetchBlockedSlots, blockedSlots, styleRecommendation, setStyleRecommendation } = useApp();
   const salon = salons.find((s) => s.id === id);
   const tr = useT();
 
@@ -104,6 +104,9 @@ export function SalonDetailPage() {
       totalPrice: total,
       paymentMethod,
       paymentStatus: (paymentMethod === 'card' || paymentMethod === 'upi') ? 'paid-online' as const : 'pending' as const,
+      customImageUrl: styleRecommendation?.customImageUrl,
+      customMessage: styleRecommendation?.customMessage,
+      aiStyleRecommendation: styleRecommendation || undefined
     });
 
     sendWhatsAppConfirmation(user.phone, currentSalon.name, date, time, serviceNames);
@@ -117,6 +120,7 @@ export function SalonDetailPage() {
     setShowBooking(false);
     setSelectedServices([]);
     setSelectedPackage(null);
+    setStyleRecommendation(null);
   }
 
   function submitReview() {
@@ -435,6 +439,11 @@ export function SalonDetailPage() {
                 {isUserBlocked(user.id).reason}
               </div>
             )}
+
+            <div className="mt-4 rounded-lg bg-[#c9a962]/5 p-3 text-[10px] text-[#9a8fa8] border border-[#c9a962]/10">
+              <p className="font-semibold text-[#e8d5a3] mb-1">Cancellation Policy</p>
+              <p>Cancel your appointment more than 2 days in advance for a 100% refund. Cancellations made within 2 days of the appointment will incur a 90% cancellation fee (10% refund will be processed).</p>
+            </div>
 
             <div className="mt-6 flex gap-3">
               <button onClick={() => setShowBooking(false)} className="luxe-btn-outline flex-1">{tr('cancel')}</button>

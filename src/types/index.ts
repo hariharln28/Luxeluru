@@ -69,6 +69,7 @@ export interface Salon {
   registeredAt?: string;
   panCardOwner?: string;
   panCardBusiness?: string;
+  exitRequestStatus?: 'pending' | 'approved';
 }
 
 export interface User {
@@ -124,6 +125,12 @@ export interface Booking {
   modifiedServiceNames?: string[];
   modifiedPrice?: number;
   rescheduledFrom?: { date: string; time: string };
+  refundAmount?: number;
+  customImageUrl?: string;
+  customMessage?: string;
+  aiStyleRecommendation?: StyleRecommendation;
+  payoutAmount?: number;
+  payoutStatus?: 'pending' | 'paid' | 'pay-at-salon';
 }
 
 export interface BlockedSlot {
@@ -155,10 +162,21 @@ export interface StyleRecommendation {
   suggestedStyles: string[];
   userAdjustedColor?: string;
   userAdjustedStyle?: string;
+  customImageUrl?: string;
+  customMessage?: string;
 }
 
 export interface Toast {
   id: string;
   type: 'success' | 'error' | 'info';
   message: string;
+}
+
+export interface Notification {
+  id: string;
+  target: string; // 'admin' or salonId
+  type: string;
+  message: string;
+  createdAt: string;
+  read: boolean;
 }

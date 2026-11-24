@@ -22,7 +22,9 @@ import {
   MapPin,
   Edit3,
   Trash2,
-  Users
+  Users,
+  Sparkles,
+  Bell
 } from 'lucide-react';
 import type { PaymentMethod } from '../types';
 import { CheckoutModal } from '../components/CheckoutModal';
@@ -43,10 +45,15 @@ export function SalonDashboardPage() {
     updateSalonLocation,
     updateSalonStaff,
     verifyBookingStatus,
-    modifyBookingServices
+    modifyBookingServices,
+    notifications,
+    fetchNotifications,
+    markNotificationRead,
+    markAllNotificationsRead
   } = useApp();
 
   const [refreshing, setRefreshing] = useState(false);
+  const [viewingImageUrl, setViewingImageUrl] = useState<string | null>(null);
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -57,7 +64,10 @@ export function SalonDashboardPage() {
   const navigate = useNavigate();
   
   // Dashboard Tabs
-  const [activeTab, setActiveTab] = useState<'appointments' | 'slots' | 'insights' | 'location' | 'team'>('appointments');
+  const [activeTab, setActiveTab] = useState<'appointments' | 'slots' | 'insights' | 'location' | 'team' | 'notifications'>('appointments');
+
+  const salonNotifications = notifications.filter(n => n.target === salon?.id);
+  const unreadCount = salonNotifications.filter(n => !n.read).length;
 
   // Manage Slots state
   const [slotDate, setSlotDate] = useState(new Date().toISOString().split('T')[0]);
@@ -282,6 +292,20 @@ export function SalonDashboardPage() {
         >
           <Users className="h-4 w-4" /> Team
         </button>
+        <button
+          onClick={() => { setActiveTab('notifications'); if (salon) fetchNotifications(salon.id); }}
+          className={`relative flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-xs font-semibold transition ${
+            activeTab === 'notifications' ? 'bg-[#c9a962] text-[#0f0d12]' : 'text-[#9a8fa8] hover:text-[#e8d5a3]'
+          }`}
+        >
+          <Bell className="h-4 w-4" />
+          Notifications
+          {unreadCount > 0 && (
+            <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
+              {unreadCount > 9 ? '9+' : unreadCount}
+            </span>
+          )}
+        </button>
       </div>
 
       {/* APPOINTMENTS VIEW */}
@@ -365,6 +389,59 @@ export function SalonDashboardPage() {
                           <p className="text-xs text-[#9a8fa8] mt-1 uppercase">Payment: {b.paymentMethod}</p>
                         </div>
                       </div>
+
+                      {/* AI Stylist & Custom Preferences */}
+                      {(b.aiStyleRecommendation || b.customImageUrl || b.customMessage) && (
+                        <div className="mt-4 bg-[#130f18]/60 border border-[#c9a962]/20 rounded-xl p-3.5 space-y-2">
+                          <p className="text-xs font-semibold text-[#e8d5a3] flex items-center gap-1">
+                            <Sparkles className="h-3.5 w-3.5 text-[#c9a962]" />
+                            AI Stylist &amp; Custom Preferences
+                          </p>
+                          
+                          {b.aiStyleRecommendation && b.aiStyleRecommendation.faceShape !== 'Custom Upload' && (
+                            <div className="grid grid-cols-2 gap-2 text-[11px] text-[#9a8fa8] pb-2 border-b border-[#c9a962]/10">
+                              <div>
+                                <span className="text-[#e8d5a3] font-medium">Face Shape:</span> {b.aiStyleRecommendation.faceShape}
+                              </div>
+                              <div>
+                                <span className="text-[#e8d5a3] font-medium">Skin Tone:</span> {b.aiStyleRecommendation.skinTone}
+                              </div>
+                              {b.aiStyleRecommendation.userAdjustedStyle && (
+                                <div className="col-span-2">
+                                  <span className="text-[#e8d5a3] font-medium">Selected Style:</span> {b.aiStyleRecommendation.userAdjustedStyle}
+                                </div>
+                              )}
+                              {b.aiStyleRecommendation.userAdjustedColor && (
+                                <div className="col-span-2">
+                                  <span className="text-[#e8d5a3] font-medium">Selected Colour:</span> {b.aiStyleRecommendation.userAdjustedColor}
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {b.customMessage && (
+                            <div className="text-[11px] text-[#9a8fa8]">
+                              <span className="text-[#e8d5a3] font-medium">Custom Notes:</span> "{b.customMessage}"
+                            </div>
+                          )}
+
+                          {b.customImageUrl && (
+                            <div className="flex items-center gap-3 pt-1">
+                              <span className="text-[11px] text-[#e8d5a3] font-medium">Custom Reference:</span>
+                              <div className="relative group cursor-pointer" onClick={() => setViewingImageUrl(b.customImageUrl || null)}>
+                                <img 
+                                  src={b.customImageUrl} 
+                                  alt="Custom Reference" 
+                                  className="h-12 w-12 rounded object-cover border border-[#c9a962]/30 hover:border-[#c9a962] transition"
+                                />
+                                <span className="absolute inset-0 bg-black/55 flex items-center justify-center text-[8px] text-white opacity-0 group-hover:opacity-100 transition rounded">
+                                  Open
+                                </span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
 
                       <div className="mt-4 flex flex-wrap gap-2 border-t border-[#c9a962]/10 pt-4">
                         <button
@@ -455,6 +532,30 @@ export function SalonDashboardPage() {
                         <div className="mt-2 bg-[#0f0d12] rounded p-1.5 text-[10px] text-amber-300">
                           <p><strong>Package Changed:</strong> {b.updatedPackageName}</p>
                           <p className="text-[9px] text-[#9a8fa8]">User originally chose: {b.originalPackageName}</p>
+                        </div>
+                      )}
+
+                      {/* AI Stylist & Custom Preferences (Previous) */}
+                      {(b.aiStyleRecommendation || b.customImageUrl || b.customMessage) && (
+                        <div className="mt-2 bg-[#130f18]/40 border border-[#c9a962]/5 rounded p-2 space-y-1.5 text-[10px]">
+                          <p className="font-semibold text-[#e8d5a3] flex items-center gap-1">
+                            <Sparkles className="h-3 w-3 text-[#c9a962]" />
+                            Style Preferences
+                          </p>
+                          {b.customMessage && (
+                            <p className="text-[#9a8fa8]"><span className="text-[#e8d5a3]">Notes:</span> "{b.customMessage}"</p>
+                          )}
+                          {b.customImageUrl && (
+                            <div className="flex items-center gap-2">
+                              <span className="text-[#e8d5a3]">Reference Image:</span>
+                              <button 
+                                onClick={() => setViewingImageUrl(b.customImageUrl || null)}
+                                className="text-[#c9a962] hover:underline text-[9px]"
+                              >
+                                View Image
+                              </button>
+                            </div>
+                          )}
                         </div>
                       )}
 
@@ -1093,6 +1194,74 @@ export function SalonDashboardPage() {
         );
       })()}
 
+      {/* NOTIFICATIONS PANEL */}
+      {activeTab === 'notifications' && (
+        <div className="luxe-card p-6">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <Bell className="h-5 w-5 text-[#c9a962]" />
+              <h2 className="text-lg font-bold text-[#e8d5a3]">Payment Notifications</h2>
+              {unreadCount > 0 && (
+                <span className="flex items-center justify-center rounded-full bg-red-500/20 border border-red-500/30 px-2 py-0.5 text-xs font-semibold text-red-400">
+                  {unreadCount} unread
+                </span>
+              )}
+            </div>
+            {unreadCount > 0 && (
+              <button
+                onClick={() => markAllNotificationsRead(salon.id)}
+                className="text-xs text-[#c9a962] hover:text-[#e8d5a3] transition underline"
+              >
+                Mark all as read
+              </button>
+            )}
+          </div>
+
+          {salonNotifications.length === 0 ? (
+            <div className="text-center py-16 text-[#9a8fa8]">
+              <Bell className="h-12 w-12 mx-auto mb-3 opacity-30" />
+              <p className="text-sm">No notifications yet.</p>
+              <p className="text-xs mt-1 opacity-70">Payout and commission updates will appear here.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {salonNotifications.map(notif => (
+                <div
+                  key={notif.id}
+                  className={`flex items-start gap-4 rounded-xl border p-4 transition cursor-pointer ${
+                    notif.read
+                      ? 'border-[#c9a962]/10 bg-[#0f0d12]/40'
+                      : 'border-[#c9a962]/40 bg-[#c9a962]/5 shadow-md'
+                  }`}
+                  onClick={() => !notif.read && markNotificationRead(notif.id)}
+                >
+                  <div className={`mt-1 flex-shrink-0 rounded-full p-2 ${
+                    notif.type === 'payout' ? 'bg-emerald-500/20 text-emerald-400' :
+                    notif.type === 'payment_received' ? 'bg-blue-500/20 text-blue-400' :
+                    'bg-amber-500/20 text-amber-400'
+                  }`}>
+                    {notif.type === 'payout' ? <CheckCircle className="h-4 w-4" /> :
+                     notif.type === 'payment_received' ? <CreditCard className="h-4 w-4" /> :
+                     <IndianRupee className="h-4 w-4" />}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-sm leading-relaxed ${notif.read ? 'text-[#9a8fa8]' : 'text-[#e8d5a3]'}`}>
+                      {notif.message}
+                    </p>
+                    <p className="mt-1.5 text-xs text-[#9a8fa8]/70">
+                      {new Date(notif.createdAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}
+                    </p>
+                  </div>
+                  {!notif.read && (
+                    <div className="mt-2 flex-shrink-0 h-2 w-2 rounded-full bg-[#c9a962] animate-pulse" />
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Stripe Checkout Modal */}
       {showCheckout && (
         <CheckoutModal
@@ -1104,6 +1273,26 @@ export function SalonDashboardPage() {
           }}
           onClose={() => setShowCheckout(false)}
         />
+      )}
+
+      {/* Full Size Image Viewer Modal */}
+      {viewingImageUrl && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4 backdrop-blur-sm">
+          <div className="relative luxe-card max-w-2xl p-2 animate-fade-in">
+            <button 
+              onClick={() => setViewingImageUrl(null)}
+              className="absolute top-4 right-4 rounded-full p-2 bg-black/60 text-[#9a8fa8] hover:text-white transition z-10"
+              title="Close"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <img 
+              src={viewingImageUrl} 
+              alt="Custom Reference Full Size" 
+              className="max-h-[80vh] w-auto max-w-full rounded-lg object-contain border border-[#c9a962]/20"
+            />
+          </div>
+        </div>
       )}
     </div>
   );

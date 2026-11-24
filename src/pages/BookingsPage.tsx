@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Calendar, Clock, Star, X, RefreshCw } from 'lucide-react';
+import { Calendar, Clock, Star, X, RefreshCw, Sparkles, IndianRupee, AlertTriangle } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useT } from '../hooks/useT';
 
@@ -66,8 +66,26 @@ function BookingCard({
 }) {
   const { rescheduleBooking } = useApp();
   const [isRescheduling, setIsRescheduling] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [newDate, setNewDate] = useState(booking.date);
   const [newTime, setNewTime] = useState(booking.time);
+
+  // Compute refund preview when cancel dialog opens
+  function getRefundPreview() {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const apptDate = new Date(booking.date);
+    apptDate.setHours(0, 0, 0, 0);
+    const diffDays = Math.round((apptDate.getTime() - today.getTime()) / (24 * 60 * 60 * 1000));
+    const isOnline = booking.paymentStatus === 'paid-online' || booking.paymentMethod === 'card' || booking.paymentMethod === 'upi';
+    if (!isOnline) return { percent: 0, amount: 0, isOnline };
+    let percent = 0;
+    if (diffDays <= 0) percent = 20;
+    else if (diffDays === 1) percent = 50;
+    else if (diffDays === 2) percent = 70;
+    else percent = 100;
+    return { percent, amount: Math.round(booking.totalPrice * percent / 100), isOnline, diffDays };
+  }
 
   // Time slots matching the salon booking system format
   const TIME_SLOTS = [
@@ -155,6 +173,60 @@ function BookingCard({
           <p className="mt-2 text-xs text-[#9a8fa8]">
             {tr('paymentMethod')}: {booking.paymentMethod === 'cash' ? tr('cash') : tr('upi')} · {tr('payAtSalon')}
           </p>
+          {booking.status === 'cancelled' && booking.refundAmount !== undefined && (
+            <p className="mt-1 text-[10px] font-semibold text-green-400">
+              {booking.refundAmount > 0
+                ? `✅ Refund Processed: ₹${booking.refundAmount.toLocaleString('en-IN')}`
+                : `❌ No refund — cancelled on the appointment day`
+              }
+            </p>
+          )}
+
+          {/* AI Stylist & Custom Preferences */}
+          {(booking.aiStyleRecommendation || booking.customImageUrl || booking.customMessage) && (
+            <div className="mt-3 bg-[#130f18]/40 border border-[#c9a962]/10 rounded-xl p-3 space-y-2">
+              <p className="text-xs font-semibold text-[#e8d5a3] flex items-center gap-1">
+                <Sparkles className="h-3.5 w-3.5 text-[#c9a962]" />
+                AI Stylist &amp; Custom Preference
+              </p>
+              
+              {booking.aiStyleRecommendation && booking.aiStyleRecommendation.faceShape !== 'Custom Upload' && (
+                <div className="grid grid-cols-2 gap-2 text-[11px] text-[#9a8fa8] pb-1 border-b border-[#c9a962]/5">
+                  <div>
+                    <span className="text-[#e8d5a3] font-medium">Face Shape:</span> {booking.aiStyleRecommendation.faceShape}
+                  </div>
+                  <div>
+                    <span className="text-[#e8d5a3] font-medium">Skin Tone:</span> {booking.aiStyleRecommendation.skinTone}
+                  </div>
+                  {booking.aiStyleRecommendation.userAdjustedStyle && (
+                    <div className="col-span-2">
+                      <span className="text-[#e8d5a3] font-medium">Style:</span> {booking.aiStyleRecommendation.userAdjustedStyle}
+                    </div>
+                  )}
+                  {booking.aiStyleRecommendation.userAdjustedColor && (
+                    <div className="col-span-2">
+                      <span className="text-[#e8d5a3] font-medium">Colour:</span> {booking.aiStyleRecommendation.userAdjustedColor}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {booking.customMessage && (
+                <div className="text-[11px] text-[#9a8fa8]">
+                  <span className="text-[#e8d5a3] font-medium">Your Notes:</span> "{booking.customMessage}"
+                </div>
+              )}
+
+              {booking.customImageUrl && (
+                <div className="flex items-center gap-2 pt-1 text-[11px] text-[#9a8fa8]">
+                  <span className="text-[#e8d5a3] font-medium">Uploaded Reference:</span>
+                  <a href={booking.customImageUrl} target="_blank" rel="noreferrer" className="text-[#c9a962] hover:underline">
+                    View Image
+                  </a>
+                </div>
+              )}
+            </div>
+          )}
         </div>
         <div className="text-left sm:text-right">
           <span className={`inline-block rounded-full px-3 py-1 text-xs font-medium ${
@@ -185,12 +257,67 @@ function BookingCard({
             </button>
           )}
           {onCancel && booking.status === 'confirmed' && (
-            <button onClick={onCancel} className="flex items-center gap-1 text-sm text-red-400 hover:underline">
+            <button onClick={() => setShowCancelConfirm(true)} className="flex items-center gap-1 text-sm text-red-400 hover:underline">
               <X className="h-4 w-4" /> {tr('cancel')}
             </button>
           )}
         </div>
       )}
+
+      {/* Cancel Confirmation Modal with Refund Preview */}
+      {showCancelConfirm && (() => {
+        const preview = getRefundPreview();
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+            <div className="w-full max-w-md rounded-2xl border border-[#c9a962]/30 bg-[#1a1520] p-6 shadow-2xl animate-fade-in">
+              <div className="flex items-center gap-3 mb-4">
+                <AlertTriangle className="h-5 w-5 text-amber-400 flex-shrink-0" />
+                <h3 className="text-lg font-bold text-[#e8d5a3]">Cancel Appointment?</h3>
+              </div>
+
+              <div className="rounded-xl border border-[#c9a962]/20 bg-[#0f0d12]/60 p-4 space-y-2 mb-5">
+                <p className="text-sm font-semibold text-[#e8d5a3]">{booking.salonName}</p>
+                <p className="text-xs text-[#9a8fa8]">{booking.date} at {booking.time}</p>
+                <div className="border-t border-[#c9a962]/10 pt-2 mt-2">
+                  <p className="text-xs text-[#9a8fa8] mb-1">Cancellation Policy:</p>
+                  {preview.isOnline ? (
+                    <div className="space-y-1">
+                      <p className="text-xs text-[#9a8fa8]">• Same day: <span className="text-amber-400 font-semibold">20% refund</span></p>
+                      <p className="text-xs text-[#9a8fa8]">• 1 day before: <span className="text-amber-400 font-semibold">50% refund</span></p>
+                      <p className="text-xs text-[#9a8fa8]">• 2 days before: <span className="text-emerald-400 font-semibold">70% refund</span></p>
+                      <p className="text-xs text-[#9a8fa8]">• 3+ days before: <span className="text-emerald-400 font-semibold">100% refund</span></p>
+                      <div className="mt-3 rounded-lg bg-[#c9a962]/10 border border-[#c9a962]/20 p-3 flex items-center gap-2">
+                        <IndianRupee className="h-4 w-4 text-[#c9a962]" />
+                        <div>
+                          <p className="text-xs text-[#9a8fa8]">Your Estimated Refund</p>
+                          <p className="text-lg font-bold text-[#c9a962]">₹{preview.amount.toLocaleString('en-IN')} <span className="text-sm text-[#9a8fa8]">(~{preview.percent}%)</span></p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-amber-400">Pay-at-salon bookings are not eligible for online refunds.</p>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowCancelConfirm(false)}
+                  className="flex-1 rounded-lg border border-[#c9a962]/20 bg-[#1a1520] py-2.5 text-sm font-medium text-[#e8d5a3] hover:bg-[#c9a962]/10 transition"
+                >
+                  Keep Appointment
+                </button>
+                <button
+                  onClick={() => { setShowCancelConfirm(false); onCancel?.(); }}
+                  className="flex-1 rounded-lg bg-red-600 py-2.5 text-sm font-semibold text-white hover:bg-red-500 transition"
+                >
+                  Confirm Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
