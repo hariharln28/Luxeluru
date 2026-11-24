@@ -29,6 +29,7 @@ interface AppContextType {
   language: Language;
   setLanguage: (lang: Language) => void;
   login: (emailOrPhone: string, password: string) => Promise<boolean>;
+  loginWithGoogle: () => Promise<void>;
   resetPassword: (email: string) => Promise<boolean>;
   salonLogin: (name: string, id: string, email: string, checkPass: string) => Promise<boolean>;
   adminLogin: (userStr: string, passStr: string) => Promise<boolean>;
@@ -476,6 +477,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return false;
     }
   }, [users, addToast]);
+
+  const loginWithGoogle = useCallback(async () => {
+    if (!supabaseConfigured) {
+      addToast('error', 'Authentication is not configured. Please set up Supabase credentials.');
+      return;
+    }
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin + '/dashboard',
+        },
+      });
+      if (error) {
+        addToast('error', error.message);
+      }
+    } catch (err: any) {
+      addToast('error', err.message || 'Google sign-in failed.');
+    }
+  }, [addToast]);
 
 
   const resetPassword = useCallback(async (email: string): Promise<boolean> => {
@@ -1288,6 +1309,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         language,
         setLanguage,
         login,
+        loginWithGoogle,
         resetPassword,
         salonLogin,
         adminLogin,
