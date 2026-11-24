@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Shield, FileText, LogOut, Lock, Building, Search, CheckCircle, Clock } from 'lucide-react';
+import { Shield, FileText, LogOut, Lock, Building, Search, CheckCircle, Clock, Eye, EyeOff, Loader2, KeyRound } from 'lucide-react';
 import { useApp } from '../context/AppContext';
+import { api } from '../services/api';
 
 export function PartnerWithUsPage() {
   const { salonRegister, salonExit, adminLogin, salons, addToast } = useApp();
@@ -42,6 +43,14 @@ export function PartnerWithUsPage() {
   // Status check state
   const [statusSearch, setStatusSearch] = useState('');
   const [statusResult, setStatusResult] = useState<any | null>(null);
+
+  // Set password state
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showNewPass, setShowNewPass] = useState(false);
+  const [passwordSetting, setPasswordSetting] = useState(false);
+  const [passwordSet, setPasswordSet] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
 
   async function handleRegisterSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -412,15 +421,100 @@ export function PartnerWithUsPage() {
                 )}
 
                 {statusResult.registrationStatus === 'approved' && (
-                  <div className="mt-4 p-4 bg-green-500/10 rounded-lg text-green-200 text-xs leading-relaxed border border-green-500/20 space-y-2">
+                  <div className="mt-4 p-4 bg-green-500/10 rounded-lg text-green-200 text-xs leading-relaxed border border-green-500/20 space-y-3">
                     <p><strong>✅ Approved:</strong> Your application has been approved and activated! You are now live on the Luxeluru platform.</p>
-                    <p className="pt-2">You can log in to the Salon Partner Portal from the Sign In page using the details below:</p>
+                    <p className="pt-1">You can log in to the Salon Partner Portal from the Sign In page using the details below:</p>
                     <ul className="list-disc pl-4 space-y-1 mt-1 text-[#e8d5a3]">
                       <li><strong>Salon Name:</strong> {statusResult.name}</li>
                       <li><strong>Salon ID:</strong> {statusResult.id}</li>
                       <li><strong>Salon Email:</strong> {statusResult.email}</li>
                       <li><strong>Default Password:</strong> <span className="font-mono bg-[#0f0d12] px-1.5 py-0.5 rounded text-[#c9a962]">SALON@123</span></li>
                     </ul>
+
+                    {/* Set Custom Password */}
+                    <div className="mt-4 pt-3 border-t border-green-500/20">
+                      {passwordSet ? (
+                        <div className="flex items-center gap-2 text-emerald-400">
+                          <CheckCircle className="h-4 w-4" />
+                          <span className="text-sm font-semibold">Password updated successfully! Use your new password to sign in.</span>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="flex items-center gap-2 mb-3">
+                            <KeyRound className="h-4 w-4 text-[#c9a962]" />
+                            <span className="text-sm font-semibold text-[#e8d5a3]">Set Custom Password</span>
+                          </div>
+                          <p className="text-[#9a8fa8] mb-3">Replace the default password with your own secure password (minimum 8 characters).</p>
+
+                          {passwordError && (
+                            <p className="text-red-400 text-xs mb-2">{passwordError}</p>
+                          )}
+
+                          <div className="space-y-2">
+                            <div className="relative">
+                              <input
+                                type={showNewPass ? 'text' : 'password'}
+                                value={newPassword}
+                                onChange={(e) => { setNewPassword(e.target.value); setPasswordError(''); }}
+                                className="luxe-input text-sm pr-10"
+                                placeholder="New password (min 8 characters)"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setShowNewPass(!showNewPass)}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9a8fa8] hover:text-[#e8d5a3] transition"
+                              >
+                                {showNewPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                              </button>
+                            </div>
+                            <input
+                              type="password"
+                              value={confirmPassword}
+                              onChange={(e) => { setConfirmPassword(e.target.value); setPasswordError(''); }}
+                              className="luxe-input text-sm"
+                              placeholder="Confirm new password"
+                            />
+                            <button
+                              type="button"
+                              disabled={passwordSetting}
+                              onClick={async () => {
+                                setPasswordError('');
+                                if (newPassword.length < 8) {
+                                  setPasswordError('Password must be at least 8 characters.');
+                                  return;
+                                }
+                                if (newPassword !== confirmPassword) {
+                                  setPasswordError('Passwords do not match.');
+                                  return;
+                                }
+                                setPasswordSetting(true);
+                                try {
+                                  const res = await api.setSalonPassword(statusResult.email, statusResult.id, newPassword);
+                                  if (res.success) {
+                                    setPasswordSet(true);
+                                    setNewPassword('');
+                                    setConfirmPassword('');
+                                    addToast('success', 'Salon password updated successfully!');
+                                  }
+                                } catch (err: any) {
+                                  setPasswordError(err?.message || 'Failed to set password. Please try again.');
+                                }
+                                setPasswordSetting(false);
+                              }}
+                              className={`w-full rounded-lg py-2.5 text-xs font-semibold transition flex items-center justify-center gap-2 ${
+                                passwordSetting ? 'bg-[#c9a962]/30 text-[#c9a962]/50 cursor-not-allowed' : 'bg-[#c9a962] text-[#0f0d12] hover:bg-[#d4b56b]'
+                              }`}
+                            >
+                              {passwordSetting ? (
+                                <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Updating...</>
+                              ) : (
+                                <><Lock className="h-3.5 w-3.5" /> Set Password</>
+                              )}
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
                   </div>
                 )}
 

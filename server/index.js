@@ -305,6 +305,35 @@ app.post('/api/salons/login', async (req, res) => {
   });
 });
 
+// ─── Set Salon Password ───────────────────────
+app.post('/api/salons/set-password', async (req, res) => {
+  const { email, salonId, newPassword } = req.body;
+
+  if (!email || !salonId || !newPassword) {
+    return res.status(400).json({ success: false, message: 'Email, Salon ID, and new password are required.' });
+  }
+
+  if (newPassword.length < 8) {
+    return res.status(400).json({ success: false, message: 'Password must be at least 8 characters long.' });
+  }
+
+  const salon = await db.getSalon(salonId);
+  if (!salon) {
+    return res.status(404).json({ success: false, message: 'Salon not found.' });
+  }
+
+  if (salon.email.toLowerCase().trim() !== email.toLowerCase().trim()) {
+    return res.status(403).json({ success: false, message: 'Email does not match this Salon ID.' });
+  }
+
+  if (salon.registrationStatus !== 'approved') {
+    return res.status(403).json({ success: false, message: 'Salon is not approved yet.' });
+  }
+
+  await db.updateSalon(salonId, { password: hashPassword(newPassword) });
+  res.json({ success: true, message: 'Password updated successfully.' });
+});
+
 app.post('/api/salons/register', async (req, res) => {
   const data = req.body;
   
