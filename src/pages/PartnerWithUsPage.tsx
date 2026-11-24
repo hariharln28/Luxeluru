@@ -322,7 +322,7 @@ export function PartnerWithUsPage() {
             </h4>
             <div className="space-y-2 text-xs text-[#9a8fa8] leading-relaxed">
               <p>
-                <strong>1. Salon Commission & Penalty:</strong> Salons are required to pay a 5% service charge to the platform on all completed appointments.
+                <strong>1. Salon Commission & Penalty:</strong> Salons are required to pay a 3% service charge to the platform on all completed appointments.
               </p>
               <p>
                 <strong>2. Billing & Updates:</strong> Dues accumulate as the salon updates appointment status. All bookings are cross-referenced with customer data to prevent discrepancies.

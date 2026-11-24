@@ -512,7 +512,7 @@ app.post('/api/bookings/:id/update', async (req, res) => {
     }
   }
 
-  const commissionAmount = Math.round(finalPrice * 0.05);
+  const commissionAmount = Math.round(finalPrice * 0.03);
 
   // Update booking fields
   await db.updateBooking(id, {

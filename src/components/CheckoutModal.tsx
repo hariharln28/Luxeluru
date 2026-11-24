@@ -262,7 +262,7 @@ export function CheckoutModal({ amount, salonName, onSuccess, onClose }: Checkou
           {/* Amount Summary */}
           <div className="rounded-xl bg-[#0f0d12]/60 p-4 mb-6">
             <div className="flex justify-between text-sm mb-1.5">
-              <span className="text-[#9a8fa8]">Platform Commission (5%)</span>
+              <span className="text-[#9a8fa8]">Platform Commission (3%)</span>
               <span className="text-[#e8d5a3]">₹{amount.toLocaleString('en-IN')}</span>
             </div>
             <div className="flex justify-between text-sm mb-1.5">
