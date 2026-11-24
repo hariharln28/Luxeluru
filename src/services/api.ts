@@ -208,7 +208,7 @@ export const api = {
     }),
 
   cancelBooking: (id: string) =>
-    request<{ success: boolean }>(`/api/bookings/${id}/cancel`, {
+    request<{ success: boolean; refundAmount?: number }>(`/api/bookings/${id}/cancel`, {
       method: 'POST',
     }),
 

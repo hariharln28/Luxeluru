@@ -298,7 +298,7 @@ const hi: Record<TranslationKey, string> = {
   bookings: 'मेरी अपॉइंटमेंट',
   leaderboard: 'लीडरबोर्ड',
   profile: 'प्रोफ़ाइल',
-  panicButton: 'स्टाइल इmergency',
+  panicButton: 'स्टाइल Emergency',
   panicDesc: 'अभी सैलून चाहिए? हम तुरंत नज़दीकी लक्ज़री सैलून ढूंढेंगे।',
   findNearest: 'नज़दीकी सैलून खोजें',
   bookNow: 'अभी बुक करें',
@@ -338,7 +338,7 @@ const hi: Record<TranslationKey, string> = {
   trustedBy: '10,000+ बेंगलuru निवासियों द्वारा विश्वसनीय',
   search: 'सैलून, सेवाएं खोजें...',
   categoryDesc: 'विशेषता के अनुसार सैलून देखें',
-  emergencyStyle: 'स्टाइल इmergency — नज़दीकी सैलून मिला!',
+  emergencyStyle: 'स्टाइल Emergency — नज़दीकी सैलून मिला!',
 };
 
 const kn: Record<TranslationKey, string> = {
@@ -364,7 +364,7 @@ const kn: Record<TranslationKey, string> = {
   bookings: 'ನನ್ನ ಅಪಾಯಿಂಟ್‌ಮೆಂಟ್‌ಗಳು',
   leaderboard: 'ಲೀಡರ್‌ಬೋರ್ಡ್',
   profile: 'ಪ್ರೊಫೈಲ್',
-  panicButton: 'ಸ್ಟೈಲ್ ಎmergency',
+  panicButton: 'ಸ್ಟೈಲ್ Emergency',
   panicDesc: 'ಈಗ ಸalon ಬೇಕೇ? ಹತ್ತಿರದ ಲಕ್ಷರಿ ಸalon ತಕ್ಷಣ ಕಂಡುಹಿಡಿಯುತ್ತೇವೆ.',
   findNearest: 'ಹತ್ತಿರದ ಸalon ಹುಡುಕಿ',
   bookNow: 'ಈಗ ಬುಕ್ ಮಾಡಿ',
@@ -390,10 +390,10 @@ const kn: Record<TranslationKey, string> = {
   kannada: 'ಕನ್ನಡ',
   hair: 'ಕೇಶ ಮತ್ತು ಸ್ಟೈಲಿಂಗ್',
   skin: 'ಚರ್ಮ ಸಂರಕ್ಷಣೆ',
-  nails: 'ನAILS',
+  nails: 'ಉಗುರು ಸೇವೆಗಳು',
   spa: 'ಸ್ಪಾ',
   bridal: 'ಮದುವೆ ಮತ್ತು ಈವೆಂಟ್',
-  grooming: 'ಪುರುಷ ಗrooming',
+  grooming: 'ಪುರುಷ Grooming',
   wellness: 'ವೆಲ್‌ನೆಸ್',
   turnOnCamera: 'AI ವಿಶ್ಲೇಷಣೆಗೆ ಕ್ಯಾಮೆರಾ ಸಕ್ರಿಯಗೊಳಿಸಿ',
   analyzeFace: 'ನನ್ನ ಲಕ್ಷಣಗಳನ್ನು ವಿಶ್ಲೇಷಿಸಿ',
@@ -404,7 +404,7 @@ const kn: Record<TranslationKey, string> = {
   trustedBy: '10,000+ ಬೆಂಗಳೂರು ನಿವಾಸಿಗಳಿಂದ ವಿಶ್ವಾಸಾರ್ಹ',
   search: 'ಸalon, ಸೇವೆಗಳನ್ನು ಹುಡುಕಿ...',
   categoryDesc: 'ವಿಶೇಷತೆಯಿಂದ ಸalonಗಳನ್ನು ಬ್ರೌಸ್ ಮಾಡಿ',
-  emergencyStyle: 'ಸ್ಟೈಲ್ ಎmergency — ಹತ್ತಿರದ ಸalon ಸಿಕ್ಕಿತು!',
+  emergencyStyle: 'ಸ್ಟೈಲ್ Emergency — ಹತ್ತಿರದ ಸalon ಸಿಕ್ಕಿತು!',
 };
 
 export const translations: Record<Language, Record<TranslationKey, string>> = {
