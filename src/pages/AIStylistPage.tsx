@@ -54,8 +54,8 @@ export function AIStylistPage() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 2 * 1024 * 1024) {
-      alert('Please upload an image smaller than 2MB.');
+    if (file.size > 20 * 1024 * 1024) {
+      addToast('error', 'Image too large. Please upload an image under 20MB.');
       return;
     }
 
@@ -143,7 +143,7 @@ export function AIStylistPage() {
             <label htmlFor="custom-pref-file-upload" className="cursor-pointer flex flex-col items-center gap-2">
               <Upload className="h-8 w-8 text-[#c9a962]/60" />
               <span className="text-xs text-[#c9a962]">Click to upload reference image</span>
-              <span className="text-[10px] text-[#9a8fa8]/60">PNG, JPG up to 2MB</span>
+              <span className="text-[10px] text-[#9a8fa8]/60">PNG, JPG, WEBP up to 20MB</span>
             </label>
           </div>
         )}
@@ -656,7 +656,7 @@ export function AIStylistPage() {
                       <label htmlFor="custom-pref-file-upload-direct" className="cursor-pointer flex flex-col items-center gap-2">
                         <Upload className="h-6 w-6 text-[#c9a962]/60" />
                         <span className="text-xs text-[#c9a962]">Click to upload style image</span>
-                        <span className="text-[10px] text-[#9a8fa8]/60">PNG, JPG up to 2MB</span>
+                        <span className="text-[10px] text-[#9a8fa8]/60">PNG, JPG, WEBP up to 20MB</span>
                       </label>
                     </div>
                   )}
