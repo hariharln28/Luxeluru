@@ -7,6 +7,9 @@
 *Discover · Book · Style — powered by AI and Smart Navigation*
 
 [![Live](https://img.shields.io/badge/Live%20on-Render-46E3B7?style=flat-square&logo=render)](https://luxeluru.onrender.com)
+[![Repo](https://img.shields.io/badge/GitHub-hariharln28%2FLuxeluru-181717?style=flat-square&logo=github)](https://github.com/hariharln28/Luxeluru)
+[![Stars](https://img.shields.io/github/stars/hariharln28/Luxeluru?style=flat-square&color=c9a962)](https://github.com/hariharln28/Luxeluru/stargazers)
+[![Forks](https://img.shields.io/github/forks/hariharln28/Luxeluru?style=flat-square&color=c9a962)](https://github.com/hariharln28/Luxeluru/forks)
 [![Tech](https://img.shields.io/badge/Stack-React%20%2B%20Node.js-61DAFB?style=flat-square&logo=react)](https://vitejs.dev)
 [![Language](https://img.shields.io/badge/Languages-EN%20%7C%20HI%20%7C%20KN-orange?style=flat-square)](#)
 
@@ -201,6 +204,22 @@ Luxeluru is deployed as a **monorepo on Render**:
 
 ---
 
+## Contributing
+
+This is an open project — contributions, bug reports, and suggestions are welcome.
+
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/your-feature`
+3. Commit your changes: `git commit -m 'feat: add your feature'`
+4. Push to your branch: `git push origin feature/your-feature`
+5. Open a Pull Request
+
+Please keep PRs focused and follow the existing code style.
+
+---
+
 ## License
 
-Private project — all rights reserved. © 2026 Luxeluru.
+MIT License — see [LICENSE](LICENSE) for details.
+
+© 2026 Luxeluru · Built in Bengaluru 🇮🇳
