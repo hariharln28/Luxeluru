@@ -158,6 +158,9 @@ export interface StaffReview {
 export interface StyleRecommendation {
   faceShape: string;
   skinTone: string;
+  monkLevel?: number;
+  monkLabel?: string;
+  monkUndertone?: string;
   gender: 'male' | 'female';
   suggestedHairColors: string[];
   suggestedStyles: string[];
