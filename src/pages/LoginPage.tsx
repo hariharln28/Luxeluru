@@ -103,6 +103,19 @@ export function LoginPage() {
           <p className="mt-2 text-sm text-[#9a8fa8]">{tr('tagline')}</p>
         </div>
 
+        {/* Success banner shown after registration */}
+        {locationState?.fromRegister && (
+          <div className="mb-5 flex items-start gap-3 rounded-xl border border-green-500/30 bg-green-500/10 px-4 py-3 animate-slide-up">
+            <span className="text-lg leading-none mt-0.5">✅</span>
+            <div>
+              <p className="text-sm font-semibold text-green-300">Account created successfully!</p>
+              <p className="mt-0.5 text-xs text-green-300/80">
+                Please check your email to verify your account, then sign in below.
+              </p>
+            </div>
+          </div>
+        )}
+
         <div className="mb-6 flex rounded-xl border border-[#c9a962]/20 bg-[#1a1520] p-1">
           <button
             type="button"
