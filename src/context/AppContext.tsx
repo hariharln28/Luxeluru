@@ -863,6 +863,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           throw err;
         }
         // Local fallback for network errors
+        const commissionAmount = Math.round((data.totalPrice || 0) * 0.03);
         const booking: Booking = {
           ...data,
           id: `booking-${Date.now()}`,
@@ -870,6 +871,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
           status: 'confirmed',
           createdAt: new Date().toISOString(),
           feedbackRequestedAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+          commissionAmount,
+          commissionPaid: false,
         };
         const updated = [...bookings, booking];
         setBookings(updated);
@@ -950,7 +953,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
           const pkg = salonObj.packages.find(p => p.id === packageId);
           if (pkg) finalPrice = pkg.price;
         }
-        const commission = Math.round(finalPrice * 0.03);
+        const newCommission = Math.round(finalPrice * 0.03);
+        const oldCommission = b.commissionAmount || 0;
+        const commissionDiff = newCommission - oldCommission;
 
         setBookings(prev => prev.map(bk => bk.id === id ? {
           ...bk,
@@ -958,24 +963,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
           totalPrice: finalPrice,
           status: 'completed',
           paymentUpdatedBySalon: true,
-          commissionAmount: commission,
+          commissionAmount: newCommission,
           commissionPaid: false
         } : bk));
 
-        setSalonsList(prev => prev.map(s => s.id === b.salonId ? {
-          ...s,
-          commissionDue: (s.commissionDue ?? 0) + commission
-        } : s));
+        if (commissionDiff !== 0) {
+          setSalonsList(prev => prev.map(s => s.id === b.salonId ? {
+            ...s,
+            commissionDue: Math.max(0, (s.commissionDue ?? 0) + commissionDiff)
+          } : s));
 
-        setSalon(curr => {
-          if (curr && curr.id === b.salonId) {
-            return {
-              ...curr,
-              commissionDue: (curr.commissionDue ?? 0) + commission
-            };
-          }
-          return curr;
-        });
+          setSalon(curr => {
+            if (curr && curr.id === b.salonId) {
+              return {
+                ...curr,
+                commissionDue: Math.max(0, (curr.commissionDue ?? 0) + commissionDiff)
+              };
+            }
+            return curr;
+          });
+        }
 
         addToast('success', 'Appointment marked as completed. Commission updated.');
       }
@@ -1023,7 +1030,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
           }
         }
 
-        const commission = Math.round(finalPrice * 0.03);
+        const newCommission = Math.round(finalPrice * 0.03);
+        const oldCommission = b.commissionAmount || 0;
+        const commissionDiff = newCommission - oldCommission;
 
         currentBookings[idx] = {
           ...b,
@@ -1036,36 +1045,38 @@ export function AppProvider({ children }: { children: ReactNode }) {
           originalPackageName: originalPkgName || undefined,
           updatedPackageId: updatedPkgId || undefined,
           updatedPackageName: updatedPkgName || undefined,
-          commissionAmount: commission,
+          commissionAmount: newCommission,
           commissionPaid: false,
         };
 
         localStorage.setItem(STORAGE_KEYS.bookings, JSON.stringify(currentBookings));
         setBookings(currentBookings);
 
-        setSalonsList((prev) => {
-          const updated = prev.map((s) => {
-            if (s.id === b.salonId) {
-              return {
-                ...s,
-                commissionDue: (s.commissionDue ?? 0) + commission,
-              };
-            }
-            return s;
-          });
-          localStorage.setItem(STORAGE_KEYS.salons, JSON.stringify(updated));
-          return updated;
+        if (commissionDiff !== 0) {
+          setSalonsList((prev) => {
+            const updated = prev.map((s) => {
+              if (s.id === b.salonId) {
+                return {
+                  ...s,
+                  commissionDue: Math.max(0, (s.commissionDue ?? 0) + commissionDiff),
+                };
+              }
+              return s;
+            });
+            localStorage.setItem(STORAGE_KEYS.salons, JSON.stringify(updated));
+            return updated;
         });
 
-        setSalon((curr) => {
-          if (curr && curr.id === b.salonId) {
-            return {
-              ...curr,
-              commissionDue: (curr.commissionDue ?? 0) + commission,
-            };
-          }
-          return curr;
-        });
+          setSalon((curr) => {
+            if (curr && curr.id === b.salonId) {
+              return {
+                ...curr,
+                commissionDue: Math.max(0, (curr.commissionDue ?? 0) + commissionDiff),
+              };
+            }
+            return curr;
+          });
+        }
 
         addToast('success', 'Appointment marked as completed. Commission updated.');
       }

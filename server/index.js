@@ -412,14 +412,29 @@ app.post('/api/bookings', authenticateJWT, async (req, res) => {
     });
   }
 
+  // Calculate 3% commission at booking time and accumulate on salon
+  const commissionAmount = Math.round((bookingData.totalPrice || 0) * 0.03);
+
+  const salon = await db.getSalon(bookingData.salonId);
+
   const newBooking = {
     ...bookingData,
     id: `bk-${Date.now()}`,
     createdAt: new Date().toISOString(),
-    status: 'confirmed'
+    status: 'confirmed',
+    commissionAmount,
+    commissionPaid: false
   };
 
   await db.createBooking(newBooking);
+
+  // Add commission to salon's running total
+  if (salon) {
+    await db.updateSalon(bookingData.salonId, {
+      commissionDue: (salon.commissionDue || 0) + commissionAmount
+    });
+  }
+
   res.json({ success: true, booking: newBooking });
 });
 
@@ -432,6 +447,17 @@ app.post('/api/bookings/:id/cancel', authenticateJWT, async (req, res) => {
       return res.status(403).json({ success: false, message: 'Unauthorized cancel action' });
     }
     await db.updateBooking(id, { status: 'cancelled' });
+
+    // Reverse commission on cancellation
+    if (booking.commissionAmount) {
+      const salon = await db.getSalon(booking.salonId);
+      if (salon) {
+        await db.updateSalon(booking.salonId, {
+          commissionDue: Math.max(0, (salon.commissionDue || 0) - booking.commissionAmount)
+        });
+      }
+    }
+
     res.json({ success: true });
   } else {
     res.status(404).json({ success: false, message: 'Booking not found' });
@@ -512,7 +538,9 @@ app.post('/api/bookings/:id/update', async (req, res) => {
     }
   }
 
-  const commissionAmount = Math.round(finalPrice * 0.03);
+  const newCommission = Math.round(finalPrice * 0.03);
+  const oldCommission = booking.commissionAmount || 0;
+  const commissionDiff = newCommission - oldCommission;
 
   // Update booking fields
   await db.updateBooking(id, {
@@ -524,14 +552,16 @@ app.post('/api/bookings/:id/update', async (req, res) => {
     updatedPackageId,
     updatedPackageName,
     paymentUpdatedBySalon: true,
-    commissionAmount,
+    commissionAmount: newCommission,
     commissionPaid: false
   });
 
-  // Update salon's cumulative commissionDue
-  await db.updateSalon(booking.salonId, {
-    commissionDue: (salon.commissionDue || 0) + commissionAmount
-  });
+  // Adjust salon's commissionDue only by the difference (commission was already added at booking time)
+  if (commissionDiff !== 0) {
+    await db.updateSalon(booking.salonId, {
+      commissionDue: Math.max(0, (salon.commissionDue || 0) + commissionDiff)
+    });
+  }
 
   res.json({ success: true });
 });
