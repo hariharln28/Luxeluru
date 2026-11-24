@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Calendar, Clock, Star, X, RefreshCw } from 'lucide-react';
 import { useApp } from '../context/AppContext';
@@ -69,11 +69,27 @@ function BookingCard({
   const [newDate, setNewDate] = useState(booking.date);
   const [newTime, setNewTime] = useState(booking.time);
 
+  // Time slots matching the salon booking system format
+  const TIME_SLOTS = [
+    '10:00 AM', '11:00 AM', '12:00 PM', '1:00 PM', '2:00 PM',
+    '3:00 PM', '4:00 PM', '5:00 PM', '6:00 PM', '7:00 PM', '8:00 PM',
+  ];
+
+  // Sync local state when booking prop updates (after successful reschedule)
+  useEffect(() => {
+    setNewDate(booking.date);
+    setNewTime(booking.time);
+  }, [booking.date, booking.time]);
+
   const todayStr = new Date().toISOString().split('T')[0];
   const canReschedule = booking.status === 'confirmed' && booking.date > todayStr;
 
   async function handleSave() {
     if (!newDate || !newTime) return;
+    if (newDate === booking.date && newTime === booking.time) {
+      setIsRescheduling(false);
+      return;
+    }
     const success = await rescheduleBooking(booking.id, newDate, newTime);
     if (success) {
       setIsRescheduling(false);
@@ -94,19 +110,22 @@ function BookingCard({
                 <input
                   type="date"
                   value={newDate}
-                  min={new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]} // Must be tomorrow onwards
+                  min={new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]}
                   onChange={(e) => setNewDate(e.target.value)}
                   className="luxe-input text-xs py-1 px-2"
                 />
               </div>
               <div>
                 <label className="text-[10px] text-[#9a8fa8] block mb-1">New Time</label>
-                <input
-                  type="time"
+                <select
                   value={newTime}
                   onChange={(e) => setNewTime(e.target.value)}
-                  className="luxe-input text-xs py-1 px-2"
-                />
+                  className="luxe-input text-xs py-1.5 px-2"
+                >
+                  {TIME_SLOTS.map(slot => (
+                    <option key={slot} value={slot}>{slot}</option>
+                  ))}
+                </select>
               </div>
               <div className="flex gap-2 pt-2">
                 <button onClick={handleSave} className="luxe-btn text-[10px] py-1 px-3">
