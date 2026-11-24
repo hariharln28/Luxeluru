@@ -490,6 +490,24 @@ app.post('/api/salons/:id/force-deactivate', async (req, res) => {
   }
 });
 
+// Permanently delete a salon from the database
+app.delete('/api/salons/:id', async (req, res) => {
+  const { id } = req.params;
+  const salon = await db.getSalon(id);
+
+  if (!salon) {
+    return res.status(404).json({ success: false, message: 'Salon not found' });
+  }
+
+  // Safety: only allow deletion of inactive/rejected salons
+  if (salon.isActive === true && salon.registrationStatus === 'approved') {
+    return res.status(400).json({ success: false, message: 'Cannot delete an active salon. Deactivate it first.' });
+  }
+
+  await db.deleteSalon(id);
+  res.json({ success: true, message: `Salon "${salon.name}" permanently deleted.` });
+});
+
 app.post('/api/salons/:id/pay-commission', async (req, res) => {
   const { id } = req.params;
   const salon = await db.getSalon(id);

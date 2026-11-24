@@ -32,6 +32,7 @@ export function AdminDashboardPage() {
     approveSalon, 
     rejectSalon, 
     removeSalonForcefully, 
+    deleteSalonPermanently,
     blockUserForcefully, 
     unblockUserForcefully,
     logout,
@@ -46,6 +47,7 @@ export function AdminDashboardPage() {
   // Blocking modal state
   const [blockingUserId, setBlockingUserId] = useState<string | null>(null);
   const [blockDays, setBlockDays] = useState('3');
+  const [deletingSalonId, setDeletingSalonId] = useState<string | null>(null);
 
   // Auto-refresh data on mount and every 30 seconds
   const handleRefresh = useCallback(async () => {
@@ -353,7 +355,13 @@ export function AdminDashboardPage() {
                           </button>
                         )}
                         {(s.isActive === false || s.exitReason?.includes('exited')) && (
-                          <span className="text-xs text-[#6b6175] italic">No Action Available</span>
+                          <button
+                            onClick={() => setDeletingSalonId(s.id)}
+                            className="flex items-center gap-1.5 text-xs text-red-500 hover:text-red-400 transition-colors mx-auto font-semibold hover:underline"
+                            title="Permanently delete this salon"
+                          >
+                            <XCircle className="h-4 w-4" /> Delete Permanently
+                          </button>
                         )}
                       </td>
                     </tr>
@@ -726,6 +734,50 @@ export function AdminDashboardPage() {
           </div>
         </div>
       )}
+
+      {/* Delete Salon Confirmation Modal */}
+      {deletingSalonId && (() => {
+        const salonToDelete = salons.find(s => s.id === deletingSalonId);
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+            <div className="w-full max-w-md rounded-2xl border border-red-500/30 bg-[#1a1520] p-6 shadow-2xl space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-500/15">
+                  <Trash2 className="h-5 w-5 text-red-400" />
+                </div>
+                <div>
+                  <h3 className="font-display text-lg font-bold text-red-400">Delete Salon Permanently</h3>
+                  <p className="text-xs text-[#9a8fa8]">This action cannot be undone</p>
+                </div>
+              </div>
+
+              <div className="rounded-lg bg-red-500/10 border border-red-500/20 p-3 text-xs text-red-200 space-y-1">
+                <p><strong>Salon:</strong> {salonToDelete?.name || deletingSalonId}</p>
+                <p><strong>ID:</strong> <span className="font-mono">{deletingSalonId}</span></p>
+                <p className="mt-2 text-red-300">⚠️ This will permanently remove the salon and all its data from the database. All associated bookings and records will become orphaned.</p>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setDeletingSalonId(null)}
+                  className="flex-1 rounded-lg border border-[#c9a962]/20 py-2.5 text-xs font-semibold text-[#9a8fa8] hover:text-[#e8d5a3] transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={async () => {
+                    await deleteSalonPermanently(deletingSalonId);
+                    setDeletingSalonId(null);
+                  }}
+                  className="flex-1 rounded-lg bg-red-600 py-2.5 text-xs font-semibold text-white hover:bg-red-500 transition flex items-center justify-center gap-2"
+                >
+                  <Trash2 className="h-3.5 w-3.5" /> Yes, Delete Permanently
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
