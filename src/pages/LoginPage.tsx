@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { CaptchaChallenge } from '../components/CaptchaChallenge';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Eye, EyeOff, User as UserIcon, Scissors, Loader2, Mail, KeyRound, AlertTriangle } from 'lucide-react';
 import { useApp } from '../context/AppContext';
@@ -25,6 +26,7 @@ export function LoginPage() {
   const [salonPassword, setSalonPassword] = useState('');
   const [showSalonPass, setShowSalonPass] = useState(false);
   const [salonFailedAttempts, setSalonFailedAttempts] = useState(0);
+  const [salonCaptchaValid, setSalonCaptchaValid] = useState(false);
 
   const [error, setError] = useState('');
   const { login, loginWithGoogle, resetPassword, salonLogin } = useApp();
@@ -250,7 +252,11 @@ export function LoginPage() {
             </div>
           )}
 
-          <button type="submit" disabled={loading} className="luxe-btn w-full disabled:opacity-60 disabled:cursor-not-allowed">
+          {loginType === 'salon' && (
+            <CaptchaChallenge onVerified={setSalonCaptchaValid} />
+          )}
+
+          <button type="submit" disabled={loading || (loginType === 'salon' && !salonCaptchaValid)} className="luxe-btn w-full disabled:opacity-60 disabled:cursor-not-allowed">
             {loading ? (
               <span className="flex items-center justify-center gap-2">
                 <Loader2 className="h-4 w-4 animate-spin" />
