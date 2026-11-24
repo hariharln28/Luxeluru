@@ -54,6 +54,8 @@ interface AppContextType {
   rescheduleBooking: (id: string, date: string, time: string) => Promise<boolean>;
   updateBookingPayment: (id: string, paymentMethod: PaymentMethod, packageId?: string) => void;
   reportFakeBooking: (id: string, reason: string) => void;
+  verifyBookingStatus: (id: string, data: { appointmentTaken?: boolean; paymentVerifiedBySalon?: boolean; paymentMethod?: string; salonNotes?: string }) => void;
+  modifyBookingServices: (id: string, modifiedServices: string[], modifiedServiceNames: string[], modifiedPrice: number) => void;
   staffReviews: StaffReview[];
   addStaffReview: (review: Omit<StaffReview, 'id' | 'createdAt'>) => void;
   styleRecommendation: StyleRecommendation | null;
@@ -1172,6 +1174,78 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [addToast]);
 
+  const verifyBookingStatus = useCallback(async (id: string, data: {
+    appointmentTaken?: boolean;
+    paymentVerifiedBySalon?: boolean;
+    paymentMethod?: string;
+    salonNotes?: string;
+  }) => {
+    try {
+      await api.verifyBookingStatus(id, data);
+      setBookings(prev => prev.map(b => b.id === id ? {
+        ...b,
+        appointmentTaken: data.appointmentTaken ?? b.appointmentTaken,
+        paymentVerifiedBySalon: data.paymentVerifiedBySalon ?? b.paymentVerifiedBySalon,
+        paymentMethod: (data.paymentMethod as any) ?? b.paymentMethod,
+        salonNotes: data.salonNotes ?? b.salonNotes,
+        paymentStatus: data.paymentVerifiedBySalon ? (data.paymentMethod === 'card' ? 'paid-online' : 'paid-at-salon') : b.paymentStatus,
+      } : b));
+      addToast('success', 'Booking status updated.');
+    } catch {
+      // Local fallback
+      setBookings(prev => prev.map(b => b.id === id ? {
+        ...b, ...data,
+        paymentStatus: data.paymentVerifiedBySalon ? 'paid-at-salon' as const : b.paymentStatus,
+      } : b));
+      const local = loadLocalBookings();
+      const idx = local.findIndex(b => b.id === id);
+      if (idx >= 0) {
+        Object.assign(local[idx], data);
+        localStorage.setItem(STORAGE_KEYS.bookings, JSON.stringify(local));
+      }
+      addToast('success', 'Booking status updated.');
+    }
+  }, [addToast]);
+
+  const modifyBookingServices = useCallback(async (
+    id: string, modifiedServices: string[], modifiedServiceNames: string[], modifiedPrice: number
+  ) => {
+    try {
+      await api.modifyBookingServices(id, { modifiedServices, modifiedServiceNames, modifiedPrice });
+      setBookings(prev => prev.map(b => b.id === id ? {
+        ...b,
+        modifiedServices,
+        modifiedServiceNames,
+        modifiedPrice,
+        originalPrice: b.originalPrice || b.totalPrice,
+        totalPrice: modifiedPrice,
+        commissionAmount: Math.round(modifiedPrice * 0.03),
+        isPackageChanged: true,
+      } : b));
+      addToast('success', 'Booking services updated. Commission recalculated.');
+    } catch {
+      // Local fallback
+      setBookings(prev => prev.map(b => b.id === id ? {
+        ...b,
+        modifiedServices,
+        modifiedServiceNames,
+        modifiedPrice,
+        originalPrice: b.originalPrice || b.totalPrice,
+        totalPrice: modifiedPrice,
+        commissionAmount: Math.round(modifiedPrice * 0.03),
+        isPackageChanged: true,
+      } : b));
+      const local = loadLocalBookings();
+      const idx = local.findIndex(b => b.id === id);
+      if (idx >= 0) {
+        local[idx] = { ...local[idx], modifiedServices, modifiedServiceNames, modifiedPrice, originalPrice: local[idx].originalPrice || local[idx].totalPrice, totalPrice: modifiedPrice, commissionAmount: Math.round(modifiedPrice * 0.03), isPackageChanged: true };
+        localStorage.setItem(STORAGE_KEYS.bookings, JSON.stringify(local));
+      }
+      addToast('success', 'Booking services updated. Commission recalculated.');
+    }
+  }, [addToast]);
+
+
   const addStaffReview = useCallback(async (review: Omit<StaffReview, 'id' | 'createdAt'>) => {
     try {
       const res = await api.addStaffReview(review);
@@ -1528,6 +1602,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         rescheduleBooking,
         updateBookingPayment,
         reportFakeBooking,
+        verifyBookingStatus,
+        modifyBookingServices,
         staffReviews,
         addStaffReview,
         styleRecommendation,

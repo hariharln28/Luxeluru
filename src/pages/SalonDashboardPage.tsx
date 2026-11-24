@@ -41,7 +41,9 @@ export function SalonDashboardPage() {
     unblockSlot,
     refreshData,
     updateSalonLocation,
-    updateSalonStaff
+    updateSalonStaff,
+    verifyBookingStatus,
+    modifyBookingServices
   } = useApp();
 
   const [refreshing, setRefreshing] = useState(false);
@@ -87,6 +89,10 @@ export function SalonDashboardPage() {
 
   const [reportingBookingId, setReportingBookingId] = useState<string | null>(null);
   const [fakeReason, setFakeReason] = useState('');
+
+  const [modifyingBookingId, setModifyingBookingId] = useState<string | null>(null);
+  const [modifyServices, setModifyServices] = useState<string[]>([]);
+  const [verifyNotes, setVerifyNotes] = useState('');
 
   // If no salon is logged in, redirect to login page
   if (!salon) {
@@ -376,6 +382,48 @@ export function SalonDashboardPage() {
                           </button>
                         )}
                       </div>
+
+                      {/* Salon verification controls */}
+                      <div className="mt-3 pt-3 border-t border-[#c9a962]/10 space-y-2">
+                        <div className="flex items-center gap-3">
+                          <label className="flex items-center gap-1.5 text-xs text-[#9a8fa8] cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={b.appointmentTaken || false}
+                              onChange={(e) => verifyBookingStatus(b.id, { appointmentTaken: e.target.checked })}
+                              className="rounded border-[#c9a962]/30"
+                            />
+                            Customer Arrived
+                          </label>
+                          <label className="flex items-center gap-1.5 text-xs text-[#9a8fa8] cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={b.paymentVerifiedBySalon || false}
+                              onChange={(e) => verifyBookingStatus(b.id, { paymentVerifiedBySalon: e.target.checked, paymentMethod: b.paymentMethod })}
+                              className="rounded border-[#c9a962]/30"
+                            />
+                            Payment Received
+                          </label>
+                        </div>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            placeholder="Add notes..."
+                            defaultValue={b.salonNotes || ''}
+                            onBlur={(e) => { if (e.target.value !== (b.salonNotes || '')) verifyBookingStatus(b.id, { salonNotes: e.target.value }); }}
+                            className="luxe-input text-xs flex-1 py-1.5"
+                          />
+                          <button
+                            onClick={() => {
+                              setModifyingBookingId(b.id);
+                              setModifyServices(b.serviceIds);
+                            }}
+                            className="text-[10px] px-3 py-1.5 rounded-lg border border-[#c9a962]/20 text-[#c9a962] hover:bg-[#c9a962]/10 transition whitespace-nowrap"
+                          >
+                            Modify Services
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -420,6 +468,14 @@ export function SalonDashboardPage() {
                           <p className="text-sm font-semibold text-amber-300">₹{(b.commissionAmount ?? 0).toLocaleString('en-IN')}</p>
                         </div>
                       </div>
+                      {b.paymentStatus && (
+                        <span className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                          b.paymentStatus === 'paid-online' ? 'bg-green-500/20 text-green-400' :
+                          b.paymentStatus === 'paid-at-salon' ? 'bg-blue-500/20 text-blue-400' :
+                          b.paymentStatus === 'not-paid' ? 'bg-red-500/20 text-red-400' :
+                          'bg-amber-500/20 text-amber-300'
+                        }`}>{b.paymentStatus.replace(/-/g, ' ')}</span>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -961,6 +1017,81 @@ export function SalonDashboardPage() {
           </div>
         </div>
       )}
+
+      {/* Modify Services Modal */}
+      {modifyingBookingId && (() => {
+        const booking = salonBookings.find(b => b.id === modifyingBookingId);
+        if (!booking) return null;
+        const currentServiceIds = modifyServices;
+        const currentTotal = currentServiceIds.reduce((sum, sid) => {
+          const svc = salon.services.find(s => s.id === sid);
+          return sum + (svc?.price || 0);
+        }, 0);
+        const newCommission = Math.round(currentTotal * 0.03);
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+            <div className="w-full max-w-lg rounded-2xl border border-[#c9a962]/20 bg-[#1a1520] p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+              <h3 className="font-display text-xl text-[#e8d5a3]">Modify Booking Services</h3>
+              <p className="text-xs text-[#9a8fa8]">Select the services the customer is actually getting:</p>
+              <div className="space-y-2">
+                {salon.services.map(svc => (
+                  <label key={svc.id} className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition ${
+                    currentServiceIds.includes(svc.id) ? 'border-[#c9a962] bg-[#c9a962]/10' : 'border-[#c9a962]/10 hover:border-[#c9a962]/30'
+                  }`}>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={currentServiceIds.includes(svc.id)}
+                        onChange={() => {
+                          setModifyServices(prev =>
+                            prev.includes(svc.id) ? prev.filter(id => id !== svc.id) : [...prev, svc.id]
+                          );
+                        }}
+                        className="rounded border-[#c9a962]/30"
+                      />
+                      <span className="text-sm text-[#e8d5a3]">{svc.name}</span>
+                    </div>
+                    <span className="text-sm font-semibold text-[#c9a962]">₹{svc.price}</span>
+                  </label>
+                ))}
+              </div>
+              <div className="border-t border-[#c9a962]/10 pt-3 space-y-1 text-xs">
+                <div className="flex justify-between text-[#9a8fa8]">
+                  <span>Original Price</span>
+                  <span>₹{booking.originalPrice || booking.totalPrice}</span>
+                </div>
+                <div className="flex justify-between text-[#e8d5a3] font-semibold text-sm">
+                  <span>New Total</span>
+                  <span>₹{currentTotal}</span>
+                </div>
+                <div className="flex justify-between text-[#c9a962]">
+                  <span>Platform Commission (3%)</span>
+                  <span>₹{newCommission}</span>
+                </div>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => setModifyingBookingId(null)}
+                  className="flex-1 rounded-lg border border-[#c9a962]/20 px-4 py-2.5 text-sm text-[#9a8fa8] hover:text-[#e8d5a3] transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    const names = currentServiceIds.map(sid => salon.services.find(s => s.id === sid)?.name || '').filter(Boolean);
+                    modifyBookingServices(modifyingBookingId, currentServiceIds, names, currentTotal);
+                    setModifyingBookingId(null);
+                  }}
+                  disabled={currentServiceIds.length === 0}
+                  className="flex-1 luxe-btn text-sm py-2.5 disabled:opacity-50"
+                >
+                  Save Changes
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Stripe Checkout Modal */}
       {showCheckout && (

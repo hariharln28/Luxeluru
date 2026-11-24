@@ -24,7 +24,12 @@ import {
   CalendarCheck,
   UserCheck,
   UserX,
-  BarChart3
+  BarChart3,
+  CreditCard,
+  Banknote,
+  Clock,
+  Phone,
+  Mail
 } from 'lucide-react';
 
 export function AdminDashboardPage() {
@@ -158,6 +163,24 @@ export function AdminDashboardPage() {
     return new Date(s.commissionPaidUntil) < new Date() && (s.commissionDue ?? 0) > 0;
   }).length;
   const forcefullyRemovedSalons = salons.filter(s => s.exitReason && !s.exitReason.includes('exited')).length;
+
+  // Payment tracking metrics
+  const paidOnlineBookings = bookings.filter(b => b.paymentStatus === 'paid-online');
+  const paidAtSalonBookings = bookings.filter(b => b.paymentStatus === 'paid-at-salon');
+  const pendingPaymentBookings = bookings.filter(b => !b.paymentStatus || b.paymentStatus === 'pending');
+  const notPaidBookings = bookings.filter(b => b.paymentStatus === 'not-paid');
+  const onlinePaymentRevenue = paidOnlineBookings.reduce((s, b) => s + b.totalPrice, 0);
+  const modifiedBookings = bookings.filter(b => b.modifiedPrice && b.modifiedPrice !== b.totalPrice);
+  
+  // Unverified bookings: past date, confirmed status, salon hasn't verified
+  const unverifiedBookings = bookings.filter(b => {
+    if (b.status !== 'confirmed') return false;
+    if (b.appointmentTaken !== undefined) return false;
+    const bookingDate = new Date(b.date);
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    return bookingDate < now;
+  });
 
   // Per-salon booking breakdown
   const perSalonStats = useMemo(() => {
@@ -762,6 +785,82 @@ export function AdminDashboardPage() {
               </div>
             </div>
           </div>
+
+          {/* Payment Analytics */}
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="luxe-card p-4 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-500/15">
+                <CreditCard className="h-5 w-5 text-green-400" />
+              </div>
+              <div>
+                <p className="text-xl font-bold text-green-400">{paidOnlineBookings.length}</p>
+                <p className="text-[10px] text-[#9a8fa8]">Paid Online (₹{onlinePaymentRevenue.toLocaleString('en-IN')})</p>
+              </div>
+            </div>
+            <div className="luxe-card p-4 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-500/15">
+                <Banknote className="h-5 w-5 text-blue-400" />
+              </div>
+              <div>
+                <p className="text-xl font-bold text-blue-400">{paidAtSalonBookings.length}</p>
+                <p className="text-[10px] text-[#9a8fa8]">Paid at Salon</p>
+              </div>
+            </div>
+            <div className="luxe-card p-4 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-amber-500/15">
+                <Clock className="h-5 w-5 text-amber-400" />
+              </div>
+              <div>
+                <p className="text-xl font-bold text-amber-400">{pendingPaymentBookings.length}</p>
+                <p className="text-[10px] text-[#9a8fa8]">Payment Pending</p>
+              </div>
+            </div>
+            <div className="luxe-card p-4 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-500/15">
+                <AlertCircle className="h-5 w-5 text-red-400" />
+              </div>
+              <div>
+                <p className="text-xl font-bold text-red-400">{notPaidBookings.length}</p>
+                <p className="text-[10px] text-[#9a8fa8]">Not Paid</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Unverified Bookings — Salon didn't update status */}
+          {unverifiedBookings.length > 0 && (
+            <div className="luxe-card p-6 space-y-4 border-l-4 border-red-500/50">
+              <h3 className="font-display text-lg text-red-400 flex items-center gap-2">
+                <AlertCircle className="h-5 w-5" /> Unverified Bookings — Action Required ({unverifiedBookings.length})
+              </h3>
+              <p className="text-xs text-[#9a8fa8]">These bookings have passed their date but the salon hasn't updated appointment/payment status. Contact the customer to verify.</p>
+              <div className="space-y-3 max-h-64 overflow-y-auto">
+                {unverifiedBookings.slice(0, 20).map(b => {
+                  const customer = users.find(u => u.id === b.userId);
+                  return (
+                    <div key={b.id} className="rounded-lg bg-[#0f0d12]/50 p-4 flex items-center justify-between">
+                      <div className="space-y-1">
+                        <p className="text-sm font-semibold text-[#e8d5a3]">{customer?.name || 'Unknown'}</p>
+                        <p className="text-[10px] text-[#9a8fa8]">{b.salonName} · {b.date} · {b.time} · ₹{b.totalPrice}</p>
+                        <p className="text-[10px] text-[#9a8fa8]">Payment: {b.paymentStatus || 'unknown'} · Method: {b.paymentMethod}</p>
+                      </div>
+                      <div className="flex gap-2 shrink-0">
+                        {customer?.phone && (
+                          <a href={`tel:${customer.phone}`} className="flex items-center gap-1 rounded-lg bg-green-500/10 px-3 py-1.5 text-[10px] text-green-400 hover:bg-green-500/20 transition">
+                            <Phone className="h-3 w-3" /> Call
+                          </a>
+                        )}
+                        {customer?.email && (
+                          <a href={`mailto:${customer.email}?subject=Luxeluru Appointment Verification — ${b.date}&body=Hi ${customer.name}, we are reaching out regarding your appointment at ${b.salonName} on ${b.date}. Please confirm if you attended the appointment and completed the payment.`} className="flex items-center gap-1 rounded-lg bg-blue-500/10 px-3 py-1.5 text-[10px] text-blue-400 hover:bg-blue-500/20 transition">
+                            <Mail className="h-3 w-3" /> Email
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Platform Intelligence — Comprehensive Tracking */}
           <div className="grid gap-6 md:grid-cols-2">

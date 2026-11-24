@@ -1,6 +1,6 @@
 export type Language = 'en' | 'hi' | 'kn';
 
-export type PaymentMethod = 'cash' | 'upi';
+export type PaymentMethod = 'cash' | 'upi' | 'card' | 'pay-at-salon';
 
 export type SalonCategory =
   | 'hair'
@@ -112,6 +112,18 @@ export interface Booking {
   commissionPaid?: boolean;
   reportedAsFake?: boolean;
   fakeReportReason?: string;
+  // Payment tracking
+  paymentStatus?: 'pending' | 'paid-online' | 'paid-at-salon' | 'not-paid';
+  stripePaymentId?: string;
+  // Salon verification
+  appointmentTaken?: boolean;
+  paymentVerifiedBySalon?: boolean;
+  salonNotes?: string;
+  // Service modification by salon
+  modifiedServices?: string[];
+  modifiedServiceNames?: string[];
+  modifiedPrice?: number;
+  rescheduledFrom?: { date: string; time: string };
 }
 
 export interface BlockedSlot {

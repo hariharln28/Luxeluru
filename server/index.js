@@ -802,6 +802,72 @@ app.post('/api/bookings/:id/report-fake', async (req, res) => {
   }
 });
 
+// Salon verifies appointment & payment status
+app.post('/api/bookings/:id/verify-status', async (req, res) => {
+  try {
+    const { appointmentTaken, paymentVerifiedBySalon, paymentMethod, salonNotes } = req.body;
+    const booking = (await db.getBookings()).find(b => b.id === req.params.id);
+    if (!booking) return res.status(404).json({ error: 'Booking not found' });
+    
+    const updates = {
+      appointmentTaken: appointmentTaken ?? booking.appointmentTaken,
+      paymentVerifiedBySalon: paymentVerifiedBySalon ?? booking.paymentVerifiedBySalon,
+      salonNotes: salonNotes ?? booking.salonNotes ?? '',
+    };
+    if (paymentMethod) updates.paymentMethod = paymentMethod;
+    if (paymentVerifiedBySalon) {
+      updates.paymentStatus = paymentMethod === 'card' ? 'paid-online' : 'paid-at-salon';
+    }
+    
+    await db.updateBooking(req.params.id, updates);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Salon modifies services on a booking
+app.post('/api/bookings/:id/modify-services', async (req, res) => {
+  try {
+    const { modifiedServices, modifiedServiceNames, modifiedPrice } = req.body;
+    if (!Array.isArray(modifiedServices) || typeof modifiedPrice !== 'number') {
+      return res.status(400).json({ error: 'modifiedServices (array) and modifiedPrice (number) are required' });
+    }
+    const booking = (await db.getBookings()).find(b => b.id === req.params.id);
+    if (!booking) return res.status(404).json({ error: 'Booking not found' });
+    
+    const oldCommission = booking.commissionAmount || Math.round(booking.totalPrice * 0.03);
+    const newCommission = Math.round(modifiedPrice * 0.03);
+    const commissionDiff = newCommission - oldCommission;
+    
+    const updates = {
+      modifiedServices,
+      modifiedServiceNames: modifiedServiceNames || [],
+      modifiedPrice,
+      originalPrice: booking.originalPrice || booking.totalPrice,
+      totalPrice: modifiedPrice,
+      commissionAmount: newCommission,
+      isPackageChanged: true,
+    };
+    
+    await db.updateBooking(req.params.id, updates);
+    
+    // Adjust salon commission due
+    if (commissionDiff !== 0) {
+      const salon = (await db.getSalons()).find(s => s.id === booking.salonId);
+      if (salon) {
+        await db.updateSalon(booking.salonId, {
+          commissionDue: (salon.commissionDue || 0) + commissionDiff
+        });
+      }
+    }
+    
+    res.json({ success: true, newCommission, modifiedPrice });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ─── Blocked Slots ───────────────────────
 app.get('/api/salons/:id/blocked-slots', async (req, res) => {
   try {
