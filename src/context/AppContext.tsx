@@ -857,8 +857,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
           return res.booking;
         }
         throw new Error('Booking placement failed');
-      } catch {
-        // Local fallback
+      } catch (err: any) {
+        // If it's a conflict error (409), surface it to the user
+        if (err?.message?.includes('already booked') || err?.message?.includes('blocked by the salon')) {
+          throw err;
+        }
+        // Local fallback for network errors
         const booking: Booking = {
           ...data,
           id: `booking-${Date.now()}`,
