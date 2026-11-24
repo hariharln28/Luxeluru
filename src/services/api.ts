@@ -6,6 +6,43 @@ export const setAuthToken = (token: string | null) => {
   authToken = token;
 };
 
+// Retry a fetch with exponential backoff
+async function fetchWithRetry(
+  url: string,
+  options: RequestInit,
+  retries = 3,
+  timeoutMs = 15000
+): Promise<Response> {
+  let lastError: Error = new Error('Network request failed');
+
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+      const res = await fetch(url, { ...options, signal: controller.signal });
+      clearTimeout(timer);
+      return res;
+    } catch (err: unknown) {
+      clearTimeout(timer);
+      const isAbort = err instanceof DOMException && err.name === 'AbortError';
+      lastError = new Error(
+        isAbort
+          ? `Request timed out after ${timeoutMs / 1000}s. Check your internet connection.`
+          : (err instanceof Error ? err.message : 'Network error')
+      );
+      // Only retry GET requests (safe/idempotent); never retry mutations on failure
+      const method = (options.method || 'GET').toUpperCase();
+      const isRetryable = method === 'GET';
+      if (!isRetryable || attempt === retries) break;
+      // Exponential backoff: 500ms, 1000ms, 2000ms
+      await new Promise(r => setTimeout(r, 500 * Math.pow(2, attempt - 1)));
+    }
+  }
+
+  throw lastError;
+}
+
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
@@ -16,10 +53,9 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
     (headers as Record<string, string>)['Authorization'] = `Bearer ${authToken}`;
   }
 
-  const res = await fetch(url, {
-    ...options,
-    headers,
-  });
+  const fetchOptions: RequestInit = { ...options, headers };
+
+  const res = await fetchWithRetry(url, fetchOptions);
 
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({}));
