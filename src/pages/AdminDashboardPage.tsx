@@ -143,6 +143,22 @@ export function AdminDashboardPage() {
   const uniqueBookingUsers = new Set(bookings.map(b => b.userId)).size;
   const blockedUsersCount = users.filter(u => u.blockedUntil && u.blockedUntil >= todayStr).length;
 
+  // Enhanced tracking metrics
+  const avgBookingValue = completedBookings.length ? Math.round(totalGMV / completedBookings.length) : 0;
+  const rescheduledBookings = bookings.filter(b => b.rescheduledFrom).length;
+  const todayRevenue = bookings.filter(b => b.date === todayStr && b.status === 'completed').reduce((s, b) => s + b.totalPrice, 0);
+  const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7);
+  const weekAgoStr = weekAgo.toISOString().split('T')[0];
+  const thisWeekBookings = bookings.filter(b => b.date >= weekAgoStr);
+  const newUsersThisWeek = users.filter(u => u.createdAt && u.createdAt >= weekAgo.toISOString()).length;
+  const newSalonsThisWeek = salons.filter(s => s.registeredAt && s.registeredAt >= weekAgo.toISOString()).length;
+  const commissionPaidSalons = approvedSalons.filter(s => s.commissionPaidUntil && new Date(s.commissionPaidUntil) >= new Date()).length;
+  const commissionOverdueSalons = approvedSalons.filter(s => {
+    if (!s.commissionPaidUntil) return false;
+    return new Date(s.commissionPaidUntil) < new Date() && (s.commissionDue ?? 0) > 0;
+  }).length;
+  const forcefullyRemovedSalons = salons.filter(s => s.exitReason && !s.exitReason.includes('exited')).length;
+
   // Per-salon booking breakdown
   const perSalonStats = useMemo(() => {
     const map: Record<string, { name: string; total: number; completed: number; cancelled: number; revenue: number }> = {};
@@ -743,6 +759,65 @@ export function AdminDashboardPage() {
               <div>
                 <p className="text-xl font-bold text-red-400">{blockedUsersCount}</p>
                 <p className="text-[10px] text-[#9a8fa8]">Blocked Users</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Platform Intelligence — Comprehensive Tracking */}
+          <div className="grid gap-6 md:grid-cols-2">
+            <div className="luxe-card p-6 space-y-3">
+              <h3 className="font-display text-lg text-[#e8d5a3] flex items-center gap-2">
+                <Activity className="h-5 w-5 text-[#c9a962]" /> This Week's Snapshot
+              </h3>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-[#0f0d12] p-3 rounded-lg text-center">
+                  <p className="text-lg font-bold text-[#c9a962]">{thisWeekBookings.length}</p>
+                  <p className="text-[10px] text-[#9a8fa8]">Bookings This Week</p>
+                </div>
+                <div className="bg-[#0f0d12] p-3 rounded-lg text-center">
+                  <p className="text-lg font-bold text-green-400">₹{todayRevenue.toLocaleString('en-IN')}</p>
+                  <p className="text-[10px] text-[#9a8fa8]">Revenue Today</p>
+                </div>
+                <div className="bg-[#0f0d12] p-3 rounded-lg text-center">
+                  <p className="text-lg font-bold text-blue-400">{newUsersThisWeek}</p>
+                  <p className="text-[10px] text-[#9a8fa8]">New Users This Week</p>
+                </div>
+                <div className="bg-[#0f0d12] p-3 rounded-lg text-center">
+                  <p className="text-lg font-bold text-purple-400">{newSalonsThisWeek}</p>
+                  <p className="text-[10px] text-[#9a8fa8]">New Salon Apps This Week</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="luxe-card p-6 space-y-3">
+              <h3 className="font-display text-lg text-[#e8d5a3] flex items-center gap-2">
+                <BarChart3 className="h-5 w-5 text-[#c9a962]" /> Deep Metrics
+              </h3>
+              <div className="space-y-2 text-xs">
+                <div className="flex justify-between py-1.5 border-b border-[#c9a962]/10">
+                  <span className="text-[#9a8fa8]">Avg. Booking Value</span>
+                  <span className="text-[#e8d5a3] font-bold">₹{avgBookingValue.toLocaleString('en-IN')}</span>
+                </div>
+                <div className="flex justify-between py-1.5 border-b border-[#c9a962]/10">
+                  <span className="text-[#9a8fa8]">Rescheduled Appointments</span>
+                  <span className="text-amber-300 font-bold">{rescheduledBookings}</span>
+                </div>
+                <div className="flex justify-between py-1.5 border-b border-[#c9a962]/10">
+                  <span className="text-[#9a8fa8]">User Engagement Rate</span>
+                  <span className="text-cyan-400 font-bold">{users.length ? Math.round((uniqueBookingUsers / users.length) * 100) : 0}%</span>
+                </div>
+                <div className="flex justify-between py-1.5 border-b border-[#c9a962]/10">
+                  <span className="text-[#9a8fa8]">Commission Paid (Current)</span>
+                  <span className="text-green-400 font-bold">{commissionPaidSalons} salons</span>
+                </div>
+                <div className="flex justify-between py-1.5 border-b border-[#c9a962]/10">
+                  <span className="text-[#9a8fa8]">Commission Overdue</span>
+                  <span className="text-red-400 font-bold">{commissionOverdueSalons} salons</span>
+                </div>
+                <div className="flex justify-between py-1.5">
+                  <span className="text-[#9a8fa8]">Forcefully Removed Salons</span>
+                  <span className="text-orange-400 font-bold">{forcefullyRemovedSalons}</span>
+                </div>
               </div>
             </div>
           </div>
