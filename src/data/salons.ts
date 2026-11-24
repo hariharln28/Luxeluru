@@ -1,14 +1,14 @@
 import type { Salon } from '../types';
 
 const staffPool = [
-  { name: 'Priya Sharma', role: 'Senior Stylist', specialties: ['Balayage', 'Bridal'] },
-  { name: 'Arjun Reddy', role: 'Master Barber', specialties: ['Fade', 'Beard Sculpt'] },
-  { name: 'Meera Nair', role: 'Skin Specialist', specialties: ['Facials', 'Anti-aging'] },
+  { name: 'Priyanka', role: 'Senior Stylist', specialties: ['Balayage', 'Bridal'] },
+  { name: 'Devi', role: 'Master Barber', specialties: ['Fade', 'Beard Sculpt'] },
+  { name: 'Meera', role: 'Skin Specialist', specialties: ['Facials', 'Anti-aging'] },
   { name: 'Kavya Iyer', role: 'Nail Artist', specialties: ['Gel Art', 'Extensions'] },
-  { name: 'Rahul Das', role: 'Spa Therapist', specialties: ['Deep Tissue', 'Aromatherapy'] },
-  { name: 'Ananya Gupta', role: 'Color Expert', specialties: ['Highlights', 'Global Color'] },
-  { name: 'Vikram Singh', role: 'Grooming Expert', specialties: ['Premium Cut', 'Hot Towel'] },
-  { name: 'Divya Rao', role: 'Bridal Specialist', specialties: ['HD Makeup', 'Hair Styling'] },
+  { name: 'Rahul Kumar', role: 'Spa Therapist', specialties: ['Deep Tissue', 'Aromatherapy'] },
+  { name: 'Ananya Shetty', role: 'Color Expert', specialties: ['Highlights', 'Global Color'] },
+  { name: 'Vikram Rao', role: 'Grooming Expert', specialties: ['Premium Cut', 'Hot Towel'] },
+  { name: 'Divya R', role: 'Bridal Specialist', specialties: ['HD Makeup', 'Hair Styling'] },
 ];
 
 function makeStaff(salonIdx: number, count: number) {
@@ -29,7 +29,7 @@ function makeStaff(salonIdx: number, count: number) {
 export const salons: Salon[] = [
   {
     id: 'salon-1',
-    name: 'Velvet Crown',
+    name: 'Anura House of Beauty',
     tagline: 'Where elegance meets artistry',
     area: 'Indiranagar',
     address: '100 Feet Road, Indiranagar, Bengaluru 560038',
@@ -41,7 +41,7 @@ export const salons: Salon[] = [
     image: 'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=800&q=80',
     openHours: '10:00 AM - 9:00 PM',
     phone: '+919876543210',
-    email: 'hello@velvetcrown.in',
+    email: 'hello@anurahouseofbeauty.in',
     featured: true,
     commissionPaidUntil: '2026-07-01',
     services: [
@@ -58,7 +58,7 @@ export const salons: Salon[] = [
   },
   {
     id: 'salon-2',
-    name: 'Aura Spa & Salon',
+    name: 'Olavu Beauty Heaven',
     tagline: 'Rejuvenate your senses',
     area: 'Koramangala',
     address: '5th Block, Koramangala, Bengaluru 560034',
@@ -70,7 +70,7 @@ export const salons: Salon[] = [
     image: 'https://images.unsplash.com/photo-1519415510233-955b37dafffb?w=800&q=80',
     openHours: '9:00 AM - 10:00 PM',
     phone: '+919876543211',
-    email: 'book@auraspa.in',
+    email: 'book@olavubeautyheaven.in',
     featured: true,
     commissionPaidUntil: '2026-07-01',
     services: [
@@ -86,7 +86,7 @@ export const salons: Salon[] = [
   },
   {
     id: 'salon-3',
-    name: 'The Gentlemen\'s Den',
+    name: 'Hair & Grooming Lounge',
     tagline: 'Premium grooming for the modern man',
     area: 'MG Road',
     address: 'UB City Mall, MG Road, Bengaluru 560001',
@@ -98,7 +98,7 @@ export const salons: Salon[] = [
     image: 'https://images.unsplash.com/photo-1503951914875-452162b0f784?w=800&q=80',
     openHours: '11:00 AM - 9:00 PM',
     phone: '+919876543212',
-    email: 'info@gentlemensden.in',
+    email: 'info@hairandgroominglounge.in',
     featured: true,
     commissionPaidUntil: '2026-06-01',
     commissionDue: 12500,
@@ -115,7 +115,7 @@ export const salons: Salon[] = [
   },
   {
     id: 'salon-4',
-    name: 'Lumière Nails Studio',
+    name: 'Luminious salon',
     tagline: 'Art at your fingertips',
     area: 'HSR Layout',
     address: '27th Main, HSR Layout, Bengaluru 560102',
@@ -127,7 +127,7 @@ export const salons: Salon[] = [
     image: 'https://images.unsplash.com/photo-1604654894610-df63bc536371?w=800&q=80',
     openHours: '10:00 AM - 8:00 PM',
     phone: '+919876543213',
-    email: 'studio@lumiere-nails.in',
+    email: 'studio@luminioussalon-nails.in',
     featured: false,
     commissionPaidUntil: '2026-07-01',
     services: [
@@ -143,7 +143,7 @@ export const salons: Salon[] = [
   },
   {
     id: 'salon-5',
-    name: 'Serene Skin Clinic',
+    name: 'Belaku Derma Studio',
     tagline: 'Clinical luxury for radiant skin',
     area: 'Whitefield',
     address: 'Phoenix Marketcity, Whitefield, Bengaluru 560048',
@@ -155,7 +155,7 @@ export const salons: Salon[] = [
     image: 'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?w=800&q=80',
     openHours: '10:00 AM - 8:00 PM',
     phone: '+919876543214',
-    email: 'care@sereneskin.in',
+    email: 'care@belakuderma.in',
     featured: true,
     commissionPaidUntil: '2026-07-01',
     services: [
@@ -171,7 +171,7 @@ export const salons: Salon[] = [
   },
   {
     id: 'salon-6',
-    name: 'Maison de Beauté',
+    name: 'Maison Beauté',
     tagline: 'French-inspired luxury beauty',
     area: 'Jayanagar',
     address: '4th Block, Jayanagar, Bengaluru 560011',
@@ -184,7 +184,7 @@ export const salons: Salon[] = [
     openHours: '10:00 AM - 9:00 PM',
     phone: '+919876543215',
     email: 'bonjour@maisonbeaute.in',
-    featured: false,
+    featured: false,   
     commissionPaidUntil: '2026-07-01',
     services: [
       { id: 's6-1', name: 'Parisian Blowout', duration: 75, price: 3200, category: 'hair' },

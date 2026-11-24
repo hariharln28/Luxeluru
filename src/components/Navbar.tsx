@@ -59,7 +59,7 @@ export function Navbar() {
           </Link>
 
           {user && (
-            <div className="hidden items-center gap-2 md:flex">
+            <div className="hidden items-center gap-2 lg:flex">
               <button
                 onClick={() => setPanicOpen(true)}
                 className="panic-pulse flex items-center gap-2 rounded-full bg-red-600/90 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-500"
@@ -70,8 +70,8 @@ export function Navbar() {
             </div>
           )}
 
-          <div className="hidden items-center gap-4 md:flex">
-            {navLinks.slice(0, 5).map(({ to, label }) => (
+          <div className="hidden items-center gap-4 lg:flex">
+            {navLinks.map(({ to, label }) => (
               <Link
                 key={to}
                 to={to}
@@ -144,13 +144,13 @@ export function Navbar() {
             )}
           </div>
 
-          <button className="md:hidden text-[#c9a962]" onClick={() => setMobileOpen(!mobileOpen)}>
+          <button className="lg:hidden text-[#c9a962]" onClick={() => setMobileOpen(!mobileOpen)}>
             {mobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </button>
         </div>
 
         {mobileOpen && (
-          <div className="border-t border-[#c9a962]/10 bg-[#1a1520] px-4 py-4 md:hidden animate-fade-in">
+          <div className="border-t border-[#c9a962]/10 bg-[#1a1520] px-4 py-4 lg:hidden animate-fade-in">
             {user && (
               <>
                 <button
