@@ -8,6 +8,7 @@ import { useApp } from '../context/AppContext';
 import { useT } from '../hooks/useT';
 import type { Language } from '../types';
 import { PanicModal } from './PanicModal';
+import logoUrl from '../assets/logo.png.jpeg';
 
 export function Navbar() {
   const { user, logout, language, setLanguage } = useApp();
@@ -52,10 +53,7 @@ export function Navbar() {
       <nav className="sticky top-0 z-50 border-b border-[#c9a962]/10 bg-[#0f0d12]/95 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
           <Link to={user ? '/dashboard' : '/'} className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-[#c9a962] to-[#a8893f]">
-              <Sparkles className="h-5 w-5 text-[#0f0d12]" />
-            </div>
-            <span className="font-display text-xl font-bold gold-gradient">{tr('appName')}</span>
+            <img src={logoUrl} alt="Luxeluru" className="h-10 w-auto object-contain mix-blend-screen" />
           </Link>
 
           {user && (
