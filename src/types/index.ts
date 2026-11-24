@@ -126,9 +126,11 @@ export interface StaffReview {
 export interface StyleRecommendation {
   faceShape: string;
   skinTone: string;
+  gender: 'male' | 'female';
   suggestedHairColors: string[];
   suggestedStyles: string[];
   userAdjustedColor?: string;
+  userAdjustedStyle?: string;
 }
 
 export interface Toast {
