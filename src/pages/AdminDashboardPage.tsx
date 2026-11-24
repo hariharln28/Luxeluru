@@ -85,24 +85,41 @@ export function AdminDashboardPage() {
     return () => clearInterval(interval);
   }, [handleRefresh, refreshData]);
 
-  // HIGH SECURITY: Auto sign-out admin when leaving the dashboard
-  // Use a ref to track if we're navigating away vs just re-rendering
+  // HIGH SECURITY: Auto sign-out admin the moment they leave the dashboard
+  // Covers: React navigation, browser back/forward, tab switch, browser close
   const isOnDashboard = useRef(true);
   const currentPath = useLocation().pathname;
 
   useEffect(() => {
     isOnDashboard.current = true;
+
+    // Lock on browser/tab close or hard refresh
     const handleBeforeUnload = () => {
-      // Clear admin session on tab/browser close
-      sessionStorage.removeItem('adminSession');
+      sessionStorage.removeItem('luxeluru_admin_session');
     };
+
+    // Lock when tab is hidden (user switches to another tab)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        logout();
+      }
+    };
+
     window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      // Lock when component unmounts (React router navigation away)
+      if (isOnDashboard.current) {
+        isOnDashboard.current = false;
+        logout();
+      }
     };
-  }, []);
+  }, [logout]);
 
-  // Watch for navigation away from the dashboard
+  // Also watch React router path changes as a secondary guard
   useEffect(() => {
     if (currentPath !== '/admin-dashboard' && isOnDashboard.current) {
       isOnDashboard.current = false;
@@ -264,12 +281,6 @@ export function AdminDashboardPage() {
           >
             <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
             {refreshing ? 'Refreshing...' : 'Refresh'}
-          </button>
-          <button 
-            onClick={() => { logout(); navigate('/partner-with-us'); }} 
-            className="luxe-btn bg-red-600 hover:shadow-red-500/20 text-white text-sm"
-          >
-            Sign Out Admin
           </button>
         </div>
       </div>
@@ -1136,13 +1147,10 @@ export function AdminDashboardPage() {
 
           <div className="flex justify-center mt-6">
             <button
-              onClick={() => {
-                logout();
-                navigate('/login');
-              }}
+              onClick={() => navigate('/login')}
               className="flex items-center gap-2 luxe-btn py-3 px-8 text-sm font-semibold"
             >
-              <LogOut className="h-4 w-4" /> Log Out Admin Session & Go to Login Page
+              <LogOut className="h-4 w-4" /> Go to Login Page (auto-signs out)
             </button>
           </div>
         </div>
