@@ -386,7 +386,13 @@ export function SalonDashboardPage() {
                         <div className="text-left sm:text-right">
                           <p className="text-[#9a8fa8] text-xs">Customer Booked Price</p>
                           <p className="text-xl font-bold font-display text-[#c9a962] mt-0.5">₹{b.totalPrice.toLocaleString('en-IN')}</p>
-                          <p className="text-xs text-[#9a8fa8] mt-1 uppercase">Payment: {b.paymentMethod}</p>
+                          <p className="text-xs text-[#9a8fa8] mt-1 uppercase">
+                            {b.paymentMethod === 'card' ? '💳 Card (Online)' :
+                             b.paymentMethod === 'upi' ? '📱 UPI (Online)' :
+                             b.paymentMethod === 'pay-at-salon' ? '💵 Pay at Salon' :
+                             b.paymentMethod === 'cash' ? '💵 Cash' : b.paymentMethod}
+                            {b.paymentStatus === 'paid-online' && <span className="ml-1 text-emerald-400">(Paid ✓)</span>}
+                          </p>
                         </div>
                       </div>
 
@@ -562,7 +568,15 @@ export function SalonDashboardPage() {
                       <div className="mt-3 flex justify-between border-t border-[#c9a962]/5 pt-2">
                         <div>
                           <p className="text-[#9a8fa8]">Total Bill (Final)</p>
-                          <p className="text-sm font-semibold text-[#c9a962]">₹{b.totalPrice.toLocaleString('en-IN')} ({b.paymentMethod})</p>
+                          <p className="text-sm font-semibold text-[#c9a962]">
+                            ₹{b.totalPrice.toLocaleString('en-IN')} &nbsp;
+                            <span className="text-xs font-normal text-[#9a8fa8]">
+                              ({b.paymentMethod === 'card' ? '💳 Card' :
+                                b.paymentMethod === 'upi' ? '📱 UPI' :
+                                b.paymentMethod === 'pay-at-salon' ? '💵 At Salon' :
+                                b.paymentMethod === 'cash' ? '💵 Cash' : b.paymentMethod})
+                            </span>
+                          </p>
                         </div>
                         <div className="text-right">
                           <p className="text-[#9a8fa8]">Commission (3%)</p>

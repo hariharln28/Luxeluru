@@ -10,6 +10,7 @@ import {
   sendWhatsAppConfirmation,
   sendEmailConfirmation,
 } from '../utils/notifications';
+import { CheckoutModal } from '../components/CheckoutModal';
 import type { PaymentMethod } from '../types';
 
 const TIME_SLOTS = [
@@ -30,6 +31,8 @@ export function SalonDetailPage() {
   const [time, setTime] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('pay-at-salon');
   const [showBooking, setShowBooking] = useState(false);
+  const [showCheckout, setShowCheckout] = useState(false);
+  const [pendingBookingData, setPendingBookingData] = useState<null | Parameters<typeof createBooking>[0]>(null);
   const [reviewStaff, setReviewStaff] = useState('');
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState('');
@@ -92,7 +95,7 @@ export function SalonDetailPage() {
 
     const staff = currentSalon.staff.find((st) => st.id === selectedStaff);
 
-    await createBooking({
+    const bookingData = {
       salonId: currentSalon.id,
       salonName: currentSalon.name,
       serviceIds: pkg ? pkg.services : selectedServices,
@@ -106,18 +109,36 @@ export function SalonDetailPage() {
       paymentStatus: (paymentMethod === 'card' || paymentMethod === 'upi') ? 'paid-online' as const : 'pending' as const,
       customImageUrl: styleRecommendation?.customImageUrl,
       customMessage: styleRecommendation?.customMessage,
-      aiStyleRecommendation: styleRecommendation || undefined
-    });
+      aiStyleRecommendation: styleRecommendation || undefined,
+    };
 
-    sendWhatsAppConfirmation(user.phone, currentSalon.name, date, time, serviceNames);
-    sendEmailConfirmation(user.email, currentSalon.name, date, time, serviceNames, total);
+    // For card/UPI: open the checkout modal first, then create booking on payment success
+    if (paymentMethod === 'card' || paymentMethod === 'upi') {
+      setPendingBookingData(bookingData);
+      setShowBooking(false);
+      setShowCheckout(true);
+      return;
+    }
 
+    // Pay-at-salon: confirm directly
+    await finaliseBooking(bookingData, serviceNames, total);
+  }
+
+  async function finaliseBooking(
+    bookingData: Parameters<typeof createBooking>[0],
+    serviceNames: string[],
+    total: number
+  ) {
+    await createBooking(bookingData);
+    sendWhatsAppConfirmation(user!.phone, currentSalon.name, bookingData.date, bookingData.time, serviceNames);
+    sendEmailConfirmation(user!.email, currentSalon.name, bookingData.date, bookingData.time, serviceNames, total);
     addToast('success', tr('bookingSuccess'));
     addToast('info', tr('whatsappSent'));
     addToast('info', tr('emailSent'));
     addToast('info', tr('feedback24h'));
-
     setShowBooking(false);
+    setShowCheckout(false);
+    setPendingBookingData(null);
     setSelectedServices([]);
     setSelectedPackage(null);
     setStyleRecommendation(null);
@@ -440,9 +461,13 @@ export function SalonDetailPage() {
               </div>
             )}
 
-            <div className="mt-4 rounded-lg bg-[#c9a962]/5 p-3 text-[10px] text-[#9a8fa8] border border-[#c9a962]/10">
+          <div className="mt-4 rounded-lg bg-[#c9a962]/5 p-3 text-[10px] text-[#9a8fa8] border border-[#c9a962]/10">
               <p className="font-semibold text-[#e8d5a3] mb-1">Cancellation Policy</p>
-              <p>Cancel your appointment more than 2 days in advance for a 100% refund. Cancellations made within 2 days of the appointment will incur a 90% cancellation fee (10% refund will be processed).</p>
+              <p>• Same day: <span className="text-amber-400">20% refund</span></p>
+              <p>• 1 day before: <span className="text-amber-400">50% refund</span></p>
+              <p>• 2 days before: <span className="text-emerald-400">70% refund</span></p>
+              <p>• 3+ days before: <span className="text-emerald-400">100% refund</span></p>
+              <p className="mt-1 opacity-60">(Applies to Card/UPI payments only)</p>
             </div>
 
             <div className="mt-6 flex gap-3">
@@ -452,11 +477,22 @@ export function SalonDetailPage() {
                 disabled={user ? isUserBlocked(user.id).blocked : false}
                 className={`luxe-btn flex-1 ${user && isUserBlocked(user.id).blocked ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
-                {tr('confirmBooking')}
+                {paymentMethod === 'card' || paymentMethod === 'upi' ? '💳 Proceed to Pay' : tr('confirmBooking')}
               </button>
             </div>
           </div>
         </div>
+      )}
+
+      {/* Checkout Modal for Card/UPI */}
+      {showCheckout && pendingBookingData && (
+        <CheckoutModal
+          amount={total}
+          salonName={currentSalon.name}
+          paymentMethod={paymentMethod as 'card' | 'upi'}
+          onSuccess={() => finaliseBooking(pendingBookingData, pendingBookingData.serviceNames, total)}
+          onClose={() => { setShowCheckout(false); setShowBooking(true); }}
+        />
       )}
     </div>
   );

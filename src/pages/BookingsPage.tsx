@@ -171,7 +171,14 @@ function BookingCard({
           )}
           
           <p className="mt-2 text-xs text-[#9a8fa8]">
-            {tr('paymentMethod')}: {booking.paymentMethod === 'cash' ? tr('cash') : tr('upi')} · {tr('payAtSalon')}
+            {tr('paymentMethod')}: {
+              booking.paymentMethod === 'card' ? '💳 Card (Online)' :
+              booking.paymentMethod === 'upi' ? '📱 UPI (Online)' :
+              booking.paymentMethod === 'pay-at-salon' ? '💵 Pay at Salon' :
+              booking.paymentMethod === 'cash' ? '💵 Cash' :
+              booking.paymentMethod
+            }
+            {booking.paymentStatus === 'paid-online' && <span className="ml-1 text-emerald-400 font-semibold">(Paid ✓)</span>}
           </p>
           {booking.status === 'cancelled' && booking.refundAmount !== undefined && (
             <p className="mt-1 text-[10px] font-semibold text-green-400">

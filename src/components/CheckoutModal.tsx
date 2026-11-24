@@ -4,12 +4,13 @@ import { CreditCard, Smartphone, X, Check, Loader2, Shield, QrCode } from 'lucid
 interface CheckoutModalProps {
   amount: number;
   salonName: string;
+  paymentMethod?: 'card' | 'upi';
   onSuccess: () => void;
   onClose: () => void;
 }
 
-export function CheckoutModal({ amount, salonName, onSuccess, onClose }: CheckoutModalProps) {
-  const [tab, setTab] = useState<'card' | 'upi'>('card');
+export function CheckoutModal({ amount, salonName, paymentMethod: initialPaymentMethod = 'card', onSuccess, onClose }: CheckoutModalProps) {
+  const [tab, setTab] = useState<'card' | 'upi'>(initialPaymentMethod);
 
   // Card state
   const [cardNumber, setCardNumber] = useState('');
@@ -250,8 +251,8 @@ export function CheckoutModal({ amount, salonName, onSuccess, onClose }: Checkou
         {/* Header */}
         <div className="bg-gradient-to-r from-[#c9a962]/10 to-purple-500/10 border-b border-[#c9a962]/10 px-6 py-4 flex items-center justify-between">
           <div>
-            <h2 className="font-display text-xl text-[#e8d5a3]">Pay Platform Commission</h2>
-            <p className="text-xs text-[#9a8fa8] mt-0.5">{salonName} • Powered by Stripe</p>
+            <h2 className="font-display text-xl text-[#e8d5a3]">Appointment Payment</h2>
+            <p className="text-xs text-[#9a8fa8] mt-0.5">{salonName} • Secured by Stripe</p>
           </div>
           <button onClick={onClose} className="text-[#9a8fa8] hover:text-white transition p-1">
             <X className="h-5 w-5" />
@@ -262,7 +263,7 @@ export function CheckoutModal({ amount, salonName, onSuccess, onClose }: Checkou
           {/* Amount Summary */}
           <div className="rounded-xl bg-[#0f0d12]/60 p-4 mb-6">
             <div className="flex justify-between text-sm mb-1.5">
-              <span className="text-[#9a8fa8]">Platform Commission (3%)</span>
+              <span className="text-[#9a8fa8]">Services Total</span>
               <span className="text-[#e8d5a3]">₹{amount.toLocaleString('en-IN')}</span>
             </div>
             <div className="flex justify-between text-sm mb-1.5">
@@ -270,7 +271,7 @@ export function CheckoutModal({ amount, salonName, onSuccess, onClose }: Checkou
               <span className="text-[#e8d5a3]">₹{gst.toLocaleString('en-IN')}</span>
             </div>
             <div className="border-t border-[#c9a962]/10 mt-2 pt-2 flex justify-between text-base font-semibold">
-              <span className="text-[#e8d5a3]">Total</span>
+              <span className="text-[#e8d5a3]">Total Payable</span>
               <span className="text-[#c9a962]">₹{totalWithGst.toLocaleString('en-IN')}</span>
             </div>
           </div>
