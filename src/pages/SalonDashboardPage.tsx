@@ -20,6 +20,7 @@ import {
   UserPlus
 } from 'lucide-react';
 import type { PaymentMethod } from '../types';
+import { CheckoutModal } from '../components/CheckoutModal';
 
 export function SalonDashboardPage() {
   const { 
@@ -45,6 +46,7 @@ export function SalonDashboardPage() {
   const [blockCustomerName, setBlockCustomerName] = useState('');
   const [blockReason, setBlockReason] = useState('');
   const [blockingTime, setBlockingTime] = useState<string | null>(null);
+  const [showCheckout, setShowCheckout] = useState(false);
 
   const TIME_SLOTS = [
     '10:00 AM', '11:00 AM', '12:00 PM', '1:00 PM', '2:00 PM',
@@ -255,7 +257,7 @@ export function SalonDashboardPage() {
                 <p className="mt-1 text-xs text-[#9a8fa8]">Clear pending commission balance to remain active.</p>
               </div>
               <button
-                onClick={() => paySalonCommission(salon.id)}
+                onClick={() => setShowCheckout(true)}
                 disabled={totalCommissionDue === 0}
                 className={`w-full mt-4 flex items-center justify-center gap-2 luxe-btn ${
                   totalCommissionDue === 0 ? 'opacity-50 cursor-not-allowed' : ''
@@ -765,6 +767,19 @@ export function SalonDashboardPage() {
             </form>
           </div>
         </div>
+      )}
+
+      {/* Stripe Checkout Modal */}
+      {showCheckout && (
+        <CheckoutModal
+          amount={totalCommissionDue}
+          salonName={salon.name}
+          onSuccess={() => {
+            paySalonCommission(salon.id);
+            setShowCheckout(false);
+          }}
+          onClose={() => setShowCheckout(false)}
+        />
       )}
     </div>
   );
