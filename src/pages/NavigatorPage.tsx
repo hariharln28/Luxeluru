@@ -32,7 +32,7 @@ export function NavigatorPage() {
             src={`https://www.openstreetmap.org/export/embed.html?bbox=${loc.lng - 0.15}%2C${loc.lat - 0.1}%2C${loc.lng + 0.15}%2C${loc.lat + 0.1}&layer=mapnik&marker=${loc.lat}%2C${loc.lng}`}
           />
           <div className="absolute bottom-3 left-3 rounded-lg bg-black/70 px-3 py-1.5 text-xs backdrop-blur">
-            📍 Your location · KNN ranking active
+            📍 Your location · Smart Navigation active
           </div>
         </div>
       </div>

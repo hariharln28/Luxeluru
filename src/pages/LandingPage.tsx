@@ -52,7 +52,7 @@ export function LandingPage() {
         <div className="grid gap-4 sm:gap-6 sm:grid-cols-3">
           {[
             { icon: Sparkles, title: tr('aiPowered'), desc: 'Camera-based face analysis for personalized hair colour & style recommendations' },
-            { icon: MapPin, title: tr('smartNav'), desc: 'KNN-powered navigation finds the nearest luxury salons instantly' },
+            { icon: MapPin, title: tr('smartNav'), desc: 'Instantly find the nearest luxury salons with smart location-based navigation' },
             { icon: Shield, title: 'Trusted Reviews', desc: 'Rate stylists & salons — real leaderboard helps you choose the best' },
           ].map(({ icon: Icon, title, desc }) => (
             <div key={title} className="luxe-card p-6 text-center">
