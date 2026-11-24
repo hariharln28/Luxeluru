@@ -1,13 +1,12 @@
 import { Link, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, Scissors, Sparkles, MapPin, Calendar,
-  Trophy, LogOut, Menu, X, Globe, ChevronDown, AlertTriangle,
+  Trophy, LogOut, Menu, X, Globe, ChevronDown,
 } from 'lucide-react';
 import { useState, useRef, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { useT } from '../hooks/useT';
 import type { Language } from '../types';
-import { PanicModal } from './PanicModal';
 import logoUrl from '../assets/logo.png.jpeg';
 
 export function Navbar() {
@@ -17,7 +16,6 @@ export function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [welcomeOpen, setWelcomeOpen] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
-  const [panicOpen, setPanicOpen] = useState(false);
   const welcomeRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -56,17 +54,7 @@ export function Navbar() {
             <img src={logoUrl} alt="Luxeluru" className="h-10 w-auto object-contain mix-blend-screen" />
           </Link>
 
-          {user && (
-            <div className="hidden items-center gap-2 lg:flex">
-              <button
-                onClick={() => setPanicOpen(true)}
-                className="panic-pulse flex items-center gap-2 rounded-full bg-red-600/90 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-500"
-              >
-                <AlertTriangle className="h-4 w-4" />
-                {tr('panicButton')}
-              </button>
-            </div>
-          )}
+
 
           <div className="hidden items-center gap-4 lg:flex">
             {navLinks.map(({ to, label }) => (
@@ -150,17 +138,9 @@ export function Navbar() {
         {mobileOpen && (
           <div className="border-t border-[#c9a962]/10 bg-[#1a1520] px-4 py-4 lg:hidden animate-fade-in">
             {user && (
-              <>
-                <button
-                  onClick={() => { setPanicOpen(true); setMobileOpen(false); }}
-                  className="mb-4 flex w-full items-center justify-center gap-2 rounded-lg bg-red-600 py-3 font-semibold text-white"
-                >
-                  <AlertTriangle className="h-5 w-5" /> {tr('panicButton')}
-                </button>
-                <p className="mb-3 font-display text-lg text-[#c9a962]">
-                  {tr('welcomeBack')}, {tr('bengalurian')}! — {user.name}
-                </p>
-              </>
+              <p className="mb-3 font-display text-lg text-[#c9a962]">
+                {tr('welcomeBack')}, {tr('bengalurian')}! — {user.name}
+              </p>
             )}
             {navLinks.map(({ to, icon: Icon, label }) => (
               <Link key={to} to={to} onClick={() => setMobileOpen(false)}
@@ -189,7 +169,6 @@ export function Navbar() {
           </div>
         )}
       </nav>
-      {panicOpen && <PanicModal onClose={() => setPanicOpen(false)} />}
     </>
   );
 }

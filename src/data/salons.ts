@@ -28,7 +28,7 @@ function makeStaff(salonIdx: number, count: number) {
 
 export const salons: Salon[] = [
   {
-    id: 'salon-1',
+    id: 'LLANU569',
     name: 'Anura House of Beauty',
     tagline: 'Where elegance meets artistry',
     area: 'Indiranagar',
@@ -57,7 +57,7 @@ export const salons: Salon[] = [
     staff: makeStaff(0, 4),
   },
   {
-    id: 'salon-2',
+    id: 'LLOLA824',
     name: 'Olavu Beauty Heaven',
     tagline: 'Rejuvenate your senses',
     area: 'Koramangala',
@@ -85,7 +85,7 @@ export const salons: Salon[] = [
     staff: makeStaff(1, 3),
   },
   {
-    id: 'salon-3',
+    id: 'LLHAI372',
     name: 'Hair & Grooming Lounge',
     tagline: 'Premium grooming for the modern man',
     area: 'MG Road',
@@ -114,7 +114,7 @@ export const salons: Salon[] = [
     staff: makeStaff(2, 3),
   },
   {
-    id: 'salon-4',
+    id: 'LLLUM185',
     name: 'Luminious salon',
     tagline: 'Art at your fingertips',
     area: 'HSR Layout',
@@ -142,7 +142,7 @@ export const salons: Salon[] = [
     staff: makeStaff(3, 2),
   },
   {
-    id: 'salon-5',
+    id: 'LLBEL903',
     name: 'Belaku Derma Studio',
     tagline: 'Clinical luxury for radiant skin',
     area: 'Whitefield',
@@ -170,7 +170,7 @@ export const salons: Salon[] = [
     staff: makeStaff(4, 3),
   },
   {
-    id: 'salon-6',
+    id: 'LLMAI421',
     name: 'Maison Beauté',
     tagline: 'French-inspired luxury beauty',
     area: 'Jayanagar',
@@ -197,7 +197,7 @@ export const salons: Salon[] = [
     staff: makeStaff(5, 3),
   },
   {
-    id: 'salon-7',
+    id: 'LLBLU756',
     name: 'Blush Bridal Studio',
     tagline: 'Your dream wedding look',
     area: 'Bannerghatta Road',
@@ -225,7 +225,7 @@ export const salons: Salon[] = [
     staff: makeStaff(6, 4),
   },
   {
-    id: 'salon-8',
+    id: 'LLZEN294',
     name: 'Zenith Wellness Spa',
     tagline: 'Holistic wellness sanctuary',
     area: 'Electronic City',
@@ -253,7 +253,7 @@ export const salons: Salon[] = [
     staff: makeStaff(7, 2),
   },
   {
-    id: 'salon-9',
+    id: 'LLCHR618',
     name: 'Chroma Hair Lab',
     tagline: 'Color science meets creativity',
     area: 'Malleshwaram',
@@ -281,7 +281,7 @@ export const salons: Salon[] = [
     staff: makeStaff(0, 3),
   },
   {
-    id: 'salon-10',
+    id: 'LLROY502',
     name: 'Royal Cut Barbershop',
     tagline: 'Classic cuts, royal treatment',
     area: 'Rajajinagar',
@@ -308,7 +308,7 @@ export const salons: Salon[] = [
     staff: makeStaff(1, 2),
   },
   {
-    id: 'salon-11',
+    id: 'LLGLO839',
     name: 'Glow & Grace',
     tagline: 'Effortless beauty, every day',
     area: 'Bellandur',
@@ -335,7 +335,7 @@ export const salons: Salon[] = [
     staff: makeStaff(2, 2),
   },
   {
-    id: 'salon-12',
+    id: 'LLOPU467',
     name: 'Opulence Spa Lounge',
     tagline: 'Indulge in pure luxury',
     area: 'Sadashivanagar',
@@ -362,7 +362,7 @@ export const salons: Salon[] = [
     staff: makeStaff(3, 3),
   },
   {
-    id: 'salon-13',
+    id: 'LLTRE138',
     name: 'Tress & Tone',
     tagline: 'Hair goals achieved',
     area: 'Marathahalli',
@@ -389,7 +389,7 @@ export const salons: Salon[] = [
     staff: makeStaff(4, 2),
   },
   {
-    id: 'salon-14',
+    id: 'LLECL981',
     name: 'Éclat Beauty Bar',
     tagline: 'Shine bright, always',
     area: 'Brigade Road',
@@ -416,7 +416,7 @@ export const salons: Salon[] = [
     staff: makeStaff(5, 3),
   },
   {
-    id: 'salon-15',
+    id: 'LLNIR725',
     name: 'Nirvana Holistic Spa',
     tagline: 'Find your inner peace',
     area: 'JP Nagar',
