@@ -2,13 +2,12 @@ import { Link } from 'react-router-dom';
 import { Sparkles, MapPin, ArrowRight, Shield, Clock } from 'lucide-react';
 import { useT } from '../hooks/useT';
 import { useApp } from '../context/AppContext';
-import { getActiveSalons } from '../data/salons';
 import { SalonCard } from '../components/SalonCard';
 
 export function LandingPage() {
   const tr = useT();
-  const { user } = useApp();
-  const featured = getActiveSalons().filter((s) => s.featured).slice(0, 4);
+  const { user, activeSalons } = useApp();
+  const featured = activeSalons.filter((s) => s.featured).slice(0, 4);
 
   return (
     <div>

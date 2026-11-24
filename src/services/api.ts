@@ -1,12 +1,24 @@
 import type { User, Salon, Booking, StaffReview } from '../types';
 
+let authToken: string | null = null;
+
+export const setAuthToken = (token: string | null) => {
+  authToken = token;
+};
+
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+    ...(options?.headers || {}),
+  };
+
+  if (authToken) {
+    (headers as Record<string, string>)['Authorization'] = `Bearer ${authToken}`;
+  }
+
   const res = await fetch(url, {
     ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options?.headers,
-    },
+    headers,
   });
 
   if (!res.ok) {
@@ -38,7 +50,7 @@ export const api = {
       body: JSON.stringify({ emailOrPhone, password }),
     }),
 
-  userRegister: (userData: Omit<User, 'id' | 'createdAt'>) =>
+  userRegister: (userData: Partial<User> & { id: string; email: string }) =>
     request<{ success: boolean; user: User }>('/api/users/register', {
       method: 'POST',
       body: JSON.stringify(userData),

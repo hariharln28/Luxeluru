@@ -1,12 +1,16 @@
 import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Eye, EyeOff, User as UserIcon, Scissors } from 'lucide-react';
+import { Eye, EyeOff, User as UserIcon, Scissors, Mail, ArrowLeft } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useT } from '../hooks/useT';
 import logoUrl from '../assets/logo.png.jpeg';
 
 export function LoginPage() {
   const [loginType, setLoginType] = useState<'user' | 'salon'>('user');
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetSending, setResetSending] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
   
   // User states
   const [emailOrPhone, setEmailOrPhone] = useState('');
@@ -21,11 +25,13 @@ export function LoginPage() {
   const [showSalonPass, setShowSalonPass] = useState(false);
 
   const [error, setError] = useState('');
-  const { login, salonLogin } = useApp();
+  const { login, salonLogin, resetPassword } = useApp();
   const tr = useT();
   const navigate = useNavigate();
   const location = useLocation();
-  const justRegistered = (location.state as { fromRegister?: boolean } | null)?.fromRegister ?? false;  async function handleSubmit(e: React.FormEvent) {
+  const justRegistered = (location.state as { fromRegister?: boolean } | null)?.fromRegister ?? false;
+
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
 
@@ -53,6 +59,117 @@ export function LoginPage() {
       navigate('/salon-dashboard');
     }
   }
+
+  async function handleResetPassword(e: React.FormEvent) {
+    e.preventDefault();
+    if (!resetEmail.trim()) {
+      setError('Please enter your email address.');
+      return;
+    }
+    setError('');
+    setResetSending(true);
+    const success = await resetPassword(resetEmail.trim());
+    setResetSending(false);
+    if (success) {
+      setResetSent(true);
+    }
+  }
+
+  // Forgot Password View
+  if (showForgotPassword) {
+    return (
+      <div className="flex min-h-[calc(100vh-140px)] items-center justify-center px-4 py-12">
+        <div className="w-full max-w-md animate-fade-in">
+          <div className="mb-8 text-center">
+            <img src={logoUrl} alt="Luxeluru" className="mx-auto h-20 w-auto object-contain mix-blend-screen" />
+            <h1 className="mt-4 font-display text-3xl gold-gradient">Reset Password</h1>
+            <p className="mt-2 text-sm text-[#9a8fa8]">
+              {resetSent
+                ? "We've sent you a password reset link"
+                : "Enter your email and we'll send you a reset link"}
+            </p>
+          </div>
+
+          <div className="luxe-card p-6 sm:p-8">
+            {resetSent ? (
+              <div className="space-y-4">
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-500/10">
+                  <Mail className="h-8 w-8 text-emerald-400" />
+                </div>
+                <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/30 px-4 py-3 text-sm text-emerald-400 text-center">
+                  <p className="font-medium">Check your email!</p>
+                  <p className="mt-1 text-emerald-400/80">
+                    We've sent a password reset link to <strong>{resetEmail}</strong>.
+                    Click the link in the email to set a new password.
+                  </p>
+                </div>
+                <p className="text-xs text-center text-[#9a8fa8]">
+                  Didn't receive it? Check your spam folder or try again.
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => { setResetSent(false); setResetEmail(''); }}
+                    className="luxe-btn-outline flex-1 text-sm"
+                  >
+                    Try Again
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setShowForgotPassword(false); setResetSent(false); setResetEmail(''); setError(''); }}
+                    className="luxe-btn flex-1 text-sm"
+                  >
+                    Back to Login
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <form onSubmit={handleResetPassword} className="space-y-4">
+                {error && (
+                  <div className="rounded-lg bg-red-500/10 px-4 py-2 text-sm text-red-400">{error}</div>
+                )}
+                <div>
+                  <label className="mb-1.5 block text-sm text-[#9a8fa8]">Email Address</label>
+                  <input
+                    type="email"
+                    value={resetEmail}
+                    onChange={(e) => setResetEmail(e.target.value)}
+                    className="luxe-input"
+                    placeholder="you@example.com"
+                    autoFocus
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={resetSending}
+                  className="luxe-btn w-full disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {resetSending ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-[#0f0d12] border-t-transparent" />
+                      Sending...
+                    </span>
+                  ) : (
+                    'Send Reset Link'
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setShowForgotPassword(false); setError(''); }}
+                  className="flex w-full items-center justify-center gap-2 text-sm text-[#9a8fa8] hover:text-[#c9a962] transition"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  Back to Login
+                </button>
+              </form>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Main Login View
   return (
     <div className="flex min-h-[calc(100vh-140px)] items-center justify-center px-4 py-12">
       <div className="w-full max-w-md animate-fade-in">
@@ -109,7 +226,16 @@ export function LoginPage() {
                 />
               </div>
               <div>
-                <label className="mb-1.5 block text-sm text-[#9a8fa8]">{tr('password')}</label>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-sm text-[#9a8fa8]">{tr('password')}</label>
+                  <button
+                    type="button"
+                    onClick={() => { setShowForgotPassword(true); setError(''); setResetEmail(emailOrPhone.includes('@') ? emailOrPhone : ''); }}
+                    className="text-xs text-[#c9a962] hover:underline transition"
+                  >
+                    Forgot password?
+                  </button>
+                </div>
                 <div className="relative">
                   <input
                     type={showPass ? 'text' : 'password'}
@@ -185,7 +311,7 @@ export function LoginPage() {
           <button type="submit" className="luxe-btn w-full">
             {loginType === 'user' ? tr('login') : 'Sign In as Salon'}
           </button>
-          
+
           {loginType === 'user' && (
             <p className="text-center text-sm text-[#9a8fa8]">
               {tr('noAccount')}{' '}

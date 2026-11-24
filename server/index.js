@@ -1,17 +1,100 @@
 import express from 'express';
 import cors from 'cors';
-import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import crypto from 'crypto';
+import dotenv from 'dotenv';
+import { db } from './db.js';
+import { createClient } from '@supabase/supabase-js';
+
+dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = 5000;
+const PORT = process.env.PORT || 5001;
 
-app.use(cors());
+// Initialize Supabase Client on Backend for JWT validation
+const supabaseUrl = process.env.SUPABASE_URL || '';
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || '';
+const supabaseConfigured = supabaseUrl && supabaseAnonKey &&
+  !supabaseUrl.includes('placeholder') && !supabaseUrl.includes('your-project');
+
+if (!supabaseConfigured) {
+  console.warn('[Luxeluru Backend] SUPABASE_URL / SUPABASE_ANON_KEY are not set.');
+  console.warn('Copy server/.env.example to server/.env and fill in your Supabase credentials.');
+  console.warn('JWT authentication will be bypassed until configured.');
+}
+
+const supabase = createClient(
+  supabaseUrl || 'https://placeholder.supabase.co',
+  supabaseAnonKey || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.placeholder'
+);
+
+const authenticateJWT = async (req, res, next) => {
+  // If Supabase is not configured, allow all requests in development mode only
+  if (!supabaseConfigured) {
+    if (process.env.NODE_ENV !== 'production') {
+      req.user = { id: req.headers['x-user-id'] || 'dev-user', email: 'dev@localhost' };
+      return next();
+    }
+    return res.status(503).json({ success: false, message: 'Authentication service not configured' });
+  }
+
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ success: false, message: 'Missing authentication token' });
+  }
+
+  const token = authHeader.split(' ')[1];
+  try {
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+    if (error || !user) {
+      return res.status(401).json({ success: false, message: 'Invalid or expired auth session' });
+    }
+
+    // Auto-sync Supabase user into database
+    const localUser = await db.getUser(user.id);
+    if (!localUser) {
+      console.log(`Auto-syncing authenticated user to database: ${user.email}`);
+      await db.createUser({
+        id: user.id,
+        name: user.user_metadata.name || user.email.split('@')[0],
+        email: user.email,
+        phone: user.user_metadata.phone || '',
+        createdAt: new Date().toISOString(),
+        preferredLanguage: 'en'
+      });
+    }
+
+    req.user = user;
+    next();
+  } catch (err) {
+    console.error('JWT Verification Error:', err);
+    return res.status(401).json({ success: false, message: 'JWT verification failed' });
+  }
+};
+
+// CORS: allow Vite dev server and any deployed frontend origin
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'http://localhost:4173',
+  ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : []),
+];
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow requests with no origin (curl, Postman, same-origin in production)
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.includes(origin) || process.env.NODE_ENV === 'production') {
+      return callback(null, true);
+    }
+    callback(new Error(`CORS policy: origin ${origin} not allowed`));
+  },
+  credentials: true,
+}));
 app.use(express.json());
 
 // Log incoming API requests to the console in real-time
@@ -29,143 +112,79 @@ function hashPassword(password) {
   return crypto.createHash('sha256').update(password).digest('hex');
 }
 
-const DATA_DIR = path.join(__dirname, 'data');
-const USERS_FILE = path.join(DATA_DIR, 'users.json');
-const SALONS_FILE = path.join(DATA_DIR, 'salons.json');
-const BOOKINGS_FILE = path.join(DATA_DIR, 'bookings.json');
-const REVIEWS_FILE = path.join(DATA_DIR, 'reviews.json');
-
-// Ensure data directory exists
-async function ensureDataDir() {
-  try {
-    await fs.mkdir(DATA_DIR, { recursive: true });
-  } catch (err) {
-    console.error('Error creating data directory:', err);
-  }
-}
-
-// Read JSON data helper
-async function readData(filePath, defaultVal = []) {
-  await ensureDataDir();
-  try {
-    const content = await fs.readFile(filePath, 'utf-8');
-    return JSON.parse(content);
-  } catch (err) {
-    if (err.code === 'ENOENT') {
-      await writeData(filePath, defaultVal);
-      return defaultVal;
-    }
-    console.error(`Error reading file ${filePath}:`, err);
-    return defaultVal;
-  }
-}
-
-// Write JSON data helper
-async function writeData(filePath, data) {
-  await ensureDataDir();
-  try {
-    await fs.writeFile(filePath, JSON.stringify(data, null, 2), 'utf-8');
-  } catch (err) {
-    console.error(`Error writing file ${filePath}:`, err);
-  }
-}
-
 // Seed endpoint
 app.post('/api/seed', async (req, res) => {
-  const { salons, users, bookings, reviews } = req.body;
-  
-  const existingSalons = await readData(SALONS_FILE);
-  if (existingSalons.length === 0 && salons) {
-    await writeData(SALONS_FILE, salons);
+  try {
+    const { salons, users, bookings, reviews } = req.body;
+    await db.seed({ salons, users, bookings, reviews });
+    res.json({ success: true, message: 'Seeding completed successfully' });
+  } catch (err) {
+    console.error('Seeding error:', err);
+    res.status(500).json({ success: false, message: 'Seeding failed' });
   }
-  
-  const existingUsers = await readData(USERS_FILE);
-  if (existingUsers.length === 0 && users) {
-    await writeData(USERS_FILE, users);
-  }
-
-  const existingBookings = await readData(BOOKINGS_FILE);
-  if (existingBookings.length === 0 && bookings) {
-    await writeData(BOOKINGS_FILE, bookings);
-  }
-
-  const existingReviews = await readData(REVIEWS_FILE);
-  if (existingReviews.length === 0 && reviews) {
-    await writeData(REVIEWS_FILE, reviews);
-  }
-
-  res.json({ success: true, message: 'Seeding completed' });
 });
 
 // GET endpoints
 app.get('/api/users', async (req, res) => {
-  const users = await readData(USERS_FILE);
+  const users = await db.getUsers();
   res.json(users);
 });
 
 app.get('/api/salons', async (req, res) => {
-  const salons = await readData(SALONS_FILE);
+  const salons = await db.getSalons();
   res.json(salons);
 });
 
 app.get('/api/bookings', async (req, res) => {
-  const bookings = await readData(BOOKINGS_FILE);
+  const bookings = await db.getBookings();
   res.json(bookings);
 });
 
 app.get('/api/reviews', async (req, res) => {
-  const reviews = await readData(REVIEWS_FILE);
+  const reviews = await db.getReviews();
   res.json(reviews);
 });
 
 // Auth endpoints
-app.post('/api/users/login', async (req, res) => {
-  const { emailOrPhone, password } = req.body;
-  const users = await readData(USERS_FILE);
-  const normalised = emailOrPhone.trim().toLowerCase();
-  
-  const found = users.find(u => 
-    (u.email.toLowerCase() === normalised || u.phone.replace(/\s+/g, '') === normalised.replace(/\s+/g, '')) &&
-    (u.password === password || u.password === hashPassword(password))
-  );
-
-  if (found) {
-    res.json({ success: true, user: found });
-  } else {
-    res.status(401).json({ success: false, message: 'Invalid credentials' });
-  }
-});
-
 app.post('/api/users/register', async (req, res) => {
   const userData = req.body;
-  const users = await readData(USERS_FILE);
+  
+  if (!userData.id) {
+    return res.status(400).json({ success: false, message: 'User ID is required' });
+  }
 
-  if (users.some(u => u.email.toLowerCase() === userData.email.toLowerCase())) {
-    return res.status(400).json({ success: false, message: 'Email already registered' });
+  const existing = await db.getUser(userData.id);
+  if (existing) {
+    return res.json({ success: true, user: existing });
   }
 
   const newUser = {
-    ...userData,
-    password: hashPassword(userData.password),
-    id: `user-${Date.now()}`,
+    id: userData.id,
+    name: userData.name || userData.email.split('@')[0],
+    email: userData.email,
+    phone: userData.phone || '',
+    password: hashPassword(crypto.randomBytes(16).toString('hex')),
     createdAt: new Date().toISOString(),
+    preferredLanguage: userData.preferredLanguage || 'en'
   };
 
-  users.push(newUser);
-  await writeData(USERS_FILE, users);
+  await db.createUser(newUser);
   res.json({ success: true, user: newUser });
 });
 
-app.post('/api/users/:id/update', async (req, res) => {
+app.post('/api/users/:id/update', authenticateJWT, async (req, res) => {
   const { id } = req.params;
   const { updates } = req.body;
-  const users = await readData(USERS_FILE);
-  const idx = users.findIndex(u => u.id === id);
-
-  if (idx >= 0) {
-    users[idx] = { ...users[idx], ...updates };
-    await writeData(USERS_FILE, users);
-    res.json({ success: true, user: users[idx] });
+  
+  // Authorization check: user can only update their own profile
+  if (req.user.id !== id) {
+    return res.status(403).json({ success: false, message: 'Unauthorized profile update' });
+  }
+  
+  const user = await db.getUser(id);
+  if (user) {
+    const updated = await db.updateUser(id, updates);
+    res.json({ success: true, user: updated });
   } else {
     res.status(404).json({ success: false, message: 'User not found' });
   }
@@ -173,7 +192,7 @@ app.post('/api/users/:id/update', async (req, res) => {
 
 app.post('/api/salons/login', async (req, res) => {
   const { name, id, email, password } = req.body;
-  const salons = await readData(SALONS_FILE);
+  const salons = await db.getSalons();
   
   const found = salons.find(s => 
     s.name.toLowerCase().trim() === name.toLowerCase().trim() &&
@@ -195,7 +214,6 @@ app.post('/api/salons/login', async (req, res) => {
 
 app.post('/api/salons/register', async (req, res) => {
   const data = req.body;
-  const salons = await readData(SALONS_FILE);
   
   const cleanedName = data.name.trim().replace(/[^a-zA-Z]/g, '');
   const prefix = (cleanedName.slice(0, 3) || 'REG').toUpperCase();
@@ -239,25 +257,21 @@ app.post('/api/salons/register', async (req, res) => {
     commissionPaidUntil: new Date().toISOString().split('T')[0]
   };
 
-  salons.push(newSalon);
-  await writeData(SALONS_FILE, salons);
+  await db.createSalon(newSalon);
   res.json({ success: true, salonId: generatedId });
 });
 
 app.post('/api/salons/:id/exit', async (req, res) => {
   const { id } = req.params;
   const { reason } = req.body;
-  const salons = await readData(SALONS_FILE);
-  const idx = salons.findIndex(s => s.id === id);
-
-  if (idx >= 0) {
-    salons[idx] = {
-      ...salons[idx],
+  
+  const salon = await db.getSalon(id);
+  if (salon) {
+    await db.updateSalon(id, {
       isActive: false,
       registrationStatus: 'rejected',
       exitReason: reason
-    };
-    await writeData(SALONS_FILE, salons);
+    });
     res.json({ success: true });
   } else {
     res.status(404).json({ success: false, message: 'Salon not found' });
@@ -266,16 +280,13 @@ app.post('/api/salons/:id/exit', async (req, res) => {
 
 app.post('/api/salons/:id/approve', async (req, res) => {
   const { id } = req.params;
-  const salons = await readData(SALONS_FILE);
-  const idx = salons.findIndex(s => s.id === id);
-
-  if (idx >= 0) {
-    salons[idx] = {
-      ...salons[idx],
+  const salon = await db.getSalon(id);
+  
+  if (salon) {
+    await db.updateSalon(id, {
       registrationStatus: 'approved',
       isActive: true
-    };
-    await writeData(SALONS_FILE, salons);
+    });
     res.json({ success: true });
   } else {
     res.status(404).json({ success: false, message: 'Salon not found' });
@@ -284,16 +295,13 @@ app.post('/api/salons/:id/approve', async (req, res) => {
 
 app.post('/api/salons/:id/reject', async (req, res) => {
   const { id } = req.params;
-  const salons = await readData(SALONS_FILE);
-  const idx = salons.findIndex(s => s.id === id);
+  const salon = await db.getSalon(id);
 
-  if (idx >= 0) {
-    salons[idx] = {
-      ...salons[idx],
+  if (salon) {
+    await db.updateSalon(id, {
       registrationStatus: 'rejected',
       isActive: false
-    };
-    await writeData(SALONS_FILE, salons);
+    });
     res.json({ success: true });
   } else {
     res.status(404).json({ success: false, message: 'Salon not found' });
@@ -302,15 +310,10 @@ app.post('/api/salons/:id/reject', async (req, res) => {
 
 app.post('/api/salons/:id/force-deactivate', async (req, res) => {
   const { id } = req.params;
-  const salons = await readData(SALONS_FILE);
-  const idx = salons.findIndex(s => s.id === id);
+  const salon = await db.getSalon(id);
 
-  if (idx >= 0) {
-    salons[idx] = {
-      ...salons[idx],
-      isActive: false
-    };
-    await writeData(SALONS_FILE, salons);
+  if (salon) {
+    await db.updateSalon(id, { isActive: false });
     res.json({ success: true });
   } else {
     res.status(404).json({ success: false, message: 'Salon not found' });
@@ -319,22 +322,18 @@ app.post('/api/salons/:id/force-deactivate', async (req, res) => {
 
 app.post('/api/salons/:id/pay-commission', async (req, res) => {
   const { id } = req.params;
-  const salons = await readData(SALONS_FILE);
-  const idx = salons.findIndex(s => s.id === id);
+  const salon = await db.getSalon(id);
 
-  if (idx >= 0) {
+  if (salon) {
     const nextMonth = new Date();
     nextMonth.setMonth(nextMonth.getMonth() + 1);
     nextMonth.setDate(1);
     
-    salons[idx] = {
-      ...salons[idx],
+    await db.updateSalon(id, {
       commissionDue: 0,
       commissionPaidUntil: nextMonth.toISOString().split('T')[0],
       isActive: true
-    };
-    
-    await writeData(SALONS_FILE, salons);
+    });
     res.json({ success: true });
   } else {
     res.status(404).json({ success: false, message: 'Salon not found' });
@@ -354,12 +353,10 @@ app.post('/api/admin/login', async (req, res) => {
 // User blocking endpoints
 app.post('/api/admin/block-user', async (req, res) => {
   const { userId, blockedUntil } = req.body;
-  const users = await readData(USERS_FILE);
-  const idx = users.findIndex(u => u.id === userId);
+  const user = await db.getUser(userId);
 
-  if (idx >= 0) {
-    users[idx].blockedUntil = blockedUntil;
-    await writeData(USERS_FILE, users);
+  if (user) {
+    await db.updateUser(userId, { blockedUntil });
     res.json({ success: true });
   } else {
     res.status(404).json({ success: false, message: 'User not found' });
@@ -368,12 +365,10 @@ app.post('/api/admin/block-user', async (req, res) => {
 
 app.post('/api/admin/unblock-user', async (req, res) => {
   const { userId } = req.body;
-  const users = await readData(USERS_FILE);
-  const idx = users.findIndex(u => u.id === userId);
+  const user = await db.getUser(userId);
 
-  if (idx >= 0) {
-    delete users[idx].blockedUntil;
-    await writeData(USERS_FILE, users);
+  if (user) {
+    await db.updateUser(userId, { blockedUntil: null });
     res.json({ success: true });
   } else {
     res.status(404).json({ success: false, message: 'User not found' });
@@ -381,9 +376,13 @@ app.post('/api/admin/unblock-user', async (req, res) => {
 });
 
 // Bookings endpoints
-app.post('/api/bookings', async (req, res) => {
+app.post('/api/bookings', authenticateJWT, async (req, res) => {
   const bookingData = req.body;
-  const bookings = await readData(BOOKINGS_FILE);
+  
+  // Verify that booking userId matches the authenticated user
+  if (bookingData.userId !== req.user.id) {
+    return res.status(403).json({ success: false, message: 'Unauthorized booking placement' });
+  }
 
   const newBooking = {
     ...bookingData,
@@ -392,35 +391,35 @@ app.post('/api/bookings', async (req, res) => {
     status: 'confirmed'
   };
 
-  bookings.push(newBooking);
-  await writeData(BOOKINGS_FILE, bookings);
+  await db.createBooking(newBooking);
   res.json({ success: true, booking: newBooking });
 });
 
-app.post('/api/bookings/:id/cancel', async (req, res) => {
+app.post('/api/bookings/:id/cancel', authenticateJWT, async (req, res) => {
   const { id } = req.params;
-  const bookings = await readData(BOOKINGS_FILE);
-  const idx = bookings.findIndex(b => b.id === id);
+  const booking = await db.getBooking(id);
 
-  if (idx >= 0) {
-    bookings[idx].status = 'cancelled';
-    await writeData(BOOKINGS_FILE, bookings);
+  if (booking) {
+    if (booking.userId !== req.user.id) {
+      return res.status(403).json({ success: false, message: 'Unauthorized cancel action' });
+    }
+    await db.updateBooking(id, { status: 'cancelled' });
     res.json({ success: true });
   } else {
     res.status(404).json({ success: false, message: 'Booking not found' });
   }
 });
 
-app.post('/api/bookings/:id/reschedule', async (req, res) => {
+app.post('/api/bookings/:id/reschedule', authenticateJWT, async (req, res) => {
   const { id } = req.params;
   const { date, time } = req.body;
-  const bookings = await readData(BOOKINGS_FILE);
-  const idx = bookings.findIndex(b => b.id === id);
+  const booking = await db.getBooking(id);
 
-  if (idx >= 0) {
-    bookings[idx].date = date;
-    bookings[idx].time = time;
-    await writeData(BOOKINGS_FILE, bookings);
+  if (booking) {
+    if (booking.userId !== req.user.id) {
+      return res.status(403).json({ success: false, message: 'Unauthorized reschedule action' });
+    }
+    await db.updateBooking(id, { date, time });
     res.json({ success: true });
   } else {
     res.status(404).json({ success: false, message: 'Booking not found' });
@@ -430,75 +429,67 @@ app.post('/api/bookings/:id/reschedule', async (req, res) => {
 app.post('/api/bookings/:id/update', async (req, res) => {
   const { id } = req.params;
   const { paymentMethod, packageId } = req.body;
-  const bookings = await readData(BOOKINGS_FILE);
-  const salons = await readData(SALONS_FILE);
-  const idx = bookings.findIndex(b => b.id === id);
-
-  if (idx >= 0) {
-    const booking = bookings[idx];
-    const salon = salons.find(s => s.id === booking.salonId);
-
-    if (!salon) {
-      return res.status(404).json({ success: false, message: 'Salon not found for this booking' });
-    }
-
-    let finalPrice = booking.totalPrice;
-    let originalPrice = booking.originalPrice || booking.totalPrice;
-    let isPackageChanged = false;
-    let updatedPackageId = undefined;
-    let updatedPackageName = undefined;
-
-    if (packageId) {
-      const pkg = salon.packages.find(p => p.id === packageId);
-      if (pkg) {
-        finalPrice = pkg.price;
-        isPackageChanged = true;
-        updatedPackageId = pkg.id;
-        updatedPackageName = pkg.name;
-      }
-    }
-
-    const commissionAmount = Math.round(finalPrice * 0.05);
-
-    // Update booking fields
-    bookings[idx] = {
-      ...booking,
-      status: 'completed',
-      paymentMethod,
-      totalPrice: finalPrice,
-      originalPrice,
-      isPackageChanged,
-      updatedPackageId,
-      updatedPackageName,
-      paymentUpdatedBySalon: true,
-      commissionAmount,
-      commissionPaid: false
-    };
-
-    // Update salon's cumulative commissionDue
-    const salonIdx = salons.findIndex(s => s.id === booking.salonId);
-    if (salonIdx >= 0) {
-      salons[salonIdx].commissionDue = (salons[salonIdx].commissionDue || 0) + commissionAmount;
-      await writeData(SALONS_FILE, salons);
-    }
-
-    await writeData(BOOKINGS_FILE, bookings);
-    res.json({ success: true });
-  } else {
-    res.status(404).json({ success: false, message: 'Booking not found' });
+  
+  const booking = await db.getBooking(id);
+  if (!booking) {
+    return res.status(404).json({ success: false, message: 'Booking not found' });
   }
+
+  const salon = await db.getSalon(booking.salonId);
+  if (!salon) {
+    return res.status(404).json({ success: false, message: 'Salon not found for this booking' });
+  }
+
+  let finalPrice = booking.totalPrice;
+  let originalPrice = booking.originalPrice || booking.totalPrice;
+  let isPackageChanged = false;
+  let updatedPackageId = null;
+  let updatedPackageName = null;
+
+  if (packageId) {
+    const pkg = salon.packages.find(p => p.id === packageId);
+    if (pkg) {
+      finalPrice = pkg.price;
+      isPackageChanged = true;
+      updatedPackageId = pkg.id;
+      updatedPackageName = pkg.name;
+    }
+  }
+
+  const commissionAmount = Math.round(finalPrice * 0.05);
+
+  // Update booking fields
+  await db.updateBooking(id, {
+    status: 'completed',
+    paymentMethod,
+    totalPrice: finalPrice,
+    originalPrice,
+    isPackageChanged,
+    updatedPackageId,
+    updatedPackageName,
+    paymentUpdatedBySalon: true,
+    commissionAmount,
+    commissionPaid: false
+  });
+
+  // Update salon's cumulative commissionDue
+  await db.updateSalon(booking.salonId, {
+    commissionDue: (salon.commissionDue || 0) + commissionAmount
+  });
+
+  res.json({ success: true });
 });
 
 app.post('/api/bookings/:id/report-fake', async (req, res) => {
   const { id } = req.params;
   const { reason } = req.body;
-  const bookings = await readData(BOOKINGS_FILE);
-  const idx = bookings.findIndex(b => b.id === id);
+  const booking = await db.getBooking(id);
 
-  if (idx >= 0) {
-    bookings[idx].reportedAsFake = true;
-    bookings[idx].fakeReportReason = reason;
-    await writeData(BOOKINGS_FILE, bookings);
+  if (booking) {
+    await db.updateBooking(id, {
+      reportedAsFake: true,
+      fakeReportReason: reason
+    });
     res.json({ success: true });
   } else {
     res.status(404).json({ success: false, message: 'Booking not found' });
@@ -506,11 +497,12 @@ app.post('/api/bookings/:id/report-fake', async (req, res) => {
 });
 
 // Reviews endpoints
-app.post('/api/reviews', async (req, res) => {
+app.post('/api/reviews', authenticateJWT, async (req, res) => {
   const reviewData = req.body;
-  const reviews = await readData(REVIEWS_FILE);
-  const bookings = await readData(BOOKINGS_FILE);
-  const salons = await readData(SALONS_FILE);
+  
+  if (reviewData.userId !== req.user.id) {
+    return res.status(403).json({ success: false, message: 'Unauthorized review submission' });
+  }
 
   const newReview = {
     ...reviewData,
@@ -518,29 +510,28 @@ app.post('/api/reviews', async (req, res) => {
     createdAt: new Date().toISOString()
   };
 
-  reviews.push(newReview);
-  await writeData(REVIEWS_FILE, reviews);
+  await db.createReview(newReview);
 
   // Mark corresponding booking as reviewed
   if (reviewData.bookingId) {
-    const bookingIdx = bookings.findIndex(b => b.id === reviewData.bookingId);
-    if (bookingIdx >= 0) {
-      bookings[bookingIdx].feedbackSent = true;
-      bookings[bookingIdx].rating = reviewData.rating;
-      bookings[bookingIdx].review = reviewData.comment;
-      await writeData(BOOKINGS_FILE, bookings);
+    const booking = await db.getBooking(reviewData.bookingId);
+    if (booking) {
+      await db.updateBooking(reviewData.bookingId, {
+        feedbackSent: true,
+        rating: reviewData.rating,
+        review: reviewData.comment
+      });
     }
   }
 
   // Update staff and salon ratings if applicable
   if (reviewData.staffId && reviewData.salonId) {
-    const salonIdx = salons.findIndex(s => s.id === reviewData.salonId);
-    if (salonIdx >= 0) {
-      const salon = salons[salonIdx];
+    const salon = await db.getSalon(reviewData.salonId);
+    if (salon) {
       const staffIdx = salon.staff.findIndex(st => st.id === reviewData.staffId);
+      const reviews = await db.getReviews();
       
       if (staffIdx >= 0) {
-        const staff = salon.staff[staffIdx];
         const staffReviews = reviews.filter(r => r.staffId === reviewData.staffId);
         const avgRating = staffReviews.reduce((sum, r) => sum + r.rating, 0) / staffReviews.length;
         
@@ -555,7 +546,11 @@ app.post('/api/reviews', async (req, res) => {
         salon.reviewCount = salonReviews.length;
       }
 
-      await writeData(SALONS_FILE, salons);
+      await db.updateSalon(reviewData.salonId, {
+        staff: salon.staff,
+        rating: salon.rating,
+        reviewCount: salon.reviewCount
+      });
     }
   }
 
@@ -564,21 +559,19 @@ app.post('/api/reviews', async (req, res) => {
 
 // Health check endpoint for frontend connectivity detection
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', uptime: process.uptime(), timestamp: new Date().toISOString() });
+  res.json({ status: 'ok', uptime: process.uptime(), timestamp: new Date().toISOString(), dbMode: db.mode });
 });
 
-// Salon password change (after approval, salon can set their own password)
+// Salon password change
 app.post('/api/salons/:id/change-password', async (req, res) => {
   const { id } = req.params;
   const { currentPassword, newPassword } = req.body;
-  const salons = await readData(SALONS_FILE);
-  const idx = salons.findIndex(s => s.id === id);
+  const salon = await db.getSalon(id);
 
-  if (idx < 0) {
+  if (!salon) {
     return res.status(404).json({ success: false, message: 'Salon not found' });
   }
 
-  const salon = salons[idx];
   if (salon.password !== currentPassword && salon.password !== hashPassword(currentPassword)) {
     return res.status(401).json({ success: false, message: 'Current password is incorrect' });
   }
@@ -587,9 +580,24 @@ app.post('/api/salons/:id/change-password', async (req, res) => {
     return res.status(400).json({ success: false, message: 'New password must be at least 6 characters' });
   }
 
-  salons[idx].password = hashPassword(newPassword);
-  await writeData(SALONS_FILE, salons);
+  await db.updateSalon(id, { password: hashPassword(newPassword) });
   res.json({ success: true, message: 'Password updated successfully' });
+});
+
+// Serve static assets from the frontend build folder in production
+const distPath = path.join(__dirname, '../dist');
+app.use(express.static(distPath));
+
+// Fallback all non-API GET requests to index.html (for React Router)
+app.get('*', (req, res, next) => {
+  if (req.path.startsWith('/api')) {
+    return next();
+  }
+  res.sendFile(path.join(distPath, 'index.html'), (err) => {
+    if (err) {
+      res.status(404).send('Not Found');
+    }
+  });
 });
 
 // Global error handler
@@ -609,8 +617,14 @@ process.on('SIGTERM', () => {
   process.exit(0);
 });
 
-app.listen(PORT, () => {
-  console.log(`Luxeluru backend running on http://localhost:${PORT}`);
-  console.log(`Health check: http://localhost:${PORT}/api/health`);
-  console.log(`Data stored in: ${DATA_DIR}`);
+// Connect to Database first and then start server listening
+const MONGODB_URI = process.env.MONGODB_URI;
+db.connect(MONGODB_URI).then(() => {
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Luxeluru backend running on http://0.0.0.0:${PORT}`);
+    console.log(`Health check: http://localhost:${PORT}/api/health`);
+  });
+}).catch(err => {
+  console.error('Failed to initialize database, shutting down:', err);
+  process.exit(1);
 });

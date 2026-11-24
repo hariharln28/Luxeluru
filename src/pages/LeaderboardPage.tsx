@@ -2,10 +2,9 @@ import { Trophy, Star, Medal } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { useT } from '../hooks/useT';
-import { salons } from '../data/salons';
 
 export function LeaderboardPage() {
-  const { staffReviews } = useApp();
+  const { salons, staffReviews } = useApp();
   const tr = useT();
 
   const topSalons = [...salons]

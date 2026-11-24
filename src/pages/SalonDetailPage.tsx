@@ -4,7 +4,6 @@ import {
   Star, MapPin, Clock, Phone, Mail, Package, Check,
   CreditCard, Banknote,
 } from 'lucide-react';
-import { getSalonById } from '../data/salons';
 import { useApp } from '../context/AppContext';
 import { useT } from '../hooks/useT';
 import {
@@ -20,8 +19,8 @@ const TIME_SLOTS = [
 
 export function SalonDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const salon = getSalonById(id ?? '');
-  const { user, createBooking, addStaffReview, staffReviews, addToast, isUserBlocked } = useApp();
+  const { user, salons, createBooking, addStaffReview, staffReviews, addToast, isUserBlocked } = useApp();
+  const salon = salons.find((s) => s.id === id);
   const tr = useT();
 
   const [selectedServices, setSelectedServices] = useState<string[]>([]);

@@ -18,7 +18,8 @@ import type {
 } from '../types';
 import { salons as defaultSalons } from '../data/salons';
 import { scheduleFeedbackRequest } from '../utils/notifications';
-import { api } from '../services/api';
+import { api, setAuthToken } from '../services/api';
+import { supabase, supabaseConfigured } from '../services/supabaseClient';
 
 interface AppContextType {
   user: User | null;
@@ -28,6 +29,7 @@ interface AppContextType {
   language: Language;
   setLanguage: (lang: Language) => void;
   login: (emailOrPhone: string, password: string) => Promise<boolean>;
+  resetPassword: (email: string) => Promise<boolean>;
   salonLogin: (name: string, id: string, email: string, checkPass: string) => Promise<boolean>;
   adminLogin: (userStr: string, passStr: string) => Promise<boolean>;
   register: (data: Omit<User, 'id' | 'createdAt'>) => Promise<boolean>;
@@ -257,16 +259,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setBookings(backendBookings);
       setStaffReviews(backendReviews);
 
-      // Re-hydrate session from localStorage
-      const sessionId = localStorage.getItem(STORAGE_KEYS.session);
-      if (sessionId) {
-        const foundUser = backendUsers.find(u => u.id === sessionId);
-        if (foundUser) {
-          setUser(foundUser);
-          if (foundUser.preferredLanguage) setLanguageState(foundUser.preferredLanguage);
-        }
-      }
-
       const sessionSalonId = localStorage.getItem(STORAGE_KEYS.salonSession);
       if (sessionSalonId) {
         const foundSalon = backendSalons.find(s => s.id === sessionSalonId);
@@ -291,15 +283,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setBookings(localBookings);
       setStaffReviews(localReviews);
 
-      const sessionId = localStorage.getItem(STORAGE_KEYS.session);
-      if (sessionId) {
-        const foundUser = localUsers.find(u => u.id === sessionId);
-        if (foundUser) {
-          setUser(foundUser);
-          if (foundUser.preferredLanguage) setLanguageState(foundUser.preferredLanguage);
-        }
-      }
-
       const sessionSalonId = localStorage.getItem(STORAGE_KEYS.salonSession);
       if (sessionSalonId) {
         const foundSalon = localSalons.find(s => s.id === sessionSalonId);
@@ -315,6 +298,64 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     syncWithBackend();
   }, [syncWithBackend]);
+
+  // Listen for Supabase Authentication State Changes
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        setAuthToken(session.access_token);
+        api.getUsers().then((backendUsers) => {
+          const foundUser = backendUsers.find(u => u.id === session.user.id);
+          if (foundUser) {
+            setUser(foundUser);
+            if (foundUser.preferredLanguage) setLanguageState(foundUser.preferredLanguage);
+          } else {
+            const newUser = {
+              id: session.user.id,
+              name: session.user.user_metadata.name || session.user.email!.split('@')[0],
+              email: session.user.email!,
+              phone: session.user.user_metadata.phone || '',
+              createdAt: new Date().toISOString(),
+            };
+            api.userRegister(newUser).then((res) => {
+              setUser(res.user);
+            }).catch(() => {});
+          }
+        }).catch(() => {});
+      }
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) {
+        setAuthToken(session.access_token);
+        api.getUsers().then((backendUsers) => {
+          const foundUser = backendUsers.find(u => u.id === session.user.id);
+          if (foundUser) {
+            setUser(foundUser);
+            if (foundUser.preferredLanguage) setLanguageState(foundUser.preferredLanguage);
+          } else {
+            const newUser = {
+              id: session.user.id,
+              name: session.user.user_metadata.name || session.user.email!.split('@')[0],
+              email: session.user.email!,
+              phone: session.user.user_metadata.phone || '',
+              createdAt: new Date().toISOString(),
+            };
+            api.userRegister(newUser).then((res) => {
+              setUser(res.user);
+            }).catch(() => {});
+          }
+        }).catch(() => {});
+      } else {
+        setAuthToken(null);
+        setUser(null);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
 
   // Compute activeSalons dynamically based on registration status, active flag, and commission status
   const activeSalons = salonsList.filter((s) => {
@@ -367,31 +408,81 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = useCallback(async (emailOrPhone: string, password: string): Promise<boolean> => {
+    if (!supabaseConfigured) {
+      addToast('error', 'Authentication is not configured. Please set up Supabase credentials.');
+      return false;
+    }
     try {
-      const res = await api.userLogin(emailOrPhone, password);
-      if (res.success) {
-        setUser(res.user);
-        localStorage.setItem(STORAGE_KEYS.session, res.user.id);
-        if (res.user.preferredLanguage) setLanguageState(res.user.preferredLanguage);
-        addToast('success', `Welcome back, ${res.user.name}!`);
+      let email = emailOrPhone.trim();
+      if (!email.includes('@')) {
+        const found = users.find(
+          (u) => u.phone.replace(/\s+/g, '') === email.replace(/\s+/g, '')
+        );
+        if (found) {
+          email = found.email;
+        } else {
+          addToast('error', 'Phone number not found. Please log in with email.');
+          return false;
+        }
+      }
+
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        addToast('error', error.message);
+        return false;
+      }
+
+      if (data.user && data.session) {
+        setAuthToken(data.session.access_token);
+        const backendUsers = await api.getUsers();
+        const foundUser = backendUsers.find((u) => u.id === data.user!.id);
+        if (foundUser) {
+          setUser(foundUser);
+          if (foundUser.preferredLanguage) setLanguageState(foundUser.preferredLanguage);
+        } else {
+          const newUser = {
+            id: data.user.id,
+            name: data.user.user_metadata.name || data.user.email!.split('@')[0],
+            email: data.user.email!,
+            phone: data.user.user_metadata.phone || '',
+            createdAt: new Date().toISOString(),
+          };
+          const res = await api.userRegister(newUser);
+          setUser(res.user);
+        }
+        addToast('success', 'Logged in successfully!');
         return true;
       }
       return false;
-    } catch {
-      // Local fallback
-      const currentUsers = loadLocalUsers();
-      const normalised = emailOrPhone.trim().toLowerCase();
-      const found = currentUsers.find(
-        (u) =>
-          (u.email.toLowerCase() === normalised || u.phone.replace(/\s+/g, '') === normalised.replace(/\s+/g, '')) &&
-          u.password === password
-      );
-      if (!found) return false;
-      setUser(found);
-      localStorage.setItem(STORAGE_KEYS.session, found.id);
-      if (found.preferredLanguage) setLanguageState(found.preferredLanguage);
-      addToast('success', `Welcome back, ${found.name}!`);
+    } catch (err: any) {
+      addToast('error', err.message || 'Login failed');
+      return false;
+    }
+  }, [users, addToast]);
+
+
+  const resetPassword = useCallback(async (email: string): Promise<boolean> => {
+    if (!supabaseConfigured) {
+      addToast('error', 'Password reset is not available. Supabase is not configured.');
+      return false;
+    }
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin + '/login',
+      });
+      if (error) {
+        addToast('error', error.message);
+        return false;
+      }
+      addToast('success', 'Password reset email sent! Check your inbox.');
       return true;
+    } catch (err: any) {
+      addToast('error', err.message || 'Failed to send reset email');
+      return false;
     }
   }, [addToast]);
 
@@ -457,34 +548,46 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [addToast]);
 
   const register = useCallback(async (data: Omit<User, 'id' | 'createdAt'>): Promise<boolean> => {
+    if (!supabaseConfigured) {
+      addToast('error', 'Authentication is not configured. Please set up Supabase credentials.');
+      return false;
+    }
     try {
-      const res = await api.userRegister(data);
-      if (res.success) {
-        setUser(res.user);
-        setUsers(prev => [...prev, res.user]);
-        localStorage.setItem(STORAGE_KEYS.session, res.user.id);
+      const { data: authData, error } = await supabase.auth.signUp({
+        email: data.email,
+        password: data.password,
+        options: {
+          data: {
+            name: data.name,
+            phone: data.phone,
+          }
+        }
+      });
+
+      if (error) {
+        addToast('error', error.message);
+        return false;
+      }
+
+      if (authData.user) {
+        const newUser = {
+          id: authData.user.id,
+          name: data.name,
+          email: data.email,
+          phone: data.phone,
+          createdAt: new Date().toISOString(),
+        };
+        await api.userRegister(newUser);
+        addToast('success', 'Registration successful! Check your email to verify your account.');
         return true;
       }
       return false;
-    } catch {
-      // Local fallback
-      const currentUsers = loadLocalUsers();
-      if (currentUsers.some((u) => u.email.toLowerCase() === data.email.toLowerCase())) {
-        return false;
-      }
-      const newUser: User = {
-        ...data,
-        id: `user-${Date.now()}`,
-        createdAt: new Date().toISOString(),
-      };
-      currentUsers.push(newUser);
-      localStorage.setItem(STORAGE_KEYS.users, JSON.stringify(currentUsers));
-      setUsers(currentUsers);
-      setUser(newUser);
-      localStorage.setItem(STORAGE_KEYS.session, newUser.id);
-      return true;
+    } catch (err: any) {
+      addToast('error', err.message || 'Registration failed');
+      return false;
     }
-  }, []);
+  }, [addToast]);
+
 
   const salonRegister = useCallback(async (data: {
     ownerName: string;
@@ -592,7 +695,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setSalon(null);
     setIsAdmin(false);
-    localStorage.removeItem(STORAGE_KEYS.session);
+    supabase.auth.signOut();
     localStorage.removeItem(STORAGE_KEYS.salonSession);
     localStorage.removeItem(STORAGE_KEYS.adminSession);
   }, []);
@@ -1154,6 +1257,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         language,
         setLanguage,
         login,
+        resetPassword,
         salonLogin,
         adminLogin,
         register,
