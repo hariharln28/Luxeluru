@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { 
   Shield, 
@@ -71,7 +71,12 @@ export function AdminDashboardPage() {
   }, [handleRefresh, refreshData]);
 
   // HIGH SECURITY: Auto sign-out admin when leaving the dashboard
+  // Use a ref to track if we're navigating away vs just re-rendering
+  const isOnDashboard = useRef(true);
+  const currentPath = useLocation().pathname;
+
   useEffect(() => {
+    isOnDashboard.current = true;
     const handleBeforeUnload = () => {
       // Clear admin session on tab/browser close
       sessionStorage.removeItem('adminSession');
@@ -79,10 +84,16 @@ export function AdminDashboardPage() {
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => {
       window.removeEventListener('beforeunload', handleBeforeUnload);
-      // Sign out admin when navigating away from dashboard
-      logout();
     };
-  }, [logout]);
+  }, []);
+
+  // Watch for navigation away from the dashboard
+  useEffect(() => {
+    if (currentPath !== '/admin-dashboard' && isOnDashboard.current) {
+      isOnDashboard.current = false;
+      logout();
+    }
+  }, [currentPath, logout]);
 
   // Guard page for unauthorized users
   if (!isAdmin) {
