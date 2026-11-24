@@ -432,17 +432,32 @@ export function SalonDashboardPage() {
                           )}
 
                           {b.customImageUrl && (
-                            <div className="flex items-center gap-3 pt-1">
-                              <span className="text-[11px] text-[#e8d5a3] font-medium">Custom Reference:</span>
-                              <div className="relative group cursor-pointer" onClick={() => setViewingImageUrl(b.customImageUrl || null)}>
-                                <img 
-                                  src={b.customImageUrl} 
-                                  alt="Custom Reference" 
-                                  className="h-12 w-12 rounded object-cover border border-[#c9a962]/30 hover:border-[#c9a962] transition"
-                                />
-                                <span className="absolute inset-0 bg-black/55 flex items-center justify-center text-[8px] text-white opacity-0 group-hover:opacity-100 transition rounded">
-                                  Open
-                                </span>
+                            <div className="pt-1">
+                              <p className="text-[11px] text-[#e8d5a3] font-medium mb-1.5">Customer Reference Image:</p>
+                              <div className="flex items-center gap-3">
+                                <button
+                                  onClick={() => setViewingImageUrl(b.customImageUrl || null)}
+                                  className="group relative flex-shrink-0 focus:outline-none"
+                                  style={{ touchAction: 'manipulation' }}
+                                  title="Click to view full size"
+                                >
+                                  <img
+                                    src={b.customImageUrl}
+                                    alt="Customer Reference"
+                                    loading="lazy"
+                                    className="h-20 w-20 rounded-xl object-cover border-2 border-[#c9a962]/40 group-hover:border-[#c9a962] transition"
+                                  />
+                                  <div className="absolute inset-0 bg-black/40 rounded-xl flex items-center justify-center opacity-0 group-hover:opacity-100 group-active:opacity-100 transition">
+                                    <span className="text-white text-[10px] font-semibold">🔍 Open</span>
+                                  </div>
+                                </button>
+                                <button
+                                  onClick={() => setViewingImageUrl(b.customImageUrl || null)}
+                                  className="text-xs text-[#c9a962] underline underline-offset-2 hover:text-[#e8d5a3] transition"
+                                  style={{ touchAction: 'manipulation', minHeight: 36 }}
+                                >
+                                  📷 View Full Image
+                                </button>
                               </div>
                             </div>
                           )}
@@ -552,13 +567,14 @@ export function SalonDashboardPage() {
                             <p className="text-[#9a8fa8]"><span className="text-[#e8d5a3]">Notes:</span> "{b.customMessage}"</p>
                           )}
                           {b.customImageUrl && (
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-wrap pt-1">
                               <span className="text-[#e8d5a3]">Reference Image:</span>
-                              <button 
+                              <button
                                 onClick={() => setViewingImageUrl(b.customImageUrl || null)}
-                                className="text-[#c9a962] hover:underline text-[9px]"
+                                className="flex items-center gap-1 rounded-lg bg-[#c9a962]/10 px-3 py-1.5 text-xs text-[#c9a962] hover:bg-[#c9a962]/20 transition"
+                                style={{ touchAction: 'manipulation', minHeight: 36 }}
                               >
-                                View Image
+                                📷 View Image
                               </button>
                             </div>
                           )}
@@ -1291,20 +1307,29 @@ export function SalonDashboardPage() {
 
       {/* Full Size Image Viewer Modal */}
       {viewingImageUrl && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4 backdrop-blur-sm">
-          <div className="relative luxe-card max-w-2xl p-2 animate-fade-in">
-            <button 
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4 backdrop-blur-sm"
+          onClick={() => setViewingImageUrl(null)}
+        >
+          <div
+            className="relative max-w-3xl w-full animate-fade-in"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Close button — large tap target */}
+            <button
               onClick={() => setViewingImageUrl(null)}
-              className="absolute top-4 right-4 rounded-full p-2 bg-black/60 text-[#9a8fa8] hover:text-white transition z-10"
-              title="Close"
+              className="absolute -top-3 -right-3 z-10 flex items-center justify-center rounded-full bg-[#c9a962] text-[#0f0d12] shadow-xl hover:bg-[#e8d5a3] transition"
+              style={{ touchAction: 'manipulation', width: 44, height: 44 }}
+              aria-label="Close image viewer"
             >
               <X className="h-5 w-5" />
             </button>
-            <img 
-              src={viewingImageUrl} 
-              alt="Custom Reference Full Size" 
-              className="max-h-[80vh] w-auto max-w-full rounded-lg object-contain border border-[#c9a962]/20"
+            <img
+              src={viewingImageUrl}
+              alt="Customer Reference — Full Size"
+              className="max-h-[85dvh] w-auto max-w-full rounded-2xl object-contain border border-[#c9a962]/20 shadow-2xl"
             />
+            <p className="mt-2 text-center text-xs text-[#9a8fa8]">Tap anywhere outside or × to close</p>
           </div>
         </div>
       )}
