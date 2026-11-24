@@ -1,8 +1,9 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Camera, Sparkles, RefreshCw, User, AlertTriangle, Upload, X } from 'lucide-react';
+import { Camera, Sparkles, RefreshCw, User, AlertTriangle, Upload, X, Wand2 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useT } from '../hooks/useT';
+import { generateStyleAdvice, type GeminiStyleAdvice } from '../utils/geminiStyle';
 import {
   analyzeFaceFromVideo,
   HAIR_COLOR_OPTIONS_FEMALE,
@@ -173,6 +174,8 @@ export function AIStylistPage() {
   const [faceDetected, setFaceDetected] = useState(false);
   const [tryOnIntensity, setTryOnIntensity] = useState(35); // 0-100
   const [tryOnMode, setTryOnMode] = useState(false); // full try-on vs mesh dots
+  const [geminiAdvice, setGeminiAdvice] = useState<GeminiStyleAdvice | null>(null);
+  const [geminiLoading, setGeminiLoading] = useState(false);
   const streamRef = useRef<MediaStream | null>(null);
   const faceMeshRef = useRef<any>(null);
   const landmarksRef = useRef<{ x: number; y: number }[]>([]);
@@ -368,6 +371,7 @@ export function AIStylistPage() {
   async function handleAnalyze() {
     if (!videoRef.current || !cameraOn) return;
     setAnalyzing(true);
+    setGeminiAdvice(null);
     await new Promise((r) => setTimeout(r, 1800));
     const result = await analyzeFaceFromVideo(
       videoRef.current,
@@ -378,6 +382,21 @@ export function AIStylistPage() {
     setCustomColor('');
     setCustomStyle('');
     setAnalyzing(false);
+
+    // Fire Gemini API for natural-language style advice (non-blocking)
+    setGeminiLoading(true);
+    generateStyleAdvice({
+      faceShape: result.faceShape,
+      skinTone: result.skinTone,
+      monkLabel: result.monkLabel,
+      monkUndertone: result.monkUndertone,
+      gender: result.gender,
+      suggestedColor: result.suggestedHairColors[0] ?? '',
+      suggestedStyle: result.suggestedStyles[0] ?? '',
+    }).then(advice => {
+      setGeminiAdvice(advice);
+      setGeminiLoading(false);
+    });
   }
 
   function handleColorSelect(color: string) {
@@ -398,6 +417,7 @@ export function AIStylistPage() {
     setGender(g);
     setCustomColor('');
     setCustomStyle('');
+    setGeminiAdvice(null);
     if (styleRecommendation && videoRef.current && cameraOn) {
       setStyleRecommendation(null);
     }
@@ -588,6 +608,44 @@ export function AIStylistPage() {
                   <div className="mt-1 flex justify-between text-[9px] text-[#9a8fa8]/60">
                     <span>MST-1</span><span>MST-5</span><span>MST-10</span>
                   </div>
+                </div>
+              )}
+
+              {/* ── Gemini AI Style Advice ── */}
+              {(geminiLoading || geminiAdvice) && (
+                <div className="rounded-2xl border border-purple-500/20 bg-gradient-to-br from-purple-500/5 to-[#c9a962]/5 p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Wand2 className="h-4 w-4 text-purple-400 flex-shrink-0" />
+                    <p className="text-xs font-semibold text-purple-300 uppercase tracking-wider">AI Stylist Advice</p>
+                    <span className="ml-auto text-[9px] text-[#9a8fa8]/60">Powered by Gemini</span>
+                  </div>
+                  {geminiLoading ? (
+                    <div className="space-y-2 animate-pulse">
+                      <div className="skeleton h-5 w-3/4 rounded" />
+                      <div className="skeleton h-3 w-full rounded" />
+                      <div className="skeleton h-3 w-5/6 rounded" />
+                      <div className="skeleton h-3 w-4/5 rounded" />
+                    </div>
+                  ) : geminiAdvice ? (
+                    <div className="space-y-3">
+                      <p className="font-display text-lg text-[#c9a962] leading-snug">{geminiAdvice.headline}</p>
+                      <p className="text-sm text-[#e8d5a3]/90 leading-relaxed">{geminiAdvice.description}</p>
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        <div className="rounded-xl bg-[#0f0d12]/50 p-3">
+                          <p className="text-[10px] uppercase tracking-wider text-[#c9a962]/70 mb-1">Colour</p>
+                          <p className="text-xs text-[#9a8fa8] leading-snug">{geminiAdvice.colorReason}</p>
+                        </div>
+                        <div className="rounded-xl bg-[#0f0d12]/50 p-3">
+                          <p className="text-[10px] uppercase tracking-wider text-[#c9a962]/70 mb-1">Style</p>
+                          <p className="text-xs text-[#9a8fa8] leading-snug">{geminiAdvice.styleReason}</p>
+                        </div>
+                      </div>
+                      <div className="rounded-xl bg-emerald-500/5 border border-emerald-500/15 px-3 py-2">
+                        <p className="text-[10px] uppercase tracking-wider text-emerald-400/70 mb-1">Care Tip</p>
+                        <p className="text-xs text-emerald-300/80 leading-snug">{geminiAdvice.careAdvice}</p>
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
               )}
 
