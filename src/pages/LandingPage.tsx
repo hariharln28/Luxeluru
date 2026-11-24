@@ -30,7 +30,7 @@ export function LandingPage() {
           </div>
           <div className="mt-6">
             <Link to="/partner-with-us" className="text-sm font-semibold text-[#c9a962] hover:underline">
-              Partner with Us — Register or Manage Salon Association
+              Partner with Us — Register
             </Link>
           </div>
           <p className="mt-8 text-sm text-[#6b6175]">{tr('trustedBy')}</p>
